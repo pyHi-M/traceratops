@@ -29,3 +29,19 @@
 9. Rebase your branch with `dev`
 10. Test the whole software with real data
 11. Rebase on `main`
+
+## Update version number MAJOR.MINOR.PATCH
+
+We following the [Semantic Versioning convention](https://semver.org/).
+
+When a bugfix is rebase on dev branch, make "PATCH += 1".
+
+When a new feature is rebase on dev branch, make "MINOR += 1".
+
+When you break compatibility with the previous versions, make "MAJOR += 1".
+
+There is three places where version number needs to be updated:
+- `doc/source/conf.py::release`
+- `pyproject.toml::project::version`
+- `traceratops::_version.py::__version__`
+

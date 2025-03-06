@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath("../../traceratops/"))
 project = "traceratops"
 copyright = "2025, Marcelo Nollmann, Xavier Devos"
 author = "Marcelo Nollmann, Xavier Devos"
-release = "0.0.1"
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
