@@ -131,6 +131,15 @@ Run inside a terminal:
 
 0. Activate your dev env and `pip install sphinx-argparse`
 
+Enable the extension in your sphinx config:
+```python
+extensions = [
+    ...,
+    'sphinxarg.ext',
+]
+```
+
+
 1. You need a python script with some arguments used for CLI.
 `<code_source_folder>/example_script.py`:
 

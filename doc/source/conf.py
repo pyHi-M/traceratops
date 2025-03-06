@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.autodoc",  # include documentation from docstring
     "sphinx.ext.napoleon",  # allow google or numpy docstring
     "myst_parser",  # parse markdown files to be understood by sphinx
+    "sphinxarg.ext",
 ]
 
 templates_path = ["_templates"]
