@@ -189,46 +189,46 @@ def runtime(
     label_to_keep="",
     label_to_remove="",
 ):
-    if len(trace_files) > 0:
-        # iterates over traces
-        for trace_file in trace_files:
-            trace = ChromatinTraceTable()
-            trace.initialize()
-            comments = list()
-            # reads new trace
-            trace.load(trace_file)
-
-            trace = filter_duplicat(remove_duplicate_spots, trace, trace_file)
-            trace, comments = filter_barcode_number(n_barcodes, trace, comments)
-
-            # filters trace by coordinate
-            for coord in ["x", "y", "z"]:
-                coor_min = coord_limits[coord + "_min"]
-                coor_max = coord_limits[coord + "_max"]
-
-                if coor_min > 0.0 or coor_max != np.inf:
-                    trace.filter_traces_by_coordinate(
-                        coor=coord,
-                        coor_min=coor_min,
-                        coor_max=coor_max,
-                    )
-                    comments.append("filt:{}<{}>{}".format(coor_min, coord, coor_max))
-
-            if remove_barcode is not None:
-                bc_list = remove_barcode.split(",")
-                print(f"\n$ Removing barcodes: {bc_list}")
-                for bc in bc_list:
-                    trace.remove_barcode(bc)
-
-            trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
-
-            # saves output trace
-            outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
-            trace.save(outputfile, trace.data, comments=", ".join(comments))
-            print(f"$ Saved output trace file at: {outputfile}")
-    else:
+    if len(trace_files) <= 0:
         print("No trace file found to process!")
+        return len(trace_files)
 
+    # iterates over traces
+    for trace_file in trace_files:
+        trace = ChromatinTraceTable()
+        trace.initialize()
+        comments = list()
+        # reads new trace
+        trace.load(trace_file)
+
+        trace = filter_duplicat(remove_duplicate_spots, trace, trace_file)
+        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
+
+        # filters trace by coordinate
+        for coord in ["x", "y", "z"]:
+            coor_min = coord_limits[coord + "_min"]
+            coor_max = coord_limits[coord + "_max"]
+
+            if coor_min > 0.0 or coor_max != np.inf:
+                trace.filter_traces_by_coordinate(
+                    coor=coord,
+                    coor_min=coor_min,
+                    coor_max=coor_max,
+                )
+                comments.append("filt:{}<{}>{}".format(coor_min, coord, coor_max))
+
+        if remove_barcode is not None:
+            bc_list = remove_barcode.split(",")
+            print(f"\n$ Removing barcodes: {bc_list}")
+            for bc in bc_list:
+                trace.remove_barcode(bc)
+
+        trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
+
+        # saves output trace
+        outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
+        trace.save(outputfile, trace.data, comments=", ".join(comments))
+        print(f"$ Saved output trace file at: {outputfile}")
     return len(trace_files)
 
 

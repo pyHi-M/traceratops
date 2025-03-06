@@ -648,7 +648,6 @@ class ChromatinTraceTable:
                 spot_id = row["Spot_ID"]
                 if spot_id in spots_to_remove:
                     rows_to_remove.append(idx)
-                    spots_to_remove.remove(spot_id)
 
             # removes from table
             trace_table_new.remove_rows(rows_to_remove)

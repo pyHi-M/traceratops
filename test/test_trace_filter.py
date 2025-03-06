@@ -135,7 +135,7 @@ def test_trace_filter_output(input_file):
     os.remove(generated_output_path)
 
 
-input_files = [f for f in os.listdir(INPUT_DIR) if f.endswith("duplicate_spot.ecsv")]
+input_files = [f for f in os.listdir(INPUT_DIR) if "duplicate_spot" in f]
 
 
 @pytest.mark.parametrize("input_file", input_files)
@@ -166,11 +166,9 @@ def test_clean_spots(input_file):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
+    os.remove(generated_output_path)
     os.remove(input_path + "_before.png")
     os.remove(input_path + "_filtered.png")
-
-
-input_files = [f for f in os.listdir(INPUT_DIR) if f.endswith("duplicate_spot.ecsv")]
 
 
 @pytest.mark.parametrize("command", ["remove_label", "keep_label"])
