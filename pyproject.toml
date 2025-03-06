@@ -10,7 +10,13 @@ readme = "README.md"
 authors = [{ name = "Marcelo Nollmann", email = "marcelo.nollmann@cbs.cnrs.fr" }, { name = "Xavier Devos", email = "xavier.devos@cbs.cnrs.fr" }]
 license = { file = "LICENSE" }
 keywords = []
-dependencies = []
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "astropy",
+    "tqdm",
+]
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
@@ -25,8 +31,8 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/pyHi-M/traceratops"
 
-# [project.scripts]
-# example = "traceratops.run_main:main"
+[project.scripts]
+trace_filter = "traceratops.trace_filter:main"
 
 # [tool.setuptools]
 # include-package-data = true

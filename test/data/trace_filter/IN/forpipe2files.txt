@@ -1,0 +1,2 @@
+one_trace_four_spots.ecsv
+two_traces_seven_spots.ecsv
