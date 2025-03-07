@@ -15,6 +15,8 @@ autodoc_mock_imports = [
     "pandas",
     "astropy",
     "tqdm",
+    "scipy",
+    "sklearn",
 ]
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "traceratops")))
