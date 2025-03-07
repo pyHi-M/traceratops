@@ -213,7 +213,85 @@ sphinx-build -b html docs/source docs/build/html
 - If you have bug with image display, may be you can refresh cache on your web navigator.
 
 - Custom the design with `html_theme` variable inside `conf.py`
-  - For ReadTheDocs: 
+  - For ReadTheDocs theme: 
     - `pip install sphinx-rtd-theme` 
     - `html_theme = "sphinx_rtd_theme"`
 
+- On ReadTheDocs you can customise the branch used to build the doc:
+  - readthedocs.org > dashboard > "your_project" > Settings > Default branch
+
+## 4. Deploy on ReadTheDocs
+
+1. Create an account on https://readthedocs.org/
+
+2. On ReadTheDcos, connect with github:
+  - Settings > Account > Connected services > Add new connection
+
+3. On GitHub (Your personnal account) give access for readthedocs:
+  - Profil > Settings > (Integrations) > Applications > Authorized OAuth Apps > Read the Docs Community (readthedocs.org)
+  - You should see a list intitle "Organization access", clic on "Grant" button of the organization that host your repository.
+
+4. On GitHub (code repository) configure your project for readthedocs:
+  - On the default branch (`main` or `master` for old repo)
+  - add a `.readthedocs.yaml` file at the root folder
+  ```yaml
+  # .readthedocs.yaml
+  # Read the Docs configuration file
+  # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+  # Required
+  version: 2
+
+  # Set the version of Python and other tools you might need
+  build:
+    os: ubuntu-24.04
+    tools:
+      python: "3.11"
+
+  # Build documentation in the docs/ directory with Sphinx
+  sphinx:
+    builder: html
+    configuration: docs/source/conf.py
+
+  # Optionally declare the Python requirements required to build your docs
+  python:
+    install:
+    - requirements: docs/requirements.txt
+    - method: pip
+      path: .
+  ```
+
+5. Add inside `docs` folder, a `requirements.txt` file with only the dependancies used to build doc:
+  ```text
+  sphinx
+  numpydoc
+  sphinx-rtd-theme
+  myst-parser
+  sphinx-argparse
+  ```
+
+6. inside the doc `conf.py` file, mock the code dependancies:
+
+  *If you generate documentation via `sphinx-apidoc` or `sphinx-argparse`, the code will be compiled in order to extract the useful information for the doc in the code. The mock system, thanks to the `autodoc_mock_imports` variable, allows you to ignore external import instructions in the code when building the documentation.*
+
+  ```python
+  #...
+  import os
+  import sys
+
+  autodoc_mock_imports = [
+      "numpy",
+      "matplotlib",
+      "pandas",
+      "astropy",
+      "tqdm",
+  ]
+
+  sys.path.insert(0, os.path.abspath("../../traceratops/"))
+  #...
+  ```
+
+  7. Go back to your [ReadTheDocs dashboard](https://app.readthedocs.org/dashboard/):
+
+  - "Add project"
+  - Follow instruction, use "Configure manually" if your repo isn't find automatically.
