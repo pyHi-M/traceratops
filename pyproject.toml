@@ -20,12 +20,15 @@ dependencies = [
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
+# When there is "for doc" comments
+# --> think to duplicate to 'docs/requirements.txt'
 dev = [
     "pytest",
-    "sphinx",
-    "sphinx-rtd-theme",
-    "sphinx-argparse",
-    "myst-parser",
+    "sphinx", # for doc
+    "sphinx-rtd-theme", # for doc
+    "sphinx-argparse", # for doc
+    "myst-parser", # for doc
+    "pre-commit",
 ]
 
 [project.urls]

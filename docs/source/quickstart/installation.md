@@ -35,3 +35,32 @@ pip install -e .
 cd $HOME/Repositories/traceratops
 pip install -e ".[dev]"
 ```
+
+### [Recommended] Setup pre-commit in local
+
+- check if it's well installed
+
+  `pre-commit --version`
+
+- install command of the file ".pre-commit-config.yaml" inside ".git/hooks/pre-commit"
+
+  `pre-commit install`
+
+- test pre-commit without any commit
+
+  `pre-commit run --all-files`
+
+```{note}
+- First time, it can take few minutes because it need to install all dependancies.
+- Then, you can re-run this command when you want to simulate action that are execute, by hidden way, when you try to make a commit.
+- For info, if one step of the pre-commit fail, your commit fail and you need to fix pre-commit error to be allow to commit.
+```
+
+- [Optional] fix strange issue or warning
+
+  `pre-commit autoupdate --repo https://github.com/pre-commit/pre-commit-hooks`
+
+- [Optional] Update pre-commit file
+  - `pre-commit clean`
+  - `pre-commit autoupdate`
+  - `pre-commit install`

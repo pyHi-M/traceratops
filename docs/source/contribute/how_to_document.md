@@ -11,7 +11,7 @@
 - Easy reference between pages
 - Its management of extensions to adapt it to all situations and languages
 
-### 0.2. Comparison of reST and MyST 
+### 0.2. Comparison of reST and MyST
 
 Source : https://deusyss.developpez.com/tutoriels/Python/SphinxDoc/#LVI
 
@@ -86,7 +86,7 @@ It create few files:
 ├── build (empty folder, used when you generate doc)
 ├── make.bat (don't modify, it's used to build doc)
 ├── Makefile (don't modify, it's used to build doc)
-└── source (folder that you will fill with doc pages) 
+└── source (folder that you will fill with doc pages)
     ├── conf.py (the place to configurate your doc)
     ├── index.rst (main doc page)
     ├── _static	(put your static data here, like picture)
@@ -150,7 +150,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         add_help=True,
         description="""You can use three double quote
-        - To wirte a description 
+        - To wirte a description
           of this script
         - With differents lines""",
     )
@@ -161,7 +161,7 @@ def parse_arguments():
     parser_opt = parser.add_argument_group("Optional arguments")
     parser_opt.add_argument("--output", help="Output filename")
     return parser # need to return the parser object
-    
+
 # How to collect argument value
 if __name__ == "__main__":
     parser = parse_arguments()
@@ -187,7 +187,7 @@ example\_script
 4. Link this file inside your `index.rst`:
 
    ```rst
-   
+
    .. toctree::
       :maxdepth: 1
       example_script
@@ -213,8 +213,8 @@ sphinx-build -b html docs/source docs/build/html
 - If you have bug with image display, may be you can refresh cache on your web navigator.
 
 - Custom the design with `html_theme` variable inside `conf.py`
-  - For ReadTheDocs theme: 
-    - `pip install sphinx-rtd-theme` 
+  - For ReadTheDocs theme:
+    - `pip install sphinx-rtd-theme`
     - `html_theme = "sphinx_rtd_theme"`
 
 - On ReadTheDocs you can customise the branch used to build the doc:
