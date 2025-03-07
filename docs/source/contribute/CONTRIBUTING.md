@@ -3,14 +3,14 @@
 ## Branches
 
 - `main` is the official branch for users, must be **always stable**.
-- `dev` is the official branch for developpers, must be stable. It's a temporary state for the code, waiting to test in real large dataset before sending code on `main`.
+- `dev` is the official branch for developers, must be stable. It's a temporary state for the code, waiting to test in real large dataset before sending code on `main`.
 - `<type>/<short_task_name>` is the template of the temporary branch for any development. `<type>` can be:
     - `feat` for development of a new feature
     - `fix` for bug fix
     - `doc` for documentation update
     - `test` for adding missing tests
     - `chore` for any technical task that has no impact on the code's functionality (to keep the project clear and organized)
-        Can be dependancy update, bash script to make some build shortcut, files for continuous integration, ...
+        Can be dependency update, bash script to make some build shortcut, files for continuous integration, ...
 
 ## Workflow
 
