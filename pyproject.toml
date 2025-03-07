@@ -10,12 +10,16 @@ readme = "README.md"
 authors = [{ name = "Marcelo Nollmann", email = "marcelo.nollmann@cbs.cnrs.fr" }, { name = "Xavier Devos", email = "xavier.devos@cbs.cnrs.fr" }]
 license = { file = "LICENSE" }
 keywords = []
+
+# --> think to duplicate all code dependencies to `docs/source/conf.py::autodoc_mock_imports`
 dependencies = [
     "numpy",
     "matplotlib",
     "pandas",
     "astropy",
     "tqdm",
+    "scipy",
+    "scikit-learn",
 ]
 requires-python = ">=3.9"
 
@@ -36,6 +40,7 @@ Homepage = "https://github.com/pyHi-M/traceratops"
 
 [project.scripts]
 trace_filter = "traceratops.trace_filter:main"
+figure_him_matrix = "traceratops.figure_him_matrix:main"
 
 # [tool.setuptools]
 # include-package-data = true

@@ -87,7 +87,7 @@ It create few files:
 ├── make.bat (don't modify, it's used to build doc)
 ├── Makefile (don't modify, it's used to build doc)
 └── source (folder that you will fill with doc pages)
-    ├── conf.py (the place to configurate your doc)
+    ├── conf.py (the place to configure your doc)
     ├── index.rst (main doc page)
     ├── _static	(put your static data here, like picture)
     └── _templates (unused?)
@@ -150,11 +150,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         add_help=True,
         description="""You can use three double quote
-        - To wirte a description
+        - To write a description
           of this script
-        - With differents lines""",
+        - With different lines""",
     )
-    # add_argument_group() is optionnal
+    # add_argument_group() is optional
     # you can directly use parser.add_argument()
     parser_required = parser.add_argument_group("Required arguments")
     parser_required.add_argument("--input", help="Input data path")
@@ -227,7 +227,7 @@ sphinx-build -b html docs/source docs/build/html
 2. On ReadTheDcos, connect with github:
   - Settings > Account > Connected services > Add new connection
 
-3. On GitHub (Your personnal account) give access for readthedocs:
+3. On GitHub (Your personal account) give access for readthedocs:
   - Profil > Settings > (Integrations) > Applications > Authorized OAuth Apps > Read the Docs Community (readthedocs.org)
   - You should see a list intitle "Organization access", clic on "Grant" button of the organization that host your repository.
 
@@ -261,7 +261,7 @@ sphinx-build -b html docs/source docs/build/html
       path: .
   ```
 
-5. Add inside `docs` folder, a `requirements.txt` file with only the dependancies used to build doc:
+5. Add inside `docs` folder, a `requirements.txt` file with only the dependencies used to build doc:
   ```text
   sphinx
   numpydoc
@@ -270,7 +270,7 @@ sphinx-build -b html docs/source docs/build/html
   sphinx-argparse
   ```
 
-6. inside the doc `conf.py` file, mock the code dependancies:
+6. inside the doc `conf.py` file, mock the code dependencies:
 
   *If you generate documentation via `sphinx-apidoc` or `sphinx-argparse`, the code will be compiled in order to extract the useful information for the doc in the code. The mock system, thanks to the `autodoc_mock_imports` variable, allows you to ignore external import instructions in the code when building the documentation.*
 
