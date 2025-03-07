@@ -1,5 +1,0 @@
-sphinx
-numpydoc
-sphinx-rtd-theme
-myst-parser
-sphinx-argparse
