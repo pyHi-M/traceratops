@@ -9,6 +9,14 @@
 import os
 import sys
 
+autodoc_mock_imports = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "astropy",
+    "tqdm",
+]
+
 sys.path.insert(0, os.path.abspath("../../traceratops/"))
 
 project = "traceratops"
