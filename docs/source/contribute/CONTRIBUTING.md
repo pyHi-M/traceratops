@@ -41,7 +41,7 @@ When a new feature is rebase on dev branch, make "MINOR += 1".
 When you break compatibility with the previous versions, make "MAJOR += 1".
 
 There is three places where version number needs to be updated:
-- `doc/source/conf.py::release`
+- `docs/source/conf.py::release`
 - `pyproject.toml::project::version`
 - `traceratops::_version.py::__version__`
 

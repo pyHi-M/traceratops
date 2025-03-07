@@ -62,11 +62,11 @@ conda activate traceratops_dev
 pip install sphinx
 ```
 
-### 1.2. Generate the doc folder structure
+### 1.2. Generate the "docs" folder structure
 
 ```shell
-mkdir doc
-cd doc
+mkdir docs
+cd docs
 sphinx-quickstart
 ```
 
@@ -95,7 +95,7 @@ It create few files:
 
 ### 1.3. Build locally your doc
 
-- ```cd doc/```
+- ```cd docs/```
 - ```sphinx-build -b html source/ build/html```
 
 ### 1.4. Open your doc inside a web navigator
@@ -123,7 +123,7 @@ extensions = [
 ```
 
 Run inside a terminal:
-```sphinx-apidoc -a -o doc/source/ <code_source_folder>/```
+```sphinx-apidoc -a -o docs/source/ <code_source_folder>/```
 
 ### 2.2. Generate doc from `ArgumentParser` descriptions
 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 ```
 
 2. Create a .rst (or .md) file inside your source folder:
-```touch doc/source/example_script.rst```
+```touch docs/source/example_script.rst```
 
 3. Add title and keywords to generate automatically the doc:
 
@@ -206,8 +206,8 @@ example\_script
 ```bash
 #!/bin/bash
 
-rm -r doc/build/html
-sphinx-build -b html doc/source doc/build/html
+rm -r docs/build/html
+sphinx-build -b html docs/source docs/build/html
 ```
 
 - If you have bug with image display, may be you can refresh cache on your web navigator.

@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rm -r doc/build/html
-sphinx-build -b html doc/source doc/build/html
+rm -r docs/build/html
+sphinx-build -b html docs/source docs/build/html
