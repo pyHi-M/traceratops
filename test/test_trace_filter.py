@@ -7,7 +7,6 @@ import pytest
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 INPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_filter", "IN")
 OUTPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_filter", "OUT")
-SCRIPT_PATH = os.path.join(os.path.dirname(TESTS_DIR), "traceratops", "trace_filter.py")
 
 
 def check_script_run_normally(result, gen_out_path, filtered, expected):
@@ -40,7 +39,7 @@ def test_trace_filter_input(input_file):
 
     # Run script with CLI
     result = subprocess.run(
-        ["python", SCRIPT_PATH, "--input", input_path],
+        ["trace_filter", "--input", input_path],
         capture_output=True,
         text=True,
     )
@@ -53,7 +52,7 @@ def test_trace_filter_input(input_file):
 def test_missing_arguments(capfd):
     """Test the case when no arguments are provided to trace_filter.py."""
     result = subprocess.run(
-        ["python", SCRIPT_PATH],  # Run the script without arguments
+        ["trace_filter"],  # Run the script without arguments
         capture_output=True,
         text=True,
     )
@@ -86,7 +85,7 @@ def test_trace_filter_pipe(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
     # Run script with CLI
     result = subprocess.run(
-        f"cd {INPUT_DIR} && cat {input_path} | python {SCRIPT_PATH} --pipe",
+        f"cd {INPUT_DIR} && cat {input_path} | trace_filter --pipe",
         capture_output=True,
         text=True,
         shell=True,  # Allows shell commands like `|`
@@ -124,7 +123,7 @@ def test_trace_filter_output(input_file):
 
     # Run script with CLI
     result = subprocess.run(
-        ["python", SCRIPT_PATH, "--input", input_path, "--output", output_arg],
+        ["trace_filter", "--input", input_path, "--output", output_arg],
         capture_output=True,
         text=True,
     )
@@ -152,8 +151,7 @@ def test_clean_spots(input_file):
     # Run script with CLI
     result = subprocess.run(
         [
-            "python",
-            SCRIPT_PATH,
+            "trace_filter",
             "--input",
             input_path,
             "--output",
@@ -186,8 +184,7 @@ def test_label(command):
     # Run script with CLI
     result = subprocess.run(
         [
-            "python",
-            SCRIPT_PATH,
+            "trace_filter",
             "--input",
             input_path,
             f"--{command}",
