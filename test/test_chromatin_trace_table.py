@@ -43,11 +43,11 @@ def test_input():
     result = subprocess.run(
         [
             "figure_him_matrix",
-            "-T",
+            "-M",
             INPUT_NPY,
-            "-U",
+            "-B",
             INPUT_ECSV,
-            "--dist_calc_mode",
+            "--mode",
             "proximity",
             "-O",
             INPUT_DIR,

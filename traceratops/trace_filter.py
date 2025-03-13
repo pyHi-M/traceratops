@@ -43,14 +43,14 @@ def parse_arguments():
         - remove a barcode ID
         - filter by the (X,Y,Z) spot localization.""",
     )
-    parserRequired = parser.add_argument_group(
+    parser_required = parser.add_argument_group(
         "Required arguments", description="*One of these two arguments is required.*"
     )
 
-    parserRequired.add_argument(
+    parser_required.add_argument(
         "--input", help="Name of input trace file (ECSV format).", default=None
     )
-    parserRequired.add_argument(
+    parser_required.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
 
