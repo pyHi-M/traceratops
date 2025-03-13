@@ -63,6 +63,10 @@ def bootstraps_matrix(m, N_bootstrap=9999):
     return mean_bs, mean_error
 
 
+def get_position_from_unique_barcode_list(i: int, unique_barcodes: list) -> int:
+    return unique_barcodes.index(i)
+
+
 def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
 
     if os.path.exists(scPWDMatrix_filename):
@@ -84,19 +88,6 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
 
     print(f"$ averaging method: {run_parameters['dist_calc_mode']}")
 
-    # if run_parameters["cMax"] == 0:
-    #     cScale = (
-    #         sc_matrix[~np.isnan(sc_matrix)].max() / run_parameters["scalingParameter"]
-    #     )
-    # else:
-    #     cScale = run_parameters["cMax"]
-
-    # print(
-    #     "$ loaded cScale: {} | used cScale: {}".format(
-    #         run_parameters["scalingParameter"], cScale
-    #     )
-    # )
-
     outputFileName = (
         run_parameters["outputFolder"]
         + os.sep
@@ -104,10 +95,12 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
         + os.path.basename(scPWDMatrix_filename).split(".")[0]
     )
 
-    if run_parameters["shuffle"] == 0:
-        index = range(sc_matrix.shape[0])
-    else:
-        index = [int(i) for i in run_parameters["shuffle"].split(",")]
+    if run_parameters["shuffle"]:
+        index = [
+            get_position_from_unique_barcode_list(int(i), uniqueBarcodes)
+            for i in run_parameters["shuffle"].split(",")
+        ]
+        uniqueBarcodes = [uniqueBarcodes[i] for i in index]
         sc_matrix = shuffle_matrix(sc_matrix, index)
 
     if run_parameters["dist_calc_mode"] == "proximity":
@@ -115,7 +108,6 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
         print("$ calculating proximity matrix")
         sc_matrix, n_cells = calculate_contact_probability_matrix(
             sc_matrix,
-            uniqueBarcodes,
             run_parameters["pixelSize"],
             threshold=run_parameters["proximity_threshold"],
             norm=run_parameters["matrix_norm_mode"],
