@@ -106,14 +106,14 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
     if run_parameters["dist_calc_mode"] == "proximity":
         # calculates and plots contact probability matrix from merged samples/datasets
         print("$ calculating proximity matrix")
-        sc_matrix, n_cells = calculate_contact_probability_matrix(
+        sc_matrix, n_cells, nan_matrix = calculate_contact_probability_matrix(
             sc_matrix,
             run_parameters["pixelSize"],
             threshold=run_parameters["proximity_threshold"],
             norm=run_parameters["matrix_norm_mode"],
         )
 
-    return sc_matrix, uniqueBarcodes, n_cells, outputFileName
+    return sc_matrix, uniqueBarcodes, n_cells, outputFileName, nan_matrix
 
 
 def Wilcoxon_matrix(

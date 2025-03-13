@@ -1039,7 +1039,7 @@ def plot_single_contact_probability_matrix(
             )
 
         else:
-            sc_matrix, n_cells = calculate_contact_probability_matrix(
+            sc_matrix, n_cells, _ = calculate_contact_probability_matrix(
                 i_sc_matrix_collated[:, :, cells_to_plot],
                 i_unique_barcodes,
                 p["pixelSize"],
@@ -1233,7 +1233,7 @@ def plot_ensemble_contact_probability_matrix(
     )
 
     # calculates contact probability matrix from merged samples/datasets
-    sc_matrix, n_cells = calculate_contact_probability_matrix(
+    sc_matrix, n_cells, _ = calculate_contact_probability_matrix(
         sc_matrix_all_datasets,
         common_set_unique_barcodes,
         p["pixelSize"],
@@ -1691,9 +1691,61 @@ def plot_distance_histograms(
     if not is_notebook():
         plt.close()
 
-    # write_string_to_file(
-    #     log_name_md, f"![]({output_filename}_PWDhistograms.png)\n", "a"
-    # )
+
+def plot_nan_matrix(
+    nan_matrix,
+    unique_barcodes,
+    pixel_size,
+    font_size,
+    figtitle,
+    n_cells,
+    cmtitle,
+    filename_addon,
+    filename_extension,
+    output_filename,
+):
+    mean_sc_matrix = pixel_size * nan_matrix
+    # plots figure
+    plt.figure(figsize=(15, 15))
+    pos = plt.imshow(mean_sc_matrix, cmap="turbo")
+    plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
+    plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
+    plt.title(
+        f"NaN percentage | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)}",
+        fontsize=float(font_size) * 1.3,
+    )
+    n_barcodes = nan_matrix.shape[0]
+    plt.xticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
+    plt.yticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
+    cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+    cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
+    cbar.minorticks_on()
+    cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
+    arr = mean_sc_matrix.astype("float")
+    arr[arr == 0] = np.nan
+    c_min = round(np.nanmin(arr), 4)
+
+    clim = round(np.nanmax(mean_sc_matrix), 4)
+    plt.clim(c_min, clim)
+
+    filename_ending = (
+        filename_addon + "_" + str(clim) + "_" + "NaN_MATRIX" + filename_extension
+    )
+
+    if len(output_filename.split(".")) > 1:
+        if output_filename.split(".")[1] == "png":
+            out_fn = output_filename.split(".")[0] + filename_ending
+        elif len(output_filename.split(".")[1]) == 3:
+            # keeps original extension
+            out_fn = output_filename
+        else:
+            # most likely the full filename contains other '.' in addition to that in the extension
+            out_fn = output_filename + filename_ending
+    else:
+        out_fn = output_filename + filename_ending
+    plt.savefig(out_fn)
+    if not is_notebook():
+        plt.close()
 
 
 def plot_matrix(
@@ -1716,6 +1768,7 @@ def plot_matrix(
     filename_extension="_HiMmatrix.png",
     font_size=22,
     proximity_threshold=0.25,
+    nan_matrix=None,
 ):
 
     if cells_to_plot is None:
@@ -1787,9 +1840,18 @@ def plot_matrix(
         plt.savefig(out_fn)
         if not is_notebook():
             plt.close()
-        if "png" not in out_fn:
-            out_fn += ".png"
-        # write_string_to_file(log_name_md, f"![]({out_fn})\n", "a")
+        plot_nan_matrix(
+            nan_matrix,
+            unique_barcodes,
+            pixel_size,
+            font_size,
+            figtitle,
+            n_cells,
+            cmtitle,
+            filename_addon,
+            filename_extension,
+            output_filename,
+        )
     else:
         # errors during pre-processing
         print("Error plotting figure. Not executing script to avoid crash.")
@@ -1807,6 +1869,7 @@ def calculate_contact_probability_matrix(
     n_x = n_y = i_sc_matrix_collated.shape[0]
     n_cells = i_sc_matrix_collated.shape[2]
     sc_matrix = np.zeros((n_x, n_y))
+    nan_matrix = np.zeros((n_x, n_y))
 
     for i in range(n_x):
         for j in range(n_y):
@@ -1817,6 +1880,8 @@ def calculate_contact_probability_matrix(
                     np.nonzero(np.isnan(distance_distribution))[0]
                 )
 
+                number_nans = len(np.nonzero(np.isnan(distance_distribution))[0])
+                nan_percentage = number_nans / n_cells
                 if number_contacts < min_number_contacts:
                     print(
                         f"$ Rejected {i}-{j} because number contacts: {number_contacts} < {min_number_contacts}"
@@ -1829,19 +1894,21 @@ def calculate_contact_probability_matrix(
                     )
 
                 elif norm == "nonNANs":
-                    number_nans = len(np.nonzero(np.isnan(distance_distribution))[0])
-                    probability = (
-                        np.nan
-                        if n_cells == number_nans
-                        else len(np.nonzero(distance_distribution < threshold)[0])
-                        / (n_cells - number_nans)
-                    )
+                    if n_cells == number_nans:
+                        probability = np.nan
+                    else:
+                        n_real_bin = n_cells - number_nans
+                        below_threshold_indices = np.nonzero(
+                            distance_distribution < threshold
+                        )[0]
+                        probability = len(below_threshold_indices) / n_real_bin
                 else:
                     raise ValueError(norm)
 
                 sc_matrix[i, j] = probability
+                nan_matrix[i, j] = nan_percentage
 
-    return sc_matrix, n_cells
+    return sc_matrix, n_cells, nan_matrix
 
 
 # @jit(nopython=True)

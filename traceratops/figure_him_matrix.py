@@ -69,6 +69,7 @@ def parse_arguments():
     parser_advanced.add_argument(
         "--norm",
         help="Matrix normalization mode. If activate, remove NaN values before compute statistics on bin.",
+        action="store_true",
     )
     parser_visu = parser.add_argument_group(
         "Visualization arguments", description="[Optional] Custom visualization"
@@ -198,6 +199,7 @@ def main():
         uniqueBarcodes,
         n_cells,
         outputFileName,
+        nan_matrix,
     ) = gets_matrix(
         run_parameters,
         scPWDMatrix_filename=run_parameters["scPWDMatrix_filename"],
@@ -225,6 +227,7 @@ def main():
         filename_extension=run_parameters["plottingFileExtension"],
         font_size=run_parameters["fontsize"],
         proximity_threshold=run_parameters["proximity_threshold"],
+        nan_matrix=nan_matrix,
     )
 
     print("Output figure: {}".format(outputFileName))
