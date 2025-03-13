@@ -16,4 +16,3 @@ traceratops documentation
 
    contribute/how_to_document
    contribute/CONTRIBUTING
-

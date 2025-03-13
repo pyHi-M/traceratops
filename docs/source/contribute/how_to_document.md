@@ -11,7 +11,7 @@
 - Easy reference between pages
 - Its management of extensions to adapt it to all situations and languages
 
-### 0.2. Comparison of reST and MyST 
+### 0.2. Comparison of reST and MyST
 
 Source : https://deusyss.developpez.com/tutoriels/Python/SphinxDoc/#LVI
 
@@ -62,11 +62,11 @@ conda activate traceratops_dev
 pip install sphinx
 ```
 
-### 1.2. Generate the doc folder structure
+### 1.2. Generate the "docs" folder structure
 
 ```shell
-mkdir doc
-cd doc
+mkdir docs
+cd docs
 sphinx-quickstart
 ```
 
@@ -86,7 +86,7 @@ It create few files:
 ├── build (empty folder, used when you generate doc)
 ├── make.bat (don't modify, it's used to build doc)
 ├── Makefile (don't modify, it's used to build doc)
-└── source (folder that you will fill with doc pages) 
+└── source (folder that you will fill with doc pages)
     ├── conf.py (the place to configurate your doc)
     ├── index.rst (main doc page)
     ├── _static	(put your static data here, like picture)
@@ -95,7 +95,7 @@ It create few files:
 
 ### 1.3. Build locally your doc
 
-- ```cd doc/```
+- ```cd docs/```
 - ```sphinx-build -b html source/ build/html```
 
 ### 1.4. Open your doc inside a web navigator
@@ -123,7 +123,7 @@ extensions = [
 ```
 
 Run inside a terminal:
-```sphinx-apidoc -a -o doc/source/ <code_source_folder>/```
+```sphinx-apidoc -a -o docs/source/ <code_source_folder>/```
 
 ### 2.2. Generate doc from `ArgumentParser` descriptions
 
@@ -150,7 +150,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         add_help=True,
         description="""You can use three double quote
-        - To wirte a description 
+        - To wirte a description
           of this script
         - With differents lines""",
     )
@@ -161,7 +161,7 @@ def parse_arguments():
     parser_opt = parser.add_argument_group("Optional arguments")
     parser_opt.add_argument("--output", help="Output filename")
     return parser # need to return the parser object
-    
+
 # How to collect argument value
 if __name__ == "__main__":
     parser = parse_arguments()
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 ```
 
 2. Create a .rst (or .md) file inside your source folder:
-```touch doc/source/example_script.rst```
+```touch docs/source/example_script.rst```
 
 3. Add title and keywords to generate automatically the doc:
 
@@ -187,7 +187,7 @@ example\_script
 4. Link this file inside your `index.rst`:
 
    ```rst
-   
+
    .. toctree::
       :maxdepth: 1
       example_script
@@ -206,14 +206,92 @@ example\_script
 ```bash
 #!/bin/bash
 
-rm -r doc/build/html
-sphinx-build -b html doc/source doc/build/html
+rm -r docs/build/html
+sphinx-build -b html docs/source docs/build/html
 ```
 
 - If you have bug with image display, may be you can refresh cache on your web navigator.
 
 - Custom the design with `html_theme` variable inside `conf.py`
-  - For ReadTheDocs: 
-    - `pip install sphinx-rtd-theme` 
+  - For ReadTheDocs theme:
+    - `pip install sphinx-rtd-theme`
     - `html_theme = "sphinx_rtd_theme"`
 
+- On ReadTheDocs you can customise the branch used to build the doc:
+  - readthedocs.org > dashboard > "your_project" > Settings > Default branch
+
+## 4. Deploy on ReadTheDocs
+
+1. Create an account on https://readthedocs.org/
+
+2. On ReadTheDcos, connect with github:
+  - Settings > Account > Connected services > Add new connection
+
+3. On GitHub (Your personnal account) give access for readthedocs:
+  - Profil > Settings > (Integrations) > Applications > Authorized OAuth Apps > Read the Docs Community (readthedocs.org)
+  - You should see a list intitle "Organization access", clic on "Grant" button of the organization that host your repository.
+
+4. On GitHub (code repository) configure your project for readthedocs:
+  - On the default branch (`main` or `master` for old repo)
+  - add a `.readthedocs.yaml` file at the root folder
+  ```yaml
+  # .readthedocs.yaml
+  # Read the Docs configuration file
+  # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+  # Required
+  version: 2
+
+  # Set the version of Python and other tools you might need
+  build:
+    os: ubuntu-24.04
+    tools:
+      python: "3.11"
+
+  # Build documentation in the docs/ directory with Sphinx
+  sphinx:
+    builder: html
+    configuration: docs/source/conf.py
+
+  # Optionally declare the Python requirements required to build your docs
+  python:
+    install:
+    - requirements: docs/requirements.txt
+    - method: pip
+      path: .
+  ```
+
+5. Add inside `docs` folder, a `requirements.txt` file with only the dependancies used to build doc:
+  ```text
+  sphinx
+  numpydoc
+  sphinx-rtd-theme
+  myst-parser
+  sphinx-argparse
+  ```
+
+6. inside the doc `conf.py` file, mock the code dependancies:
+
+  *If you generate documentation via `sphinx-apidoc` or `sphinx-argparse`, the code will be compiled in order to extract the useful information for the doc in the code. The mock system, thanks to the `autodoc_mock_imports` variable, allows you to ignore external import instructions in the code when building the documentation.*
+
+  ```python
+  #...
+  import os
+  import sys
+
+  autodoc_mock_imports = [
+      "numpy",
+      "matplotlib",
+      "pandas",
+      "astropy",
+      "tqdm",
+  ]
+
+  sys.path.insert(0, os.path.abspath("../../traceratops/"))
+  #...
+  ```
+
+  7. Go back to your [ReadTheDocs dashboard](https://app.readthedocs.org/dashboard/):
+
+  - "Add project"
+  - Follow instruction, use "Configure manually" if your repo isn't find automatically.

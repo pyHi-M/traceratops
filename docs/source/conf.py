@@ -17,7 +17,7 @@ autodoc_mock_imports = [
     "tqdm",
 ]
 
-sys.path.insert(0, os.path.abspath("../../traceratops/"))
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "traceratops")))
 
 project = "traceratops"
 copyright = "2025, Marcelo Nollmann, Xavier Devos"

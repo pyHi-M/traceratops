@@ -18,9 +18,9 @@
 2. From the latest version of `dev` branch, create a new branch named like `<type>/<short_task_name>`
 3. Write a test (that must fail) to specify the feature behavior or reproduce the bug to fix.
 4. Code the minimum to pass the test
-5. Enjoy this advance by contemplating your code for a few moments... 
-    - Isn't there a simpler way of doing this? 
-    - Are all cases covered by the test? 
+5. Enjoy this advance by contemplating your code for a few moments...
+    - Isn't there a simpler way of doing this?
+    - Are all cases covered by the test?
     - Are you sure there are no hidden side effects?
     - If it's necessary, go back to the step 3.
 6. Document what you've just done before you forget the subtleties.
@@ -41,7 +41,6 @@ When a new feature is rebase on dev branch, make "MINOR += 1".
 When you break compatibility with the previous versions, make "MAJOR += 1".
 
 There is three places where version number needs to be updated:
-- `doc/source/conf.py::release`
+- `docs/source/conf.py::release`
 - `pyproject.toml::project::version`
 - `traceratops::_version.py::__version__`
-
