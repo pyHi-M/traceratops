@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun  4 09:04:10 2020
-edited on Sep 6 2022
-
 This script calculates and plots matrices (PWD and proximity) from:
     - a file with single-cell PWD matrices in Numpy format
     - a file with the unique barcodes used
@@ -22,8 +19,6 @@ Options:
 
 Left to do:
     - need to implement a way to select a subset of chromatin traces...
-
-@author: marcnol
 """
 
 
