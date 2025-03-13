@@ -14,7 +14,6 @@ will analyze 'Trace.ecsv' and remove spots with 4>z>5 amd z>175 and less than 3 
 """
 
 import argparse
-import select
 import sys
 
 import numpy as np
@@ -120,19 +119,10 @@ def args_coord_to_dict(args):
 
 
 def get_files_from_args(args):
+    """Read input directly without using select.select()"""
     if args.pipe:
-        if select.select(
-            [
-                sys.stdin,
-            ],
-            [],
-            [],
-            0.0,
-        )[0]:
-            return [line.rstrip("\n") for line in sys.stdin]
-        else:
-            print("Nothing in stdin")
-            return 0
+        trace_files = sys.stdin.read().strip().split("\n")
+        return trace_files
     else:
         return [args.input]
 
@@ -174,7 +164,7 @@ def filter_label(label_to_keep, label_to_remove, trace):
         file_tag = "_" + label_to_keep
     elif label_to_remove is not None:
         trace.trace_remove_label(label_to_remove)
-        file_tag = "_not:" + label_to_remove
+        file_tag = "_not-" + label_to_remove
     else:
         file_tag = ""
     return trace, file_tag
