@@ -1315,18 +1315,19 @@ def plot_ensemble_contact_probability_matrix(
 
 def shuffle_matrix(matrix, index):
     new_size = len(index)
-    new_matrix = np.zeros((new_size, new_size))
+    new_matrix = np.zeros((new_size, new_size, len(matrix[0][0])))
 
-    if new_size <= matrix.shape[0]:
-        for i, j in itertools.product(range(new_size), range(new_size)):
-            if index[i] < matrix.shape[0] and index[j] < matrix.shape[0]:
-                new_matrix[i, j] = matrix[index[i], index[j]]
-    else:
-        print(
-            f"Error: shuffle size {new_size} is larger than matrix dimensions {matrix.shape[0]}"
+    if new_size > matrix.shape[0]:
+        raise ValueError(
+            f"Error: shuffle size {new_size} is larger than matrix dimensions {matrix.shape[0]}\nShuffle: {index}"
         )
-        print(f"Shuffle: {index} ")
-
+    for i, j in itertools.product(range(new_size), range(new_size)):
+        if index[i] < matrix.shape[0] and index[j] < matrix.shape[0]:
+            new_matrix[i, j] = matrix[index[i], index[j]]
+        else:
+            raise ValueError(
+                f"Out of index; matrix.shape[0]: {matrix.shape[0]} |i: {i} |index[i]: {index[i]} |j: {j} |index[j]: {index[j]}"
+            )
     return new_matrix
 
 
@@ -1755,12 +1756,12 @@ def plot_matrix(
             f"{figtitle} | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)} | threshold={proximity_threshold}μm",
             fontsize=float(font_size) * 1.3,
         )
-
+        n_barcodes = sc_matrix_collated.shape[0]
         plt.xticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
+            np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size
         )
         plt.yticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
+            np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size
         )
         cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
         cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
@@ -1798,7 +1799,6 @@ def plot_matrix(
 
 def calculate_contact_probability_matrix(
     i_sc_matrix_collated,
-    i_unique_barcodes,
     pixel_size,
     threshold=0.25,
     norm="n_cells",
@@ -1836,6 +1836,8 @@ def calculate_contact_probability_matrix(
                         else len(np.nonzero(distance_distribution < threshold)[0])
                         / (n_cells - number_nans)
                     )
+                else:
+                    raise ValueError(norm)
 
                 sc_matrix[i, j] = probability
 
