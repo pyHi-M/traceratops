@@ -38,9 +38,9 @@ def parse_arguments():
         description="""calculates and plots matrices (PWD and proximity) from:
     - a file with single-cell PWD matrices in Numpy format
     - a file with the unique barcodes used
-    
+
 Outputs:
-    - Matrix (NxN) of mean pairwise distance, stored in a NPY file. 
+    - Matrix (NxN) of mean pairwise distance, stored in a NPY file.
     - Visualization of this matrix in PNG format (or PDF/SVG)
     - Shadow matrix of NaN (Numpy null value) percentage for each pairwise distance
     """,
