@@ -1886,18 +1886,19 @@ def plot_matrix(
         plt.savefig(out_fn)
         if not is_notebook():
             plt.close()
-        plot_nan_matrix(
-            nan_matrix,
-            unique_barcodes,
-            pixel_size,
-            font_size,
-            figtitle,
-            n_cells,
-            cmtitle,
-            filename_addon,
-            filename_extension,
-            output_filename,
-        )
+        if mode == "proximity":
+            plot_nan_matrix(
+                nan_matrix,
+                unique_barcodes,
+                pixel_size,
+                font_size,
+                figtitle,
+                n_cells,
+                cmtitle,
+                filename_addon,
+                filename_extension,
+                output_filename,
+            )
     else:
         # errors during pre-processing
         print("Error plotting figure. Not executing script to avoid crash.")

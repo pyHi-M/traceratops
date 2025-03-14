@@ -112,6 +112,8 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
             threshold=run_parameters["proximity_threshold"],
             norm=run_parameters["matrix_norm_mode"],
         )
+    else:
+        nan_matrix = None
 
     return sc_matrix, uniqueBarcodes, n_cells, outputFileName, nan_matrix
 
