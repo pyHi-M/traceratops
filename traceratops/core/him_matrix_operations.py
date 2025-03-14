@@ -1692,6 +1692,43 @@ def plot_distance_histograms(
         plt.close()
 
 
+def adjust_colorbar(cbar, pos, c_min, clim):
+    """
+    Adjusts the colorbar to display correct limits and tick values.
+
+    Parameters:
+    - cbar: The colorbar object from plt.colorbar().
+    - pos: The image object returned by plt.imshow().
+    - c_min: The minimum value to set on the colorbar.
+    - clim: The maximum value to set on the colorbar.
+    """
+    # Set color limits for the colormap
+    pos.set_clim(c_min, clim)
+
+    # Get default ticks
+    ticks = cbar.get_ticks()
+
+    # Filter ticks to keep them inside [c_min, clim]
+    ticks = [tick for tick in ticks if c_min <= tick <= clim]
+
+    # Ensure c_min and clim are included in ticks
+    if c_min not in ticks:
+        ticks.insert(0, c_min)
+    if clim not in ticks:
+        ticks.append(clim)
+
+    # Apply new ticks to colorbar
+    cbar.set_ticks(ticks)
+
+    # Format tick labels with two decimals, keeping exact c_min and clim
+    yticklabels = [f"{tick:.2f}" for tick in ticks[1:-1]]  # Middle ticks formatted
+    yticklabels.insert(0, str(c_min))  # Exact c_min
+    yticklabels.append(str(clim))  # Exact clim
+
+    # Apply formatted labels
+    cbar.ax.set_yticklabels(yticklabels)
+
+
 def plot_nan_matrix(
     nan_matrix,
     unique_barcodes,
@@ -1724,10 +1761,8 @@ def plot_nan_matrix(
     arr = mean_sc_matrix.astype("float")
     arr[arr == 0] = np.nan
     c_min = round(np.nanmin(arr), 4)
-
     clim = round(np.nanmax(mean_sc_matrix), 4)
-    plt.clim(c_min, clim)
-
+    adjust_colorbar(cbar, pos, c_min, clim)
     filename_ending = (
         filename_addon + "_" + str(clim) + "_" + "NaN_MATRIX" + filename_extension
     )
@@ -1769,6 +1804,7 @@ def plot_matrix(
     font_size=22,
     proximity_threshold=0.25,
     nan_matrix=None,
+    matrix_norm_mode="n_cells",
 ):
 
     if cells_to_plot is None:
@@ -1805,8 +1841,10 @@ def plot_matrix(
         pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
         plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
         plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
+        c_min_txt = "auto" if c_min == -1 else str(c_min)
+        c_max_txt = "auto" if clim == 0 else str(clim)
         plt.title(
-            f"{figtitle} | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)} | threshold={proximity_threshold}μm",
+            f"{figtitle} | Barcodes: {str(mean_sc_matrix.shape[0])} | Traces: {str(n_cells)}\nThreshold: {proximity_threshold}μm | norm: {matrix_norm_mode} | c_min: {c_min_txt} | c_max: {c_max_txt}\n",
             fontsize=float(font_size) * 1.3,
         )
         n_barcodes = sc_matrix_collated.shape[0]
@@ -1822,9 +1860,16 @@ def plot_matrix(
         cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
         if clim == 0:
             clim = round(np.nanmax(mean_sc_matrix), 4)
-        plt.clim(c_min, clim)
+        if c_min == -1:
+            arr = mean_sc_matrix.astype("float")
+            arr[arr == 0] = np.nan
+            c_min = round(np.nanmin(arr), 4)
 
-        filename_ending = filename_addon + "_" + str(clim) + filename_extension
+        adjust_colorbar(cbar, pos, c_min, clim)
+
+        filename_ending = (
+            filename_addon + f"_{c_min:.2f}-{clim:.2f}" + filename_extension
+        )
 
         if len(output_filename.split(".")) > 1:
             if output_filename.split(".")[1] == "png":

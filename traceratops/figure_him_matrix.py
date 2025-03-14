@@ -37,7 +37,13 @@ def parse_arguments():
         add_help=True,
         description="""calculates and plots matrices (PWD and proximity) from:
     - a file with single-cell PWD matrices in Numpy format
-    - a file with the unique barcodes used""",
+    - a file with the unique barcodes used
+    
+Outputs:
+    - Matrix (NxN) of mean pairwise distance, stored in a NPY file. 
+    - Visualization of this matrix in PNG format (or PDF/SVG)
+    - Shadow matrix of NaN (Numpy null value) percentage for each pairwise distance
+    """,
     )
     parser_required = parser.add_argument_group(
         "Required arguments", description="*These both arguments are required.*"
@@ -74,8 +80,14 @@ def parse_arguments():
     parser_visu = parser.add_argument_group(
         "Visualization arguments", description="[Optional] Custom visualization"
     )
-    parser_visu.add_argument("--c_min", help="Colormap min scale. Default: 0")
-    parser_visu.add_argument("--c_max", help="Colormap max scale. Default: automatic")
+    parser_visu.add_argument(
+        "--c_min",
+        help="Colormap min scale. Default: automatic (detects the first frequency higher than 0)",
+    )
+    parser_visu.add_argument(
+        "--c_max",
+        help="Colormap max scale. Default: automatic (detects the highest frequency value)",
+    )
     parser_visu.add_argument(
         "--c_map",
         help="Colormap (see: matplotlib > colormaps > diverging). Default: coolwarm",
@@ -138,7 +150,7 @@ def create_dict_args(args):
     if args.c_min:
         run_parameters["cMin"] = float(args.c_min)
     else:
-        run_parameters["cMin"] = 0.0
+        run_parameters["cMin"] = -1.0
 
     if args.plot_format:
         run_parameters["plottingFileExtension"] = "." + args.plot_format
@@ -206,6 +218,8 @@ def main():
         uniqueBarcodes=run_parameters["uniqueBarcodes"],
     )
 
+    base_filename = "_" + run_parameters["dist_calc_mode"]
+    base_filename += "_norm" if args.norm else ""
     meansc_matrix, fileNameEnding = plot_matrix(
         sc_matrix,
         uniqueBarcodes,
@@ -213,21 +227,19 @@ def main():
         1,
         outputFileName,
         "log",
-        figtitle="Map: " + run_parameters["dist_calc_mode"],
+        figtitle="Mode: " + run_parameters["dist_calc_mode"],
         mode=run_parameters["dist_calc_mode"],  # median or KDE
         clim=run_parameters["cMax"],
         c_min=run_parameters["cMin"],
         n_cells=n_cells,
         c_m=run_parameters["cmap"],
         cmtitle=run_parameters["cmtitle"],
-        filename_addon="_"
-        + run_parameters["dist_calc_mode"]
-        + "_"
-        + run_parameters["matrix_norm_mode"],
+        filename_addon=base_filename,
         filename_extension=run_parameters["plottingFileExtension"],
         font_size=run_parameters["fontsize"],
         proximity_threshold=run_parameters["proximity_threshold"],
         nan_matrix=nan_matrix,
+        matrix_norm_mode=run_parameters["matrix_norm_mode"],
     )
 
     print("Output figure: {}".format(outputFileName))
