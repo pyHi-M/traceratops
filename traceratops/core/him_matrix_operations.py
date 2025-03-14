@@ -1744,7 +1744,7 @@ def plot_nan_matrix(
     mean_sc_matrix = pixel_size * nan_matrix
     # plots figure
     plt.figure(figsize=(15, 15))
-    pos = plt.imshow(mean_sc_matrix, cmap="turbo")
+    pos = plt.imshow(mean_sc_matrix, cmap="Reds")
     plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
     plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
     plt.title(
@@ -1757,7 +1757,7 @@ def plot_nan_matrix(
     cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
     cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
     cbar.minorticks_on()
-    cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
+    cbar.set_label("NaN value (%)", fontsize=float(font_size) * 1.0)
     arr = mean_sc_matrix.astype("float")
     arr[arr == 0] = np.nan
     c_min = round(np.nanmin(arr), 4)
@@ -1782,6 +1782,24 @@ def plot_nan_matrix(
     plt.savefig(out_fn)
     if not is_notebook():
         plt.close()
+
+
+def get_matrix_title(
+    figtitle,
+    n_barcodes,
+    n_cells,
+    proximity_threshold=None,
+    matrix_norm_mode=None,
+    c_min=-1,
+    clim=0,
+):
+    title = f"{figtitle} | Barcodes: {n_barcodes} | Traces: {str(n_cells)}\n"
+    if "proximity" in figtitle:
+        title += f"Threshold: {proximity_threshold}μm | norm: {matrix_norm_mode} |"
+    c_min_txt = "auto" if c_min == -1 else str(c_min)
+    c_max_txt = "auto" if clim == 0 else str(clim)
+    title += f" c_min: {c_min_txt} | c_max: {c_max_txt}\n"
+    return title
 
 
 def plot_matrix(
@@ -1842,10 +1860,17 @@ def plot_matrix(
         pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
         plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
         plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
-        c_min_txt = "auto" if c_min == -1 else str(c_min)
-        c_max_txt = "auto" if clim == 0 else str(clim)
+        m_title = get_matrix_title(
+            figtitle,
+            str(mean_sc_matrix.shape[0]),
+            n_cells,
+            proximity_threshold,
+            matrix_norm_mode,
+            c_min,
+            clim,
+        )
         plt.title(
-            f"{figtitle} | Barcodes: {str(mean_sc_matrix.shape[0])} | Traces: {str(n_cells)}\nThreshold: {proximity_threshold}μm | norm: {matrix_norm_mode} | c_min: {c_min_txt} | c_max: {c_max_txt}\n",
+            m_title,
             fontsize=float(font_size) * 1.3,
         )
         n_barcodes = sc_matrix_collated.shape[0]
@@ -1886,18 +1911,19 @@ def plot_matrix(
         plt.savefig(out_fn)
         if not is_notebook():
             plt.close()
-        plot_nan_matrix(
-            nan_matrix,
-            unique_barcodes,
-            pixel_size,
-            font_size,
-            figtitle,
-            n_cells,
-            cmtitle,
-            filename_addon,
-            filename_extension,
-            output_filename,
-        )
+        if mode == "proximity":
+            plot_nan_matrix(
+                nan_matrix,
+                unique_barcodes,
+                pixel_size,
+                font_size,
+                figtitle,
+                n_cells,
+                cmtitle,
+                filename_addon,
+                filename_extension,
+                output_filename,
+            )
     else:
         # errors during pre-processing
         print("Error plotting figure. Not executing script to avoid crash.")
