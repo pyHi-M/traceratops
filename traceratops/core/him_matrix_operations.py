@@ -1763,8 +1763,9 @@ def plot_nan_matrix(
     c_min = round(np.nanmin(arr), 4)
     clim = round(np.nanmax(mean_sc_matrix), 4)
     adjust_colorbar(cbar, pos, c_min, clim)
+
     filename_ending = (
-        filename_addon + "_" + str(clim) + "_" + "NaN_MATRIX" + filename_extension
+        filename_addon + f"_{c_min:.2f}-{clim:.2f}_nan%" + filename_extension
     )
 
     if len(output_filename.split(".")) > 1:
