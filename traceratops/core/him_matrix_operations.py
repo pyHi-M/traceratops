@@ -1744,7 +1744,7 @@ def plot_nan_matrix(
     mean_sc_matrix = pixel_size * nan_matrix
     # plots figure
     plt.figure(figsize=(15, 15))
-    pos = plt.imshow(mean_sc_matrix, cmap="turbo")
+    pos = plt.imshow(mean_sc_matrix, cmap="Reds")
     plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
     plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
     plt.title(
