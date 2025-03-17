@@ -49,7 +49,7 @@ def test_trace_filter_input(input_file):
     os.remove(generated_output_path)
 
 
-def test_missing_arguments(capfd):
+def test_missing_arguments():
     """Test the case when no arguments are provided to trace_filter.py."""
     result = subprocess.run(
         ["trace_filter"],  # Run the script without arguments

@@ -1763,7 +1763,6 @@ def plot_nan_matrix(
     c_min = round(np.nanmin(arr), 4)
     clim = round(np.nanmax(mean_sc_matrix), 4)
     adjust_colorbar(cbar, pos, c_min, clim)
-
     filename_ending = (
         filename_addon + f"_{c_min:.2f}-{clim:.2f}_nan%" + filename_extension
     )
@@ -1892,9 +1891,14 @@ def plot_matrix(
             c_min = round(np.nanmin(arr), 4)
 
         adjust_colorbar(cbar, pos, c_min, clim)
-
+        threshold_txt = (
+            f"_T{proximity_threshold}" if proximity_threshold != 0.25 else ""
+        )
         filename_ending = (
-            filename_addon + f"_{c_min:.2f}-{clim:.2f}" + filename_extension
+            filename_addon
+            + threshold_txt
+            + f"_{c_min:.2f}-{clim:.2f}"
+            + filename_extension
         )
 
         if len(output_filename.split(".")) > 1:
@@ -1920,7 +1924,7 @@ def plot_matrix(
                 figtitle,
                 n_cells,
                 cmtitle,
-                filename_addon,
+                filename_addon + threshold_txt,
                 filename_extension,
                 output_filename,
             )

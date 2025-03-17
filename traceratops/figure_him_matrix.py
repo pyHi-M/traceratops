@@ -67,16 +67,22 @@ Outputs:
         "--shuffle",
         help="Provide shuffle vector: 0,1,2,3... of the same size or smaller than the original matrix. No spaces! comma-separated!",
     )
-    parser_advanced.add_argument("-T", "--threshold", help="Proximity threshold in µm")
     parser_advanced.add_argument(
         "--mode",
         help="Mode used to calculate the mean distance. Can be either 'median', 'KDE' or 'proximity'. Default: proximity",
     )
-    parser_advanced.add_argument(
+
+    parser_proximity = parser.add_argument_group(
+        "Proximity arguments",
+        description="[Optional] Only for proximity ```--mode```",
+    )
+    parser_proximity.add_argument("-T", "--threshold", help="Proximity threshold in µm")
+    parser_proximity.add_argument(
         "--norm",
         help="Matrix normalization mode. If activate, remove NaN values before compute statistics on bin.",
         action="store_true",
     )
+
     parser_visu = parser.add_argument_group(
         "Visualization arguments", description="[Optional] Custom visualization"
     )
@@ -186,8 +192,6 @@ def create_dict_args(args):
 
     return run_parameters
 
-
-# %%
 
 # =============================================================================
 # MAIN
