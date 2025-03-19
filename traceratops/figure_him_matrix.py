@@ -16,6 +16,7 @@ import numpy as np
 
 from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
+    calculate_ensemble_pwd_matrix,
     plot_matrix,
 )
 
@@ -171,6 +172,24 @@ def new_shuffle_matrix(shuffle_csl, barcode_list, sc_matrix):
     return new_barcode_list, sc_matrix_shuffled
 
 
+def merge_matrices(mode, matrices, threshold=None, remove_nan=None):
+    if mode == "proximity":
+        print("$ calculating contact probability matrix")
+        sc_matrix, nan_matrix = calculate_contact_probability_matrix(
+            matrices,
+            1,
+            threshold=threshold,
+            remove_nan=remove_nan,
+        )
+    else:
+        nan_matrix = None
+        cells_to_plot = range(matrices.shape[2])
+        sc_matrix, _ = calculate_ensemble_pwd_matrix(
+            matrices, 1, cells_to_plot, mode=mode
+        )
+    return sc_matrix, nan_matrix
+
+
 def main():
     parser = parse_arguments()
     args = parser.parse_args()
@@ -184,17 +203,6 @@ def main():
             args.shuffle, u_barcodes, sc_matrices
         )
     n_cells = sc_matrices.shape[2]
-    if args.mode == "proximity":
-        print("$ calculating contact probability matrix")
-        sc_matrix, n_cells, nan_matrix = calculate_contact_probability_matrix(
-            sc_matrices,
-            1,
-            threshold=args.threshold,
-            norm=matrix_norm_mode,
-        )
-    else:
-        nan_matrix = None
-        sc_matrix = sc_matrices
     print(f"$ averaging method: {args.mode}")
     outputFileName = (
         args.output + os.sep + "Fig_" + os.path.basename(args.matrix).split(".")[0]
@@ -203,9 +211,11 @@ def main():
     base_filename = "_" + args.mode
     base_filename += "_norm" if args.norm else ""
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
-
-    meansc_matrix, fileNameEnding = plot_matrix(
-        sc_matrix,
+    matrix_to_plot, nan_matrix = merge_matrices(
+        args.mode, sc_matrices, args.threshold, remove_nan=args.norm
+    )
+    _, fileNameEnding = plot_matrix(
+        matrix_to_plot,
         u_barcodes,
         1,
         1,
@@ -226,12 +236,12 @@ def main():
         matrix_norm_mode=matrix_norm_mode,
     )
 
-    print("Output figure: {}".format(outputFileName))
+    print(f"Output figure: {outputFileName}")
 
     # saves output matrix in NPY format
     outputFileName = outputFileName + fileNameEnding
-    np.save(outputFileName, meansc_matrix)
-    print("Output data: {}.npy".format(outputFileName))
+    np.save(outputFileName, matrix_to_plot)
+    print(f"Output data: {outputFileName}.npy")
 
 
 if __name__ == "__main__":

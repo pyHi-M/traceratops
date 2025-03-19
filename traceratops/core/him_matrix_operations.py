@@ -1824,29 +1824,8 @@ def plot_matrix(
     nan_matrix=None,
     matrix_norm_mode="n_cells",
 ):
-
-    if cells_to_plot is None:
-        cells_to_plot = []
-    ######################################################
-    # Calculates ensemble matrix from single cell matrices
-    ######################################################
-
-    if len(sc_matrix_collated.shape) == 3:
-        # matrix is 3D and needs combining SC matrices into an ensemble matrix
-        if len(cells_to_plot) == 0:
-            cells_to_plot = range(sc_matrix_collated.shape[2])
-
-        mean_sc_matrix, keep_plotting = calculate_ensemble_pwd_matrix(
-            sc_matrix_collated, pixel_size, cells_to_plot, mode=mode
-        )
-
-    else:
-        # already an ensemble matrix --> no need for further treatment
-        if mode == "counts":
-            mean_sc_matrix = sc_matrix_collated
-        else:
-            mean_sc_matrix = pixel_size * sc_matrix_collated
-        keep_plotting = True
+    mean_sc_matrix = sc_matrix_collated
+    keep_plotting = True
     if keep_plotting:
         # no errors occurred
 
@@ -1939,7 +1918,7 @@ def calculate_contact_probability_matrix(
     i_sc_matrix_collated,
     pixel_size,
     threshold=0.25,
-    norm="n_cells",
+    remove_nan=False,
     min_number_contacts=0,
 ):
     n_x = n_y = i_sc_matrix_collated.shape[0]
@@ -1964,12 +1943,12 @@ def calculate_contact_probability_matrix(
                     )
 
                     probability = 0.0
-                elif norm == "n_cells":
+                elif not remove_nan:
                     probability = (
                         len(np.nonzero(distance_distribution < threshold)[0]) / n_cells
                     )
 
-                elif norm == "nonNANs":
+                else:
                     if n_cells == number_nans:
                         probability = np.nan
                     else:
@@ -1978,13 +1957,11 @@ def calculate_contact_probability_matrix(
                             distance_distribution < threshold
                         )[0]
                         probability = len(below_threshold_indices) / n_real_bin
-                else:
-                    raise ValueError(norm)
 
                 sc_matrix[i, j] = probability
                 nan_matrix[i, j] = nan_percentage
 
-    return sc_matrix, n_cells, nan_matrix
+    return sc_matrix, nan_matrix
 
 
 # @jit(nopython=True)
