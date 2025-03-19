@@ -67,7 +67,15 @@ def get_position_from_unique_barcode_list(i: int, unique_barcodes: list) -> int:
     return unique_barcodes.index(i)
 
 
-def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
+def gets_matrix(
+    scPWDMatrix_filename="",
+    uniqueBarcodes="",
+    out_folder="",
+    proximity_threshold=0.25,
+    shuffle=None,
+    dist_calc_mode="proximity",
+    matrix_norm_mode="n_cells",
+):
 
     if os.path.exists(scPWDMatrix_filename):
         sc_matrix = np.load(scPWDMatrix_filename)
@@ -86,31 +94,31 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
     uniqueBarcodes = [int(x) for x in uniqueBarcodes]
     print(f"$ unique barcodes loaded: {uniqueBarcodes}")
 
-    print(f"$ averaging method: {run_parameters['dist_calc_mode']}")
+    print(f"$ averaging method: {dist_calc_mode}")
 
     outputFileName = (
-        run_parameters["outputFolder"]
+        out_folder
         + os.sep
         + "Fig_"
         + os.path.basename(scPWDMatrix_filename).split(".")[0]
     )
 
-    if run_parameters["shuffle"]:
+    if shuffle:
         index = [
             get_position_from_unique_barcode_list(int(i), uniqueBarcodes)
-            for i in run_parameters["shuffle"].split(",")
+            for i in shuffle.split(",")
         ]
         uniqueBarcodes = [uniqueBarcodes[i] for i in index]
         sc_matrix = shuffle_matrix(sc_matrix, index)
 
-    if run_parameters["dist_calc_mode"] == "proximity":
+    if dist_calc_mode == "proximity":
         # calculates and plots contact probability matrix from merged samples/datasets
         print("$ calculating proximity matrix")
         sc_matrix, n_cells, nan_matrix = calculate_contact_probability_matrix(
             sc_matrix,
-            run_parameters["pixelSize"],
-            threshold=run_parameters["proximity_threshold"],
-            norm=run_parameters["matrix_norm_mode"],
+            1,
+            threshold=proximity_threshold,
+            norm=matrix_norm_mode,
         )
     else:
         nan_matrix = None
@@ -283,12 +291,6 @@ def plot_2d_matrix_simple(
         xtick.set_fontsize(fontsize)
         ytick.set_fontsize(fontsize)
 
-    # plt.xticks(
-    #     np.arange(matrix.shape[0]), unique_barcodes, fontsize=fontsize
-    # )
-    # plt.yticks(
-    #     np.arange(matrix.shape[0]), unique_barcodes, fontsize=fontsize
-    # )
     if colorbar:
         cbar = plt.colorbar(pos, ax=ifigure, fraction=0.046, pad=0.04)
         cbar.minorticks_on()

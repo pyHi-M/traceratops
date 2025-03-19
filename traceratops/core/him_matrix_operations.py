@@ -1675,7 +1675,7 @@ def plot_distance_histograms(
             axs[i, j].set_xlim(0, max_distance)
             axs[i, j].set_yticklabels([])
 
-    plt.xlabel("distance, um")
+    plt.xlabel("distance, µm")
     plt.ylabel("counts")
 
     file_extension = output_filename.split(".")[-1]
@@ -1811,7 +1811,7 @@ def plot_matrix(
     clim=1.4,
     c_m="seismic",
     figtitle="PWD matrix",
-    cmtitle="distance, um",
+    cmtitle="distance, µm",
     n_cells=0,
     mode="median",
     inverse_matrix=False,
@@ -2070,7 +2070,7 @@ def distribution_maximum_kernel_density_estimation(
     bin2 : int
         first bin.
     pixel_size : float
-        pixel size in um
+        pixel size in µm
     optimize_kernel_width : Boolean, optional
         does kernel need optimization?. The default is False.
 
