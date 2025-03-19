@@ -746,6 +746,99 @@ def normalize_matrix(sc_matrix_wt):
     return sc_matrix_wt_normalized
 
 
+def plot_matrix(
+    sc_matrix_collated,
+    unique_barcodes,
+    pixel_size,
+    number_rois=1,
+    output_filename="test",
+    log_name_md="log.md",
+    clim=1.4,
+    c_m="seismic",
+    figtitle="PWD matrix",
+    cmtitle="distance, um",
+    n_cells=0,
+    mode="median",
+    inverse_matrix=False,
+    c_min=0,
+    cells_to_plot=None,
+    filename_ending="_HiMmatrix.png",
+    font_size=22,
+):
+    if cells_to_plot is None:
+        cells_to_plot = []
+    ######################################################
+    # Calculates ensemble matrix from single cell matrices
+    ######################################################
+
+    if len(sc_matrix_collated.shape) == 3:
+        # matrix is 3D and needs combining SC matrices into an ensemble matrix
+        if len(cells_to_plot) == 0:
+            cells_to_plot = range(sc_matrix_collated.shape[2])
+
+        mean_sc_matrix, keep_plotting = calculate_ensemble_pwd_matrix(
+            sc_matrix_collated, pixel_size, cells_to_plot, mode=mode
+        )
+
+    else:
+        # already an ensemble matrix --> no need for further treatment
+        if mode == "counts":
+            mean_sc_matrix = sc_matrix_collated
+        else:
+            mean_sc_matrix = pixel_size * sc_matrix_collated
+        keep_plotting = True
+    if keep_plotting:
+        # no errors occurred
+
+        # Calculates the inverse distance matrix if requested in the argument.
+        if inverse_matrix:
+            mean_sc_matrix = np.reciprocal(mean_sc_matrix)
+
+        # plots figure
+        plt.figure(figsize=(15, 15))
+        pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
+        plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
+        plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
+        plt.title(
+            f"{figtitle} | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)}",
+            fontsize=float(font_size) * 1.3,
+        )
+
+        plt.xticks(
+            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
+        )
+        plt.yticks(
+            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
+        )
+        cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+        cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
+        cbar.minorticks_on()
+        cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
+        plt.clim(c_min, clim)
+
+        if len(output_filename.split(".")) > 1:
+            if output_filename.split(".")[1] == "png":
+                out_fn = output_filename.split(".")[0] + filename_ending
+            elif len(output_filename.split(".")[1]) == 3:
+                # keeps original extension
+                out_fn = output_filename
+            else:
+                # most likely the full filename contains other '.' in addition to that in the extension
+                out_fn = output_filename + filename_ending
+        else:
+            out_fn = output_filename + filename_ending
+        plt.savefig(out_fn)
+        if not is_notebook():
+            plt.close()
+        if "png" not in out_fn:
+            out_fn += ".png"
+    else:
+        # errors during pre-processing
+        print("Error plotting figure. Not executing script to avoid crash.")
+
+    return mean_sc_matrix
+
+
 def plot_ensemble_3_way_contact_matrix(
     sc_matrix_collated,
     unique_barcodes,
@@ -1728,62 +1821,26 @@ def adjust_colorbar(cbar, pos, c_min, clim):
     cbar.ax.set_yticklabels(yticklabels)
 
 
-def plot_nan_matrix(
-    nan_matrix,
-    unique_barcodes,
-    pixel_size,
-    font_size,
-    figtitle,
-    n_cells,
-    cmtitle,
-    filename_addon,
-    filename_extension,
-    output_filename,
+def plot_single_matrix(
+    matrix, cmap, matrix_title, fontsize, barcode_names, cm_title, c_min, clim, fig_path
 ):
-    mean_sc_matrix = pixel_size * nan_matrix
-    # plots figure
     plt.figure(figsize=(15, 15))
-    pos = plt.imshow(mean_sc_matrix, cmap="Reds")
-    plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
-    plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
-    plt.title(
-        f"NaN percentage | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)}",
-        fontsize=float(font_size) * 1.3,
-    )
-    n_barcodes = nan_matrix.shape[0]
-    plt.xticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
-    plt.yticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
+    pos = plt.imshow(matrix, cmap=cmap)
+    plt.title(matrix_title, fontsize=float(fontsize) * 1.3)
+    plt.xlabel("barcode #", fontsize=float(fontsize) * 1.2)
+    plt.ylabel("barcode #", fontsize=float(fontsize) * 1.2)
+    plt.xticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
+    plt.yticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
     cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
-    cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
+    cbar.ax.tick_params(labelsize=float(fontsize) * 0.8)
     cbar.minorticks_on()
-    cbar.set_label("NaN value (%)", fontsize=float(font_size) * 1.0)
-    arr = mean_sc_matrix.astype("float")
-    arr[arr == 0] = np.nan
-    c_min = round(np.nanmin(arr), 4)
-    clim = round(np.nanmax(mean_sc_matrix), 4)
+    cbar.set_label(cm_title, fontsize=float(fontsize) * 1.0)
     adjust_colorbar(cbar, pos, c_min, clim)
-    filename_ending = (
-        filename_addon + f"_{c_min:.2f}-{clim:.2f}_nan%" + filename_extension
-    )
-
-    if len(output_filename.split(".")) > 1:
-        if output_filename.split(".")[1] == "png":
-            out_fn = output_filename.split(".")[0] + filename_ending
-        elif len(output_filename.split(".")[1]) == 3:
-            # keeps original extension
-            out_fn = output_filename
-        else:
-            # most likely the full filename contains other '.' in addition to that in the extension
-            out_fn = output_filename + filename_ending
-    else:
-        out_fn = output_filename + filename_ending
-    plt.savefig(out_fn)
-    if not is_notebook():
-        plt.close()
+    plt.savefig(fig_path)
 
 
 def get_matrix_title(
-    figtitle,
+    fig_type,
     n_barcodes,
     n_cells,
     proximity_threshold=None,
@@ -1791,9 +1848,9 @@ def get_matrix_title(
     c_min=-1,
     clim=0,
 ):
-    title = f"{figtitle} | Barcodes: {n_barcodes} | Traces: {str(n_cells)}\n"
+    title = f"{fig_type} | Barcodes: {n_barcodes} | Traces: {str(n_cells)}\n"
     remove_nan_txt = "nonNANs" if remove_nan else "n_cells"
-    if "proximity" in figtitle:
+    if "proximity" in fig_type:
         title += f"Threshold: {proximity_threshold}μm | norm: {remove_nan_txt} |"
     c_min_txt = "auto" if c_min == -1 else str(c_min)
     c_max_txt = "auto" if clim == 0 else str(clim)
@@ -1801,75 +1858,119 @@ def get_matrix_title(
     return title
 
 
-def plot_matrix(
-    matrix,
-    unique_barcodes,
-    pixel_size,
-    output_filename="test",
-    clim=1.4,
-    c_m="seismic",
-    figtitle="PWD matrix",
-    cmtitle="distance, µm",
-    n_cells=0,
-    mode="median",
-    c_min=0,
-    filename_addon="",
-    filename_extension="_HiMmatrix.png",
-    font_size=22,
-    proximity_threshold=0.25,
-    nan_matrix=None,
+def adjust_cmin_cmax(matrix, cmin=-1, cmax=0):
+    if cmax == 0:
+        cmax = round(np.nanmax(matrix), 4)
+    if cmin == -1:
+        arr = matrix.astype("float")
+        arr[arr == 0] = np.nan
+        cmin = round(np.nanmin(arr), 4)
+    return cmin, cmax
+
+
+def get_plot_path(
+    input_filename,
+    output_folder,
+    file_format,
+    c_min,
+    c_max,
+    mode,
+    threshold=0.25,
     remove_nan=False,
 ):
-    plt.figure(figsize=(15, 15))
-    pos = plt.imshow(matrix, cmap=c_m)  # colormaps RdBu seismic
-    plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
-    plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
+    input_basename = os.path.basename(input_filename).split(".")[0]
+    norm_txt = "_norm" if remove_nan else ""
+    threshold_txt = f"_T{threshold}" if threshold != 0.25 else ""
+    c_min_max_txt = f"{c_min:.2f}-{c_max:.2f}"
+    filename = f"Fig_{input_basename}_{mode}{norm_txt}{threshold_txt}_{c_min_max_txt}.{file_format}"
+    out_path = os.path.join(output_folder, filename)
+    return out_path
+
+
+def plot_nan_matrix(
+    nan_matrix,
+    barcode_names,
+    input_filename,
+    output_folder,
+    file_format="png",
+    n_cells=0,
+    font_size=22,
+    remove_nan=False,
+):
+    c_min, c_max = adjust_cmin_cmax(nan_matrix)
     m_title = get_matrix_title(
-        figtitle,
+        "NaN percentage", nan_matrix.shape[0], n_cells, c_min=c_min, clim=c_max
+    )
+    plot_path = get_plot_path(
+        input_filename,
+        output_folder,
+        file_format,
+        c_min,
+        c_max,
+        mode="nan%",
+        remove_nan=remove_nan,
+    )
+    plot_single_matrix(
+        nan_matrix,
+        "Reds",
+        m_title,
+        font_size,
+        barcode_names,
+        "NaN value (%)",
+        c_min,
+        c_max,
+        plot_path,
+    )
+
+
+def plot_him_matrix(
+    matrix,
+    barcode_names,
+    input_filename,
+    output_folder,
+    file_format="png",
+    mode="proximity",
+    n_cells=0,
+    font_size=22,
+    proximity_threshold=0.25,
+    remove_nan=False,
+    cmtitle="proximity frequency",
+    c_min=-1,
+    c_max=0,
+    c_m="seismic",
+):
+    m_title = get_matrix_title(
+        f"Mode: {mode}",
         str(matrix.shape[0]),
         n_cells,
         proximity_threshold,
         remove_nan,
         c_min,
-        clim,
+        c_max,
     )
-    plt.title(
+    c_min, c_max = adjust_cmin_cmax(matrix, c_min, c_max)
+    plot_path = get_plot_path(
+        input_filename,
+        output_folder,
+        file_format,
+        c_min,
+        c_max,
+        mode,
+        proximity_threshold,
+        remove_nan,
+    )
+    plot_single_matrix(
+        matrix,
+        c_m,
         m_title,
-        fontsize=float(font_size) * 1.3,
+        font_size,
+        barcode_names,
+        cmtitle,
+        c_min,
+        c_max,
+        plot_path,
     )
-    n_barcodes = matrix.shape[0]
-    plt.xticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
-    plt.yticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
-    cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
-    cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
-    cbar.minorticks_on()
-    cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
-    if clim == 0:
-        clim = round(np.nanmax(matrix), 4)
-    if c_min == -1:
-        arr = matrix.astype("float")
-        arr[arr == 0] = np.nan
-        c_min = round(np.nanmin(arr), 4)
-
-    adjust_colorbar(cbar, pos, c_min, clim)
-    threshold_txt = f"_T{proximity_threshold}" if proximity_threshold != 0.25 else ""
-    filename_ending = (
-        filename_addon + threshold_txt + f"_{c_min:.2f}-{clim:.2f}" + filename_extension
-    )
-
-    if len(output_filename.split(".")) > 1:
-        if output_filename.split(".")[1] == "png":
-            out_fn = output_filename.split(".")[0] + filename_ending
-        elif len(output_filename.split(".")[1]) == 3:
-            # keeps original extension
-            out_fn = output_filename
-        else:
-            # most likely the full filename contains other '.' in addition to that in the extension
-            out_fn = output_filename + filename_ending
-    else:
-        out_fn = output_filename + filename_ending
-    plt.savefig(out_fn)
-    return filename_ending[:-4]
+    return plot_path[:-4]
 
 
 def calculate_contact_probability_matrix(
