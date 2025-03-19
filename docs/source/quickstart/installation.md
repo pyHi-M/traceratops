@@ -22,6 +22,14 @@ conda create -n traceratops python=3.11
 conda activate traceratops
 ```
 
+## Download the source code
+
+```bash
+cd $HOME/Repositories
+git clone https://github.com/pyHi-M/traceratops.git
+```
+
+
 ## Install package
 
 ```bash
