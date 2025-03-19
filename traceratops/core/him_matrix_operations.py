@@ -1802,7 +1802,7 @@ def get_matrix_title(
 
 
 def plot_matrix(
-    sc_matrix_collated,
+    matrix,
     unique_barcodes,
     pixel_size,
     output_filename="test",
@@ -1812,7 +1812,6 @@ def plot_matrix(
     cmtitle="distance, µm",
     n_cells=0,
     mode="median",
-    inverse_matrix=False,
     c_min=0,
     filename_addon="",
     filename_extension="_HiMmatrix.png",
@@ -1821,94 +1820,69 @@ def plot_matrix(
     nan_matrix=None,
     remove_nan=False,
 ):
-    mean_sc_matrix = sc_matrix_collated
-    keep_plotting = True
-    if keep_plotting:
-        # no errors occurred
+    plt.figure(figsize=(15, 15))
+    pos = plt.imshow(matrix, cmap=c_m)  # colormaps RdBu seismic
+    plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
+    plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
+    m_title = get_matrix_title(
+        figtitle,
+        str(matrix.shape[0]),
+        n_cells,
+        proximity_threshold,
+        remove_nan,
+        c_min,
+        clim,
+    )
+    plt.title(
+        m_title,
+        fontsize=float(font_size) * 1.3,
+    )
+    n_barcodes = matrix.shape[0]
+    plt.xticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
+    plt.yticks(np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size)
+    cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+    cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
+    cbar.minorticks_on()
+    cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
+    if clim == 0:
+        clim = round(np.nanmax(matrix), 4)
+    if c_min == -1:
+        arr = matrix.astype("float")
+        arr[arr == 0] = np.nan
+        c_min = round(np.nanmin(arr), 4)
 
-        # Calculates the inverse distance matrix if requested in the argument.
-        if inverse_matrix:
-            mean_sc_matrix = np.reciprocal(mean_sc_matrix)
+    adjust_colorbar(cbar, pos, c_min, clim)
+    threshold_txt = f"_T{proximity_threshold}" if proximity_threshold != 0.25 else ""
+    filename_ending = (
+        filename_addon + threshold_txt + f"_{c_min:.2f}-{clim:.2f}" + filename_extension
+    )
 
-        # plots figure
-        plt.figure(figsize=(15, 15))
-        pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
-        plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
-        plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
-        m_title = get_matrix_title(
-            figtitle,
-            str(mean_sc_matrix.shape[0]),
-            n_cells,
-            proximity_threshold,
-            remove_nan,
-            c_min,
-            clim,
-        )
-        plt.title(
-            m_title,
-            fontsize=float(font_size) * 1.3,
-        )
-        n_barcodes = sc_matrix_collated.shape[0]
-        plt.xticks(
-            np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size
-        )
-        plt.yticks(
-            np.arange(n_barcodes), unique_barcodes[:n_barcodes], fontsize=font_size
-        )
-        cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
-        cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
-        cbar.minorticks_on()
-        cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
-        if clim == 0:
-            clim = round(np.nanmax(mean_sc_matrix), 4)
-        if c_min == -1:
-            arr = mean_sc_matrix.astype("float")
-            arr[arr == 0] = np.nan
-            c_min = round(np.nanmin(arr), 4)
-
-        adjust_colorbar(cbar, pos, c_min, clim)
-        threshold_txt = (
-            f"_T{proximity_threshold}" if proximity_threshold != 0.25 else ""
-        )
-        filename_ending = (
-            filename_addon
-            + threshold_txt
-            + f"_{c_min:.2f}-{clim:.2f}"
-            + filename_extension
-        )
-
-        if len(output_filename.split(".")) > 1:
-            if output_filename.split(".")[1] == "png":
-                out_fn = output_filename.split(".")[0] + filename_ending
-            elif len(output_filename.split(".")[1]) == 3:
-                # keeps original extension
-                out_fn = output_filename
-            else:
-                # most likely the full filename contains other '.' in addition to that in the extension
-                out_fn = output_filename + filename_ending
+    if len(output_filename.split(".")) > 1:
+        if output_filename.split(".")[1] == "png":
+            out_fn = output_filename.split(".")[0] + filename_ending
+        elif len(output_filename.split(".")[1]) == 3:
+            # keeps original extension
+            out_fn = output_filename
         else:
+            # most likely the full filename contains other '.' in addition to that in the extension
             out_fn = output_filename + filename_ending
-        plt.savefig(out_fn)
-        if not is_notebook():
-            plt.close()
-        if mode == "proximity":
-            plot_nan_matrix(
-                nan_matrix,
-                unique_barcodes,
-                pixel_size,
-                font_size,
-                figtitle,
-                n_cells,
-                cmtitle,
-                filename_addon + threshold_txt,
-                filename_extension,
-                output_filename,
-            )
     else:
-        # errors during pre-processing
-        print("Error plotting figure. Not executing script to avoid crash.")
-
-    return mean_sc_matrix, filename_ending[:-4]
+        out_fn = output_filename + filename_ending
+    plt.savefig(out_fn)
+    if mode == "proximity":
+        plot_nan_matrix(
+            nan_matrix,
+            unique_barcodes,
+            pixel_size,
+            font_size,
+            figtitle,
+            n_cells,
+            cmtitle,
+            filename_addon + threshold_txt,
+            filename_extension,
+            output_filename,
+        )
+    return filename_ending[:-4]
 
 
 def calculate_contact_probability_matrix(
