@@ -343,7 +343,7 @@ def test_norm():
             FAKE_BARCODES_PATH,
             "-O",
             INPUT_DIR,
-            "--norm",
+            "--remove_nan",
         ],
         capture_output=True,
         text=True,

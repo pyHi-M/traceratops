@@ -26,7 +26,7 @@ figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
 
 
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --norm
+figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --remove_nan
 ```
 
 **VS.**
