@@ -1973,6 +1973,20 @@ def plot_him_matrix(
     return plot_path[:-4]
 
 
+def calculate_nan_matrix(sc_matrices):
+    n_barcodes = sc_matrices.shape[0]
+    n_cells = sc_matrices.shape[2]
+    nan_matrix = np.zeros((n_barcodes, n_barcodes))
+    for i in range(n_barcodes):
+        for j in range(n_barcodes):
+            if i != j:
+                distance_distribution = sc_matrices[i, j, :]
+                number_nans = len(np.nonzero(np.isnan(distance_distribution))[0])
+                nan_percentage = number_nans / n_cells
+                nan_matrix[i, j] = nan_percentage
+    return nan_matrix
+
+
 def calculate_contact_probability_matrix(
     i_sc_matrix_collated,
     pixel_size,
@@ -1983,30 +1997,23 @@ def calculate_contact_probability_matrix(
     n_x = n_y = i_sc_matrix_collated.shape[0]
     n_cells = i_sc_matrix_collated.shape[2]
     sc_matrix = np.zeros((n_x, n_y))
-    nan_matrix = np.zeros((n_x, n_y))
-
     for i in range(n_x):
         for j in range(n_y):
             if i != j:
                 distance_distribution = pixel_size * i_sc_matrix_collated[i, j, :]
-
                 number_contacts = distance_distribution.squeeze().shape[0] - len(
                     np.nonzero(np.isnan(distance_distribution))[0]
                 )
-
                 number_nans = len(np.nonzero(np.isnan(distance_distribution))[0])
-                nan_percentage = number_nans / n_cells
                 if number_contacts < min_number_contacts:
                     print(
                         f"$ Rejected {i}-{j} because number contacts: {number_contacts} < {min_number_contacts}"
                     )
-
                     probability = 0.0
                 elif not remove_nan:
                     probability = (
                         len(np.nonzero(distance_distribution < threshold)[0]) / n_cells
                     )
-
                 else:
                     if n_cells == number_nans:
                         probability = np.nan
@@ -2016,11 +2023,8 @@ def calculate_contact_probability_matrix(
                             distance_distribution < threshold
                         )[0]
                         probability = len(below_threshold_indices) / n_real_bin
-
                 sc_matrix[i, j] = probability
-                nan_matrix[i, j] = nan_percentage
-
-    return sc_matrix, nan_matrix
+    return sc_matrix
 
 
 # @jit(nopython=True)
