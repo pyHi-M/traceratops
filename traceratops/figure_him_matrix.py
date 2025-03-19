@@ -8,13 +8,16 @@ This script calculates and plots matrices (PWD and proximity) from:
 
 
 import argparse
+import itertools
 import os
 import sys
 
 import numpy as np
 
-from traceratops.core.him_matrix_operations import plot_matrix
-from traceratops.core.plotting_functions import gets_matrix
+from traceratops.core.him_matrix_operations import (
+    calculate_contact_probability_matrix,
+    plot_matrix,
+)
 
 
 def parse_arguments():
@@ -123,35 +126,78 @@ def check_required_arg(args, parser):
         sys.exit(0)
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
+def create_output_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+    print(f"Output path: {folder_path}")
+
+
+def load_matrix(matrix_path):
+    if not os.path.exists(matrix_path):
+        raise ValueError(f"File not found: {matrix_path}")
+    print(f"$ Matrix loaded: {matrix_path}")
+    return np.load(matrix_path)
+
+
+def load_barcodes(barcodes_path):
+    unique_barcodes = list(np.loadtxt(barcodes_path, delimiter=" "))
+    unique_barcodes = [int(x) for x in unique_barcodes]
+    print(f"$ Unique barcodes loaded: {unique_barcodes}")
+    return unique_barcodes
+
+
+def shuffle_matrix(matrix, index):
+    new_size = len(index)
+    new_matrix = np.zeros((new_size, new_size, len(matrix[0][0])))
+
+    if new_size > matrix.shape[0]:
+        raise ValueError(
+            f"Error: shuffle size {new_size} is larger than matrix dimensions {matrix.shape[0]}\nShuffle: {index}"
+        )
+    for i, j in itertools.product(range(new_size), range(new_size)):
+        if index[i] < matrix.shape[0] and index[j] < matrix.shape[0]:
+            new_matrix[i, j] = matrix[index[i], index[j]]
+        else:
+            raise ValueError(
+                f"Out of index; matrix.shape[0]: {matrix.shape[0]} |i: {i} |index[i]: {index[i]} |j: {j} |index[j]: {index[j]}"
+            )
+    return new_matrix
+
+
+def new_shuffle_matrix(shuffle_csl, barcode_list, sc_matrix):
+    index = [barcode_list.index(int(i)) for i in shuffle_csl.split(",")]
+    new_barcode_list = [barcode_list[i] for i in index]
+    sc_matrix_shuffled = shuffle_matrix(sc_matrix, index)
+    return new_barcode_list, sc_matrix_shuffled
 
 
 def main():
-    print(">>> Producing HiM matrix")
-
     parser = parse_arguments()
     args = parser.parse_args()
     check_required_arg(args, parser)
-    if not os.path.exists(args.output):
-        os.mkdir(args.output)
-        print(f"Folder created: {args.output}")
+    create_output_folder(args.output)
     matrix_norm_mode = "nonNANs" if args.norm else "n_cells"
-    (
-        sc_matrix,
-        uniqueBarcodes,
-        n_cells,
-        outputFileName,
-        nan_matrix,
-    ) = gets_matrix(
-        scPWDMatrix_filename=args.matrix,
-        uniqueBarcodes=args.barcodes,
-        out_folder=args.output,
-        proximity_threshold=args.threshold,
-        shuffle=args.shuffle,
-        dist_calc_mode=args.mode,
-        matrix_norm_mode=matrix_norm_mode,
+    sc_matrices = load_matrix(args.matrix)
+    u_barcodes = load_barcodes(args.barcodes)
+    if args.shuffle:
+        u_barcodes, sc_matrices = new_shuffle_matrix(
+            args.shuffle, u_barcodes, sc_matrices
+        )
+    n_cells = sc_matrices.shape[2]
+    if args.mode == "proximity":
+        print("$ calculating contact probability matrix")
+        sc_matrix, n_cells, nan_matrix = calculate_contact_probability_matrix(
+            sc_matrices,
+            1,
+            threshold=args.threshold,
+            norm=matrix_norm_mode,
+        )
+    else:
+        nan_matrix = None
+        sc_matrix = sc_matrices
+    print(f"$ averaging method: {args.mode}")
+    outputFileName = (
+        args.output + os.sep + "Fig_" + os.path.basename(args.matrix).split(".")[0]
     )
 
     base_filename = "_" + args.mode
@@ -160,7 +206,7 @@ def main():
 
     meansc_matrix, fileNameEnding = plot_matrix(
         sc_matrix,
-        uniqueBarcodes,
+        u_barcodes,
         1,
         1,
         outputFileName,
@@ -186,8 +232,6 @@ def main():
     outputFileName = outputFileName + fileNameEnding
     np.save(outputFileName, meansc_matrix)
     print("Output data: {}.npy".format(outputFileName))
-
-    print("\nDone\n\n")
 
 
 if __name__ == "__main__":

@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import bootstrap, ranksums
 from tqdm import trange
-
-from traceratops.core.him_matrix_operations import (
-    calculate_contact_probability_matrix,
-    shuffle_matrix,
-)
 
 rng = np.random.default_rng()
 
@@ -65,65 +57,6 @@ def bootstraps_matrix(m, N_bootstrap=9999):
 
 def get_position_from_unique_barcode_list(i: int, unique_barcodes: list) -> int:
     return unique_barcodes.index(i)
-
-
-def gets_matrix(
-    scPWDMatrix_filename="",
-    uniqueBarcodes="",
-    out_folder="",
-    proximity_threshold=0.25,
-    shuffle=None,
-    dist_calc_mode="proximity",
-    matrix_norm_mode="n_cells",
-):
-
-    if os.path.exists(scPWDMatrix_filename):
-        sc_matrix = np.load(scPWDMatrix_filename)
-        print(f"$ Loaded: {scPWDMatrix_filename}")
-    else:
-        print("*** Error: could not find {}".format(scPWDMatrix_filename))
-        sys.exit(-1)
-
-    n_cells = sc_matrix.shape[2]
-
-    cells2Plot = range(n_cells)
-
-    print("$ N traces to plot: {}/{}".format(len(cells2Plot), sc_matrix.shape[2]))
-
-    uniqueBarcodes = list(np.loadtxt(uniqueBarcodes, delimiter=" "))
-    uniqueBarcodes = [int(x) for x in uniqueBarcodes]
-    print(f"$ unique barcodes loaded: {uniqueBarcodes}")
-
-    print(f"$ averaging method: {dist_calc_mode}")
-
-    outputFileName = (
-        out_folder
-        + os.sep
-        + "Fig_"
-        + os.path.basename(scPWDMatrix_filename).split(".")[0]
-    )
-
-    if shuffle:
-        index = [
-            get_position_from_unique_barcode_list(int(i), uniqueBarcodes)
-            for i in shuffle.split(",")
-        ]
-        uniqueBarcodes = [uniqueBarcodes[i] for i in index]
-        sc_matrix = shuffle_matrix(sc_matrix, index)
-
-    if dist_calc_mode == "proximity":
-        # calculates and plots contact probability matrix from merged samples/datasets
-        print("$ calculating proximity matrix")
-        sc_matrix, n_cells, nan_matrix = calculate_contact_probability_matrix(
-            sc_matrix,
-            1,
-            threshold=proximity_threshold,
-            norm=matrix_norm_mode,
-        )
-    else:
-        nan_matrix = None
-
-    return sc_matrix, uniqueBarcodes, n_cells, outputFileName, nan_matrix
 
 
 def Wilcoxon_matrix(
