@@ -207,7 +207,6 @@ def main():
     outputFileName = (
         args.output + os.sep + "Fig_" + os.path.basename(args.matrix).split(".")[0]
     )
-
     base_filename = "_" + args.mode
     base_filename += "_norm" if args.remove_nan else ""
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
