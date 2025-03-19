@@ -17,6 +17,7 @@ import numpy as np
 from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
     calculate_ensemble_pwd_matrix,
+    calculate_nan_matrix,
     plot_him_matrix,
     plot_nan_matrix,
 )
@@ -73,6 +74,12 @@ Outputs:
         "--mode",
         help="Mode used to calculate the mean distance. Can be either 'median', 'KDE' or 'proximity'",
         default="proximity",
+    )
+    parser_advanced.add_argument(
+        "--nan_threshold",
+        help="Value between 0 and 1. Set a bin to NaN if: nan_percentage[bin] > nan_threshold",
+        default=None,
+        type=float,
     )
 
     parser_proximity = parser.add_argument_group(
@@ -178,19 +185,24 @@ def merge_matrices(mode, matrices, threshold=None, remove_nan=None):
     print(f"$ averaging method: {mode}")
     if mode == "proximity":
         print("$ calculating contact probability matrix")
-        sc_matrix, nan_matrix = calculate_contact_probability_matrix(
-            matrices,
-            1,
-            threshold=threshold,
-            remove_nan=remove_nan,
+        single_matrix = calculate_contact_probability_matrix(
+            matrices, 1, threshold=threshold, remove_nan=remove_nan
         )
     else:
-        nan_matrix = None
         cells_to_plot = range(matrices.shape[2])
-        sc_matrix, _ = calculate_ensemble_pwd_matrix(
+        single_matrix, _ = calculate_ensemble_pwd_matrix(
             matrices, 1, cells_to_plot, mode=mode
         )
-    return sc_matrix, nan_matrix
+    return single_matrix
+
+
+def apply_nan_threshold(matrix, nan_matrix, threshold):
+    n_barcodes = matrix.shape[0]
+    for i in range(n_barcodes):
+        for j in range(n_barcodes):
+            if nan_matrix[i][j] > threshold:
+                matrix[i][j] = np.nan
+    return matrix
 
 
 def main():
@@ -204,9 +216,14 @@ def main():
         u_barcodes, sc_matrices = new_shuffle_matrix(
             args.shuffle, u_barcodes, sc_matrices
         )
-    matrix_to_plot, nan_matrix = merge_matrices(
-        args.mode, sc_matrices, args.threshold, remove_nan=args.remove_nan
+    matrix_to_plot = merge_matrices(
+        args.mode, sc_matrices, args.threshold, args.remove_nan
     )
+    nan_matrix = calculate_nan_matrix(sc_matrices)
+    if args.nan_threshold:
+        matrix_to_plot = apply_nan_threshold(
+            matrix_to_plot, nan_matrix, args.nan_threshold
+        )
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
     n_cells = sc_matrices.shape[2]
     if args.mode == "proximity":
