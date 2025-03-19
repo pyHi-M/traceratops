@@ -18,6 +18,7 @@ from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
     calculate_ensemble_pwd_matrix,
     plot_matrix,
+    plot_nan_matrix,
 )
 
 
@@ -213,7 +214,21 @@ def main():
     matrix_to_plot, nan_matrix = merge_matrices(
         args.mode, sc_matrices, args.threshold, remove_nan=args.remove_nan
     )
-    _, fileNameEnding = plot_matrix(
+    threshold_txt = f"_T{args.threshold}" if args.threshold != 0.25 else ""
+    if args.mode == "proximity":
+        plot_nan_matrix(
+            nan_matrix,
+            u_barcodes,
+            1,
+            args.fontsize,
+            figtitle="Mode: " + args.mode,
+            n_cells=n_cells,
+            cmtitle=cmtitle,
+            filename_addon=base_filename + threshold_txt,
+            filename_extension="." + args.plot_format,
+            output_filename=outputFileName,
+        )
+    fileNameEnding = plot_matrix(
         matrix_to_plot,
         u_barcodes,
         1,

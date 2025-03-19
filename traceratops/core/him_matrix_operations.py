@@ -1869,19 +1869,6 @@ def plot_matrix(
     else:
         out_fn = output_filename + filename_ending
     plt.savefig(out_fn)
-    if mode == "proximity":
-        plot_nan_matrix(
-            nan_matrix,
-            unique_barcodes,
-            pixel_size,
-            font_size,
-            figtitle,
-            n_cells,
-            cmtitle,
-            filename_addon + threshold_txt,
-            filename_extension,
-            output_filename,
-        )
     return filename_ending[:-4]
 
 
