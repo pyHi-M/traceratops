@@ -82,7 +82,8 @@ Outputs:
         "-T", "--threshold", help="Proximity threshold in µm", default=0.25, type=float
     )
     parser_proximity.add_argument(
-        "--norm",
+        "-R",
+        "--remove_nan",
         help="Matrix normalization mode. If activate, remove NaN values before compute statistics on bin.",
         action="store_true",
     )
@@ -195,7 +196,6 @@ def main():
     args = parser.parse_args()
     check_required_arg(args, parser)
     create_output_folder(args.output)
-    matrix_norm_mode = "nonNANs" if args.norm else "n_cells"
     sc_matrices = load_matrix(args.matrix)
     u_barcodes = load_barcodes(args.barcodes)
     if args.shuffle:
@@ -209,18 +209,16 @@ def main():
     )
 
     base_filename = "_" + args.mode
-    base_filename += "_norm" if args.norm else ""
+    base_filename += "_norm" if args.remove_nan else ""
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
     matrix_to_plot, nan_matrix = merge_matrices(
-        args.mode, sc_matrices, args.threshold, remove_nan=args.norm
+        args.mode, sc_matrices, args.threshold, remove_nan=args.remove_nan
     )
     _, fileNameEnding = plot_matrix(
         matrix_to_plot,
         u_barcodes,
         1,
-        1,
         outputFileName,
-        "log",
         figtitle="Mode: " + args.mode,
         mode=args.mode,
         clim=args.c_max,
@@ -233,7 +231,7 @@ def main():
         font_size=args.fontsize,
         proximity_threshold=args.threshold,
         nan_matrix=nan_matrix,
-        matrix_norm_mode=matrix_norm_mode,
+        remove_nan=args.remove_nan,
     )
 
     print(f"Output figure: {outputFileName}")

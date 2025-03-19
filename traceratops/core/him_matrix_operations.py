@@ -800,9 +800,8 @@ def plot_ensemble_3_way_contact_matrix(
             s_out,
             threshold=i_list_data["ContactProbability_distanceThreshold"],
             norm="nonNANs",
-        )  # norm: nonNANs (default)
+        )
 
-        # output_filename = p['output_folder'] + os.sep + dataset_name + "_Cells:" + p['action'] + "_ensemble3wayContacts"
         output_filename = (
             p["outputFolder"]
             + os.sep
@@ -1046,7 +1045,7 @@ def plot_single_contact_probability_matrix(
                 threshold=i_list_data["ContactProbability_distanceThreshold"],
                 min_number_contacts=min_number_contacts,
                 norm="nonNANs",
-            )  # norm: n_cells (default), nonNANs
+            )
             output_filename = (
                 p["outputFolder"]
                 + os.sep
@@ -1788,13 +1787,14 @@ def get_matrix_title(
     n_barcodes,
     n_cells,
     proximity_threshold=None,
-    matrix_norm_mode=None,
+    remove_nan=False,
     c_min=-1,
     clim=0,
 ):
     title = f"{figtitle} | Barcodes: {n_barcodes} | Traces: {str(n_cells)}\n"
+    remove_nan_txt = "nonNANs" if remove_nan else "n_cells"
     if "proximity" in figtitle:
-        title += f"Threshold: {proximity_threshold}μm | norm: {matrix_norm_mode} |"
+        title += f"Threshold: {proximity_threshold}μm | norm: {remove_nan_txt} |"
     c_min_txt = "auto" if c_min == -1 else str(c_min)
     c_max_txt = "auto" if clim == 0 else str(clim)
     title += f" c_min: {c_min_txt} | c_max: {c_max_txt}\n"
@@ -1805,9 +1805,7 @@ def plot_matrix(
     sc_matrix_collated,
     unique_barcodes,
     pixel_size,
-    number_rois=1,
     output_filename="test",
-    log_name_md="log.md",
     clim=1.4,
     c_m="seismic",
     figtitle="PWD matrix",
@@ -1816,13 +1814,12 @@ def plot_matrix(
     mode="median",
     inverse_matrix=False,
     c_min=0,
-    cells_to_plot=None,
     filename_addon="",
     filename_extension="_HiMmatrix.png",
     font_size=22,
     proximity_threshold=0.25,
     nan_matrix=None,
-    matrix_norm_mode="n_cells",
+    remove_nan=False,
 ):
     mean_sc_matrix = sc_matrix_collated
     keep_plotting = True
@@ -1843,7 +1840,7 @@ def plot_matrix(
             str(mean_sc_matrix.shape[0]),
             n_cells,
             proximity_threshold,
-            matrix_norm_mode,
+            remove_nan,
             c_min,
             clim,
         )
