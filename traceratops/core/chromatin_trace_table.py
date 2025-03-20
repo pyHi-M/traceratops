@@ -292,6 +292,20 @@ class ChromatinTraceTable:
             csv_data.to_csv(f, index=False, header=False)
         print(f"Saved 4dn trace table with headers: {output_file}")
 
+    def prevent_roi_conflict(self, table):
+        existing_roi = set(self.data["ROI #"])
+        conflicting_rois = set(table["ROI #"]) & existing_roi
+        roi_mapping = {}
+        current_max = max(existing_roi) + 1 if existing_roi else 1
+        for roi in conflicting_rois:
+            while current_max in existing_roi:
+                current_max += 1
+            roi_mapping[roi] = current_max
+            existing_roi.add(current_max)
+        new_roi_numbers = [roi_mapping.get(roi, roi) for roi in table["ROI #"]]
+        table["ROI #"] = new_roi_numbers
+        return table
+
     def append(self, table):
         """
         appends <table> to self.data
@@ -306,7 +320,7 @@ class ChromatinTraceTable:
         None.
 
         """
-
+        table = self.prevent_roi_conflict(table)
         self.data = vstack([self.data, table])
 
     def filter_traces_by_coordinate(self, coor="z", coor_min=0.0, coor_max=np.inf):
