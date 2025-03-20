@@ -218,7 +218,7 @@ def runtime(
 
         # saves output trace
         outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
-        trace.save(outputfile, trace.data, comments=", ".join(comments))
+        trace.save(outputfile, comments=", ".join(comments))
         print(f"$ Saved output trace file at: {outputfile}")
     return len(trace_files)
 

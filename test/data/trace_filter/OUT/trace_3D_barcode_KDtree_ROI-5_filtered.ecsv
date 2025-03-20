@@ -14,7 +14,7 @@
 # - {name: 'Barcode #', datatype: int64}
 # - {name: label, datatype: string}
 # meta: !!omap
-# - comments: [xyz_unit=micron, genome_assembly=mm10, '', 'filt:n_barcodes>2']
+# - comments: [xyz_unit=micron, genome_assembly=mm10, 'filt:n_barcodes>2']
 # schema: astropy-2.0
 Spot_ID Trace_ID x y z Chrom Chrom_Start Chrom_End "ROI #" Mask_id "Barcode #" label
 3cb9a0c5-517a-42a2-8781-980faec7985b 42d8a93b-fd2e-4ffa-a871-0647ee9f431b 110.47546 92.936485 8.416461 xxxxx 0 999999999 5 13 14 xxxxxxxxxxxxxxxxxxxx

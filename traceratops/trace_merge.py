@@ -22,12 +22,15 @@ def parse_arguments():
         description="""Simpler version of trace_combinator.
         This just takes a list of trace files and merges them together.
 
-        Old usage: ```ls Trace*.ecsv | trace_merge.py```"""
+        Usage example:
+
+        ``ls trace*.ecsv | trace_merge``
+
+        or
+
+        ``trace_merge.py --traces <folder_path_with_trace_files>``
+        """
     )
-    parser.add_argument(
-        "-N", "--name", help="Output file name", default="merged_traces.ecsv"
-    )
-    parser.add_argument("-F", "--folder", help="Output folder", default=os.getcwd())
     parser.add_argument(
         "-T", "--traces", help="Input folder with traces to merge", default=None
     )
@@ -37,6 +40,10 @@ def parse_arguments():
         action="store_true",
         default=True,
     )
+    parser.add_argument(
+        "-N", "--name", help="Output file name", default="merged_traces.ecsv"
+    )
+    parser.add_argument("-F", "--folder", help="Output folder", default=os.getcwd())
     return parser
 
 
@@ -63,20 +70,16 @@ def get_files_from_args(args):
 
 def appends_traces(traces, trace_files):
     new_trace = ChromatinTraceTable()
-
     # iterates over traces in folder
     for trace_file in trace_files:
         # reads new trace
         new_trace.load(trace_file)
-
         # adds it to existing trace collection
+
         traces.append(new_trace.data)
         traces.number_traces += 1
-
         print(f" $ appended trace file with {len(new_trace.data)} traces")
-
     print(f" $ Merged trace file will contain {len(traces.data)} traces")
-
     return traces
 
 
@@ -88,9 +91,7 @@ def load_traces(trace_files=[]):
     if len(trace_files) > 1:
         # user provided a list of files to concatenate
         traces = appends_traces(traces, trace_files)
-
     print(f"Read and accumulated {traces.number_traces} trace files")
-
     return traces
 
 
