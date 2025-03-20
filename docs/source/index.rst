@@ -10,6 +10,7 @@ traceratops documentation
    :caption: Scripts
 
    scripts/trace_filter
+   scripts/trace_merge
    scripts/figure_him_matrix
 
 .. toctree::
