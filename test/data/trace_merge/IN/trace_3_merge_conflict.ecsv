@@ -1,0 +1,23 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: Spot_ID, datatype: string}
+# - {name: Trace_ID, datatype: string}
+# - {name: x, datatype: float32}
+# - {name: y, datatype: float32}
+# - {name: z, datatype: float32}
+# - {name: Chrom, datatype: string}
+# - {name: Chrom_Start, datatype: int64}
+# - {name: Chrom_End, datatype: int64}
+# - {name: 'ROI #', datatype: int64}
+# - {name: Mask_id, datatype: int64}
+# - {name: 'Barcode #', datatype: int64}
+# - {name: label, datatype: string}
+# meta: !!omap
+# - comments: [xyz_unit=micron, genome_assembly=mm10, '']
+# schema: astropy-2.0
+Spot_ID Trace_ID x y z Chrom Chrom_Start Chrom_End "ROI #" Mask_id "Barcode #" label
+0000005 cccccccc 84.0 47.0 7.0 Crôm 0 99 5 3 28 label_1
+0000006 cccccccc 145.0 73.0 4.0 Crôm 0 99 5 4 8 label_1
+0000007 dddddddd 152.0 36.0 4.0 Crôm 0 99 6 5 15 label_1
+0000008 dddddddd 203.0 62.0 8.0 Crôm 0 99 6 6 21 label_1
