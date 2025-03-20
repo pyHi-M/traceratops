@@ -43,6 +43,7 @@ Homepage = "https://github.com/pyHi-M/traceratops"
 
 [project.scripts]
 trace_filter = "traceratops.trace_filter:main"
+trace_merge = "traceratops.trace_merge:main"
 figure_him_matrix = "traceratops.figure_him_matrix:main"
 
 # [tool.setuptools]
