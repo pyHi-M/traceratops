@@ -134,7 +134,17 @@ class ChromatinTraceTable:
         print(f"Successfully loaded trace table: {file}")
         return self.data
 
-    def save(self, file_name, table, comments=""):
+    def remove_empty_comments(self):
+        if len(self.data.meta["comments"]):
+            self.data.meta["comments"] = [
+                com for com in self.data.meta["comments"] if com
+            ]
+
+    def remove_duplicate_comments(self):
+        if len(self.data.meta["comments"]):
+            self.data.meta["comments"] = list(dict.fromkeys(self.data.meta["comments"]))
+
+    def save(self, file_name, comments=""):
         """
         Saves the trace table in the appropriate format (.ecsv or .4dn).
         """
@@ -142,13 +152,14 @@ class ChromatinTraceTable:
             self._convert_astropy_to_4dn(self.data, file_name)
         else:
             print(f"$ Saving output table as {file_name} ...")
-
+            self.remove_empty_comments()
+            self.remove_duplicate_comments()
             try:
-                table.meta["comments"].append(comments)
+                self.data.meta["comments"].append(comments)
             except KeyError:
-                table.meta["comments"] = [comments]
+                self.data.meta["comments"] = [comments]
 
-            save_table_to_ecsv(table, file_name)
+            save_table_to_ecsv(self.data, file_name)
 
     def _read_metadata_from_4dn(self, file):
         """

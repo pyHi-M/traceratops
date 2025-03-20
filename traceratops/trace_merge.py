@@ -12,7 +12,6 @@ ChromatinTraceTable() object and output .ecsv formatted file with assembled trac
 
 import argparse
 import os
-import select
 import sys
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
@@ -26,42 +25,40 @@ def parse_arguments():
         Old usage: ```ls Trace*.ecsv | trace_merge.py```"""
     )
     parser.add_argument(
-        "-o", "--output_file", help="Output File name. Default = merged_traces.ecsv"
+        "-N", "--name", help="Output file name", default="merged_traces.ecsv"
     )
-    parser.add_argument("-O", "--output_folder", help="Output File name. Default = ./")
+    parser.add_argument("-F", "--folder", help="Output folder", default=os.getcwd())
+    parser.add_argument(
+        "-T", "--traces", help="Input folder with traces to merge", default=None
+    )
+    parser.add_argument(
+        "--pipe",
+        help="input trace file list from stdin (pipe)",
+        action="store_true",
+        default=True,
+    )
     return parser
 
 
-def create_dict_args(args):
-    p = {}
-    if args.output_folder:
-        p["outputFolder"] = args.output_folder
+def check_required_arg(args, parser):
+    """
+    Check that no required arguments are supplied.
+    If it's the case, we make a normal code exit with the print of usage help before.
+    """
+    if not args.traces and not args.pipe:
+        print("Error: No argument provided. You must use '--traces' or '--pipe'")
+        print("Redirecting to `--help` option:\n")
+        parser.print_help()
+        sys.exit(0)
+
+
+def get_files_from_args(args):
+    """Read input directly without using select.select()"""
+    if args.pipe:
+        trace_files = sys.stdin.read().strip().split("\n")
+        return trace_files
     else:
-        p["outputFolder"] = "."
-
-    if args.output_file:
-        p["output_file"] = args.output_file
-    else:
-        p["output_file"] = "merged_traces.ecsv"
-
-    p["trace_files"] = []
-    if select.select(
-        [
-            sys.stdin,
-        ],
-        [],
-        [],
-        0.0,
-    )[0]:
-        p["trace_files"] = [line.rstrip("\n") for line in sys.stdin]
-    else:
-        print("Nothing in stdin!\n")
-
-    print("Input parameters\n" + "-" * 15)
-    for item in p.keys():
-        print("{}-->{}".format(item, p[item]))
-
-    return p
+        return os.listdir(args.traces)
 
 
 def appends_traces(traces, trace_files):
@@ -97,40 +94,31 @@ def load_traces(trace_files=[]):
     return traces
 
 
-def run(p):
-    print("\n" + "-" * 80)
-
-    # [ creates output folder]
-    if not os.path.exists(p["outputFolder"]):
-        os.mkdir(p["outputFolder"])
-        print("Folder created: {}".format(p["outputFolder"]))
-
-    # loads and merges traces
-    traces = load_traces(trace_files=p["trace_files"])
-
-    # saves merged trace table
-    output_file = p["output_file"]
-
-    traces.save(
-        output_file,
-        traces.data,
-        comments="appended_trace_files=" + str(traces.number_traces),
-    )
-
-    print("Finished execution")
+def create_out_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+        print(f"Folder created: {folder_path}")
 
 
 def main():
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()
-    p = create_dict_args(args)
+    check_required_arg(args, parser)
+    trace_files = get_files_from_args(args)
 
-    print("trace_files{}".format(len(p["trace_files"])))
-    if len(p["trace_files"]) < 1:
-        print("\nNothing to process...\n")
-    else:
-        run(p)
+    print(f"Number of trace files to merge: {len(trace_files)}")
+    if len(trace_files) < 2:
+        raise ValueError("\nNothing to process...\n")
+
+    create_out_folder(args.folder)
+    traces = load_traces(trace_files)
+    traces.save(
+        args.name,
+        comments="appended_trace_files=" + str(traces.number_traces),
+    )
+
+    print("Finished execution")
 
 
 if __name__ == "__main__":

@@ -95,8 +95,7 @@ def test_trace_filter_pipe(input_file):
     print(result.stdout)
     print("===== STDERR =====")
     print(result.stderr)
-    # Vérifier que le script s'exécute correctement
-    assert result.returncode == 0, f"Erreur d'exécution: {result.stderr}"
+    assert result.returncode == 0, f"Runtime error: {result.stderr}"
     file1 = os.path.join(INPUT_DIR, "one_trace_four_spots_filtered.ecsv")
     file2 = os.path.join(INPUT_DIR, "two_traces_seven_spots_filtered.ecsv")
     if os.path.exists(file1):
