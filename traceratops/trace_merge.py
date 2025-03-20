@@ -20,7 +20,10 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Simpler version of trace_combinator. This just takes a list of trace files and merges them together"
+        description="""Simpler version of trace_combinator.
+        This just takes a list of trace files and merges them together.
+
+        Old usage: ```ls Trace*.ecsv | trace_merge.py```"""
     )
     parser.add_argument(
         "-o", "--output_file", help="Output File name. Default = merged_traces.ecsv"
