@@ -11,9 +11,9 @@
 
 Here is examples usage of figure_him_matrix:
 
-### Default (proximity)
+### Proximity matrix with all data (including bin with NaN value)
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
+figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --keep_nan
 ```
 
 <p align="center">
@@ -26,7 +26,7 @@ figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
 
 
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --remove_nan
+figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
 ```
 
 **VS.**
