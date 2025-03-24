@@ -6,8 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import os
-import sys
+from traceratops._version import __version__
 
 autodoc_mock_imports = [
     "numpy",
@@ -19,12 +18,11 @@ autodoc_mock_imports = [
     "sklearn",
 ]
 
-sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "traceratops")))
 
 project = "traceratops"
 copyright = "2025, Marcelo Nollmann, Xavier Devos"
 author = "Marcelo Nollmann, Xavier Devos"
-release = "0.2.1"
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

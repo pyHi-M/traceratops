@@ -1,6 +1,8 @@
 traceratops documentation
 =========================
 
+**Date**: |today| **Version**: |release|
+
 .. toctree::
    :caption: Getting Started
 
