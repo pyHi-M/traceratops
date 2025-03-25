@@ -90,7 +90,7 @@ Outputs:
         "-T", "--threshold", help="Proximity threshold in µm", default=0.25, type=float
     )
     parser_proximity.add_argument(
-        "-R",
+        "-K",
         "--keep_nan",
         help="Matrix normalization mode. By default, NaN values per bin are removed before compute statistics for proximity. Activate this mode to keep NaN values.",
         action="store_true",
