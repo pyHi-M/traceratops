@@ -164,8 +164,9 @@ def test_clean_spots(input_file):
         result, generated_output_path, filtered_filename, expected_output_path
     )
     os.remove(generated_output_path)
-    os.remove(input_path + "_before.png")
-    os.remove(input_path + "_filtered.png")
+    in_path_base = input_path.split(".")[0]
+    os.remove(in_path_base + "_before_filtering.png")
+    os.remove(in_path_base + "_filtered.png")
 
 
 @pytest.mark.parametrize("command", ["remove_label", "keep_label"])
