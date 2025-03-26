@@ -9,6 +9,7 @@ traceratops documentation
    quickstart/installation
 
 .. toctree::
+   :maxdepth: 1
    :caption: Scripts
 
    scripts/trace_filter
@@ -16,8 +17,10 @@ traceratops documentation
    scripts/figure_him_matrix
 
 .. toctree::
+   :maxdepth: 1
    :caption: Contribute
 
-   contribute/dev_installation
-   contribute/how_to_document
    contribute/CONTRIBUTING
+   [DEV] Installation<contribute/dev_installation>
+   contribute/how_to_document
+   contribute/import_pyhim_script

@@ -1,4 +1,10 @@
-# How to document
+# [How to] Document
+
+```{note}
+**If everything is already set up**, simply run this script to build the documentation locally and verify your changes before committing them.
+
+`bash build_doc.sh`
+```
 
 ## 0. Introduction to Sphinx
 
