@@ -36,6 +36,7 @@ dev = [
     "sphinx-argparse",  # for doc
     "myst-parser",      # for doc
     "pre-commit",
+    "mypy",
 ]
 
 [project.urls]
@@ -46,8 +47,10 @@ trace_filter = "traceratops.trace_filter:main"
 trace_merge = "traceratops.trace_merge:main"
 figure_him_matrix = "traceratops.figure_him_matrix:main"
 
-# [tool.setuptools]
-# include-package-data = true
-
-# [tool.setuptools.package-data]
-# "path.to.files" = ["*.json"]
+[tool.mypy]
+python_version = "3.11" # Python version used for mypy analysis
+ignore_missing_imports = true # avoids import errors
+disallow_untyped_defs = false # allows untyped functions (legacy code)
+check_untyped_defs = true # even analyses functions without annotations
+warn_unused_ignores = true # alert if a `# type: ignore` is unnecessary
+show_error_codes = true # displays error codes (useful for googling)
