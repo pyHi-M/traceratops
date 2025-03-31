@@ -24,3 +24,4 @@ traceratops documentation
    [DEV] Installation<contribute/dev_installation>
    contribute/how_to_document
    contribute/import_pyhim_script
+   contribute/code_review
