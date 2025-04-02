@@ -11,7 +11,7 @@
 Tests can be performed in two ways:
 
 - A `test/test_*.py` file for automation with [`pytest`](https://docs.pytest.org/en/stable/) [(cheatsheet)](https://cheatography.com/hvid2301/cheat-sheets/pytest-usage/)
-- Updating the private repository for manual testing
+- [Updating the private repository for manual testing](https://traceratops.readthedocs.io/en/main/contribute/manual_test_checklist.md)
 
 Tests are required to:
 

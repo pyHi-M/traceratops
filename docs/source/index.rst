@@ -27,3 +27,4 @@ traceratops documentation
    contribute/code_review
    contribute/doc_from_scratch
    contribute/generate_doc
+   contribute/manual_test_checklist
