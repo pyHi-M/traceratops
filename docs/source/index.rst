@@ -25,3 +25,5 @@ traceratops documentation
    contribute/how_to_document
    contribute/import_pyhim_script
    contribute/code_review
+   contribute/doc_from_scratch
+   contribute/generate_doc

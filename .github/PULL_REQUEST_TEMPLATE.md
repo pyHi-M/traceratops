@@ -23,8 +23,8 @@ Tests are required to:
 **Only for Pull Request on `dev` branch.**
 
 - [ ] Tests are available
-- [ ] [Documentation has been updated (tutorial)]()
-- [ ] [Argument status are updated]()
+- [ ] [Documentation has been updated (tutorial)](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html)
+- [ ] [Argument status are updated](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html#inside-your-python-script)
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
 - [ ] [Code has been reviewed](https://traceratops.readthedocs.io/en/main/contribute/code_review.html)
 - [ ] GitHub Actions checks pass successfully
