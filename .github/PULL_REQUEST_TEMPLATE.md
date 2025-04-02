@@ -6,14 +6,6 @@
 - [ ] Code refactoring
 - [ ] Other (please specify):
 
-## Version Update
-
-[Depending on the type of change](https://semver.org/), please update the version number in the `pyproject.toml` file.
-
-- **Bug fix** (*patch*): `X.Y.Z` → `X.Y.Z+1`
-- **New feature** (*minor*): `X.Y.Z` → `X.Y+1.0`
-- **Breaking change** (*major*): `X.Y.Z` → `X+1.0.0`
-
 ## Tests
 
 Tests can be performed in two ways:
@@ -26,15 +18,23 @@ Tests are required to:
 - Validate the new feature
 - Confirm that the bug no longer occurs
 
-## Additional Comments
+## [DEV] Checklist
 
-<!-- Add any extra information that might be helpful to the reviewers. -->
+**Only for Pull Request on `dev` branch.**
 
-## Checklist
-
-- [ ] Version number has been updated
 - [ ] Tests are available
 - [ ] [Documentation has been updated (tutorial)]()
+- [ ] [Argument status are updated]()
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
-- [ ] [Code has been reviewed]()
+- [ ] [Code has been reviewed](https://traceratops.readthedocs.io/en/main/contribute/code_review.html)
+- [ ] GitHub Actions checks pass successfully
+
+## [MAIN] Checklist
+
+**Only for Pull Request on `main` branch.**
+
+- [ ] Version number has been updated inside `pyproject.toml` [(Depending on the type of change)](https://semver.org/)
+- [ ] The status of at least one feature are updated to `stable` (for each argument involved) OR it's a **hotfix** branch
+- [ ] Manual tests are checked
+- [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
 - [ ] GitHub Actions checks pass successfully
