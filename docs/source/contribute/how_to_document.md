@@ -2,7 +2,7 @@
 
 *This current documentation was created and configured using [this tutorial](documentation/doc_from_scratch.md). It's a set of text files in Markdown (MD) or reStructuredText (RST or ReST) language.*
 
-*We use Sphinx tool to generate HTML pages and ReadTheDocs to host documentation online. On ReadTheDocs, the documentation is automaticaly build and update when your push code on `main` or `dev` branches to GitHub repository.*
+*We use Sphinx tool to generate HTML pages and ReadTheDocs to host documentation online. On ReadTheDocs, the documentation is automatically build and update when your push code on `main` or `dev` branches to GitHub repository.*
 
 ## Shortcut
 

@@ -72,6 +72,7 @@ class ChromatinTraceTable:
         self.columns = []
         self.data = None
         self.original_format = "ecsv"  # Default format
+        self.number_traces = 0
 
     def initialize(self):
         self.data = Table(

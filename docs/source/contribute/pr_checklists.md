@@ -1,4 +1,4 @@
-# PR cheklists
+# PR checklists
 
 ```{toctree}
 :maxdepth: 1
