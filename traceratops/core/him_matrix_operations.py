@@ -39,8 +39,8 @@ class AnalysisHiMMatrix:
         self.data_folder = root_folder + os.sep + "scHiMmatrices"
         self.run_parameters = run_parameters
         self.root_folder = root_folder
-        self.data = []
-        self.data_files = []
+        self.data = dict()
+        self.data_files = dict()
         self.folders_to_load = []
         self.number_barcodes = 0
 
@@ -369,12 +369,10 @@ def load_list(file_name):
         spamreader = csv.reader(csvfile, delimiter=" ", quotechar="|")
         run_name = []
         for row in spamreader:
-            # print(', '.join(row))
             if len(run_name) > 0:
                 run_name.append(row)
             else:
                 run_name = row
-
     return run_name
 
 

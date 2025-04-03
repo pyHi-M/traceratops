@@ -72,6 +72,7 @@ class ChromatinTraceTable:
         self.columns = []
         self.data = None
         self.original_format = "ecsv"  # Default format
+        self.number_traces = 0
 
     def initialize(self):
         self.data = Table(
@@ -306,6 +307,101 @@ class ChromatinTraceTable:
         table["ROI #"] = new_roi_numbers
         return table
 
+    def load_bed_file(self, bed_file):
+        """Loads the BED file into a dictionary mapping barcode numbers to genomic coordinates.
+        Handles files with inconsistent tab spacing by using regex splitting."""
+        bed_dict = {}
+
+        with open(bed_file, "r") as f:
+            for line in f:
+                # Skip empty lines
+                if not line.strip():
+                    continue
+
+                # Split on any number of whitespace characters
+                # This handles inconsistent tabs/spaces more robustly
+                fields = line.strip().split()
+
+                # Ensure we have exactly 4 fields
+                if len(fields) != 4:
+                    print(f"Warning: Skipping malformed line: {line.strip()}")
+                    continue
+
+                try:
+                    chrom = fields[0]
+                    chrom_start = int(fields[1])
+                    chrom_end = int(fields[2])
+                    barcode = int(fields[3])
+
+                    bed_dict[barcode] = {
+                        "Chrom": chrom,
+                        "Chrom_Start": chrom_start,
+                        "Chrom_End": chrom_end,
+                    }
+                except ValueError as e:
+                    print(
+                        f"Warning: Skipping line with invalid data types: {line.strip()}"
+                    )
+                    print(f"Error: {e}")
+
+        if not bed_dict:
+            raise ValueError("No valid entries found in the BED file.")
+
+        print(f"Successfully loaded {len(bed_dict)} barcode mappings from BED file.")
+
+        return bed_dict
+
+    def impute_genomic_coordinates(self, bed_dict, auto_continue=False):
+        """Updates the Chrom, Chrom_Start, and Chrom_End columns in the trace file based on the BED file."""
+
+        unmatched_barcodes = set()
+        matched_count = 0
+        total_count = 0
+
+        for row in self.data:
+            barcode = row["Barcode #"]
+            total_count += 1
+
+            if barcode in bed_dict:
+                row["Chrom"] = bed_dict[barcode]["Chrom"]
+                row["Chrom_Start"] = bed_dict[barcode]["Chrom_Start"]
+                row["Chrom_End"] = bed_dict[barcode]["Chrom_End"]
+                matched_count += 1
+            else:
+                unmatched_barcodes.add(barcode)
+
+        if unmatched_barcodes:
+            missing_percent = (len(unmatched_barcodes) / total_count) * 100
+            print(
+                f"Warning: {len(unmatched_barcodes)} unique barcodes ({missing_percent:.1f}% of rows) couldn't be matched:"
+            )
+
+            # Only show up to 10 unmatched barcodes to avoid cluttering the output
+            if len(unmatched_barcodes) <= 10:
+                print(
+                    f"  Unmatched barcodes: {', '.join(map(str, sorted(unmatched_barcodes)))}"
+                )
+            else:
+                print(
+                    f"  First 10 unmatched barcodes: {', '.join(map(str, sorted(list(unmatched_barcodes))[:10]))}"
+                )
+                print(f"  ... and {len(unmatched_barcodes) - 10} more")
+
+            # Ask the user if they want to continue if more than 10% of barcodes are unmatched
+            if missing_percent > 10 and ~auto_continue:
+                response = input(
+                    "More than 10% of barcodes couldn't be matched. Continue anyway? (y/n): "
+                )
+                if response.lower() != "y":
+                    print("Operation aborted by user.")
+                    return
+
+        print(
+            f"Successfully matched {matched_count}/{total_count} rows ({(matched_count/total_count)*100:.1f}%)"
+        )
+
+        return matched_count, total_count
+
     def append(self, table):
         """
         appends <table> to self.data
@@ -378,6 +474,34 @@ class ChromatinTraceTable:
             print("! Error: you are trying to filter an empty trace table!")
         self.data = trace_table
 
+    def filter_by_intensity(self, trace, localizations, intensity_min):
+        """
+        Filters localizations in the trace file based on intensity from the localization table.
+        """
+        localizations.add_index("Buid")  # Add an index for fast lookup
+
+        rows_to_remove = []
+        number_spots = len(trace.data)
+        intensities_kept = list()
+        for idx, row in enumerate(trace.data):
+            spot_id = row["Spot_ID"]
+            try:
+                intensity = localizations.loc[spot_id]["peak"]
+                if intensity < intensity_min:
+                    rows_to_remove.append(idx)
+                else:
+                    intensities_kept.append(intensity)
+            except KeyError:
+                continue  # If Spot_ID is not found, keep the entry
+
+        trace.data.remove_rows(rows_to_remove)
+        print(
+            f"> Removed {len(rows_to_remove)}/{number_spots} localizations below intensity threshold ({intensity_min})."
+        )
+        print(f"> Number of rows in filtered trace table: {len(trace.data)}")
+
+        return intensities_kept
+
     def barcode_statistics(self, trace_table):
         """
         calculates the number of times a barcode is repeated in a trace for all traces in a trace table
@@ -423,6 +547,7 @@ class ChromatinTraceTable:
         file_name="barcode_stats",
         kind="violin",
         norm=True,
+        format="png",
     ):
         """
         plots the collecive_bracode stats (see previous function)
@@ -447,7 +572,7 @@ class ChromatinTraceTable:
         fig, (ax1) = plt.subplots(nrows=1, ncols=1, figsize=(15, 15))
 
         label, density = ("frequency", True) if norm else ("counts", False)
-        ax1.set_title("Distribution of barcodes per trace")
+        ax1.set_title("Relative barcode frequencies", fontsize=30)
 
         if "violin" in kind:
             self._extracted_from_plots_barcode_statistics_38(ax1, data, sorted_barcodes)
@@ -460,15 +585,17 @@ class ChromatinTraceTable:
                 )
             bin_number = list(bins)
             pos = ax1.imshow(np.transpose(matrix), cmap="Reds")
-            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes)
-            ax1.set_yticks(np.arange(0, len(bins)), bin_number)
-            ax1.set_ylabel("number of barcodes")
-            ax1.set_xlabel("barcode id")
+            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes, fontsize=15)
+            ax1.set_yticks(np.arange(0, len(bins)), bin_number, fontsize=15)
+            ax1.set_ylabel("number of barcodes", fontsize=25)
+            ax1.set_xlabel("barcode IDs", fontsize=25)
             fig.colorbar(
                 pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4, label=label
             )
-
-        fig.savefig(f"{file_name}.png")
+        print(
+            f"$ Exporting relative barcode frequencies figure to: {file_name}.{format}"
+        )
+        fig.savefig(f"{file_name}.{format}")
 
     # TODO Rename this here and in `plots_barcode_statistics`
     def _extracted_from_plots_barcode_statistics_38(self, ax1, data, sorted_barcodes):
@@ -574,7 +701,7 @@ class ChromatinTraceTable:
             # plots statistics of barcodes and saves in file
             self.plots_barcode_statistics(
                 collective_barcode_stats,
-                file_name=f"{trace_file}_before",
+                file_name=f"{trace_file.split('.')[0]}_before_filtering",
                 kind="matrix",
                 norm=True,
             )
@@ -614,9 +741,6 @@ class ChromatinTraceTable:
 
             if len(trace_table_new) > 0:
                 trace_table_indexed = trace_table_new.group_by("Trace_ID")
-            #     number_traces_left = len(trace_table_indexed.groups)
-            # else:
-            #     number_traces_left = 0
 
             print(
                 f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {len(trace_table_indexed.groups)}"
@@ -628,7 +752,7 @@ class ChromatinTraceTable:
             # plots statistics of barcodes and saves in file
             self.plots_barcode_statistics(
                 collective_barcode_stats_new,
-                file_name=f"{trace_file}_filtered",
+                file_name=f"{trace_file.split('.')[0]}_filtered",
                 kind="matrix",
                 norm=False,
             )
@@ -637,9 +761,88 @@ class ChromatinTraceTable:
             print("! Error: you are trying to filter an empty trace table!")
         self.data = trace_table_new
 
-    def remove_duplicates(
-        self,
-    ):  # sourcery skip: extract-method
+    def remove_duplicates_loc(self, localization_table=None):
+        """
+        Removes duplicated barcodes within each trace.
+        If a localization_table is provided, keeps only the spot with the highest intensity ("peak").
+        Otherwise, removes all instances of duplicated barcodes.
+
+        Parameters
+        ----------
+        localization_table : astropy Table, optional
+            Localization table with 'Buid' and 'peak' columns. Used to select spot with highest intensity.
+
+        Returns
+        -------
+        Updates self.data with filtered trace table.
+        """
+        trace_table = self.data
+        trace_table_new = trace_table.copy()
+        print("\n$ Removing duplicated barcodes within traces...")
+
+        if len(trace_table) == 0:
+            print("! Error: you are trying to filter an empty trace table!")
+            return
+
+        trace_table_indexed = trace_table.group_by("Trace_ID")
+        trace_table.add_index("Spot_ID")  # Add index for faster lookup
+        rows_to_remove = []
+
+        if localization_table is not None:
+            print("$ Using intensity to resolve duplicates...")
+            localization_table.add_index("Buid")
+
+            for trace in tqdm(trace_table_indexed.groups):
+                barcode_groups = trace.group_by("Barcode #").groups
+                for group in barcode_groups:
+                    if len(group) == 1:
+                        continue  # no duplicates
+
+                    peaks = []
+                    for row in group:
+                        spot_id = row["Spot_ID"]
+                        try:
+                            peak = localization_table.loc[spot_id]["peak"]
+                        except KeyError:
+                            peak = -1
+                        peaks.append(peak)
+
+                    max_idx = peaks.index(max(peaks))
+                    for idx, row in enumerate(group):
+                        if idx != max_idx:
+                            global_idx = trace_table.loc_indices[row["Spot_ID"]]
+                            rows_to_remove.append(global_idx)
+
+        else:
+            print(
+                "$ No localization table provided. Removing all instances of duplicated barcodes."
+            )
+
+            for trace in trace_table_indexed.groups:
+                barcode_groups = trace.group_by("Barcode #").groups
+                for group in barcode_groups:
+                    if len(group) <= 1:
+                        continue
+                    for row in group:
+                        global_idx = trace_table.loc_indices[row["Spot_ID"]]
+                        rows_to_remove.append(global_idx)
+
+        trace_table_new.remove_rows(rows_to_remove)
+
+        print(f"$ Number of rows to remove: {len(rows_to_remove)}")
+
+        if len(trace_table_new) > 0:
+            number_traces_left = len(trace_table_new.group_by("Trace_ID").groups)
+        else:
+            number_traces_left = 0
+
+        print(
+            f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {number_traces_left}"
+        )
+
+        self.data = trace_table_new
+
+    def remove_duplicates(self):
         """
         removes duplicated (identical) spots
 
@@ -654,7 +857,7 @@ class ChromatinTraceTable:
         """
         trace_table = self.data
         trace_table_new = trace_table.copy()
-        print("\n$ Removing duplicated barcodes...")
+        print("\n$ Removing duplicated barcodes within traces...")
         if len(trace_table) > 0:
             # indexes trace file
             trace_table_indexed = trace_table.group_by("Spot_ID")

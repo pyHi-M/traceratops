@@ -86,8 +86,6 @@ def appends_traces(traces, trace_files):
 def load_traces(trace_files=[]):
     traces = ChromatinTraceTable()
     traces.initialize()
-    traces.number_traces = 0
-
     if len(trace_files) > 1:
         # user provided a list of files to concatenate
         traces = appends_traces(traces, trace_files)

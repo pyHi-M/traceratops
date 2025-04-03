@@ -3,3 +3,4 @@ numpydoc
 sphinx-rtd-theme
 myst-parser
 sphinx-argparse
+sphinx-panels

@@ -1,5 +1,5 @@
 
-# Installation for developer
+# Installation for **developer**
 
 ## Inside a virtual environment
 
