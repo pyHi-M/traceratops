@@ -54,8 +54,7 @@ import sys
 import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
-
-# from traceratops.core.localization_table import LocalizationTable
+from traceratops.core.localization_table import LocalizationTable
 
 
 def check_required_arg(args, parser):
@@ -223,10 +222,34 @@ def runtime(
     remove_barcode=None,
     label_to_keep="",
     label_to_remove="",
+    localizations_file=None,
+    intensity_min=0,
 ):
     if len(trace_files) <= 0:
         print("No trace file found to process!")
         return len(trace_files)
+    elif len(trace_files) == 1:
+        print("\n$ trace files to process= {}".format(trace_files))
+    else:
+        print(
+            "\n{} trace files to process= {}".format(
+                len(trace_files), "\n".join(map(str, trace_files))
+            )
+        )
+
+    if localizations_file:
+        localization_table = LocalizationTable()
+        localizations_data, _ = localization_table.load(localizations_file)
+        print(f"$ Loaded localizations table with: {len(localizations_data)} rows")
+
+    if localizations_file and intensity_min:
+
+        # Plot intensity distribution to help user choose a threshold
+        intensities = [row["peak"] for row in localizations_data]
+        output_file = localizations_file.split(".")[0]
+        localization_table.plot_intensity_distribution(
+            intensities, output_file=output_file + "_localization_intensities.png"
+        )
 
     # iterates over traces
     for trace_file in trace_files:
@@ -238,6 +261,18 @@ def runtime(
 
         trace = filter_duplicat(remove_duplicate_spots, trace, trace_file)
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
+
+        # remove duplicated spots
+        if remove_duplicate_spots:
+            if localizations_file:
+                trace.remove_duplicates_loc(localization_table=localizations_data)
+            else:
+                trace.remove_duplicates()
+
+        # filters trace by minimum number of barcodes
+        if n_barcodes > 1:
+            trace.filter_traces_by_n(minimum_number_barcodes=n_barcodes)
+            comments.append("filt:N_barcodes>" + str(n_barcodes))
 
         # filters trace by coordinate
         for coord in ["x", "y", "z"]:
@@ -252,6 +287,11 @@ def runtime(
                 )
                 comments.append("filt:{}<{}>{}".format(coor_min, coord, coor_max))
 
+        # removes barcodes in traces where they are repeated
+        if remove_duplicate_spots:
+            trace.filter_repeated_barcodes(trace_file)
+
+        # removes barcodes from a list provided by user
         if remove_barcode is not None:
             bc_list = remove_barcode.split(",")
             print(f"\n$ Removing barcodes: {bc_list}")
@@ -260,8 +300,30 @@ def runtime(
 
         trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
 
-        # saves output trace
-        outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
+        # removes localizations with low intensity
+        if intensity_min and localizations_file:
+            intensities_kept = trace.filter_by_intensity(
+                trace, localizations_data, intensity_min
+            )
+            output_file = trace_file.split(".")[0]
+            localization_table.plot_intensity_distribution(
+                intensities_kept, output_file=f"{output_file}_filtered_intensities"
+            )
+
+        # defines output file name
+        if label_to_keep is not None:
+            if label_to_keep:
+                trace.trace_keep_label(label_to_keep)
+                file_tag = label_to_keep
+            else:
+                trace.trace_remove_label(label_to_keep)
+                file_tag = "not:" + label_to_keep
+
+            # saves output trace
+            outputfile = trace_file.split(".")[0] + "_" + tag + "_" + file_tag + ".ecsv"
+        else:
+            outputfile = trace_file.split(".")[0] + "_" + tag + ".ecsv"
+
         trace.save(outputfile, comments=", ".join(comments))
         print(f"$ Saved output trace file at: {outputfile}")
     return len(trace_files)
