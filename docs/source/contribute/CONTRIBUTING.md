@@ -14,6 +14,8 @@ Please follow the guidelines below to ensure smooth collaboration and maintain a
 
 ## Workflow
 
+### New branch
+
 **Always create your working branch from `dev`**:
 
 ```bash
@@ -34,7 +36,7 @@ Where `<type>` can be:
 - `chore`: Technical tasks with no impact on functionality (e.g., updating dependencies, CI config, build scripts, etc.)
 ```
 
-## Commit messages
+### Commit messages
 
 Use clear and conventional commit messages. We recommend following [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -58,7 +60,7 @@ doc(contributor): Write file for commit good practices #167
 During the Pull Request to `dev`, the "squash & merge" method will be used, so this clear message is only needed for the squash commit.
 ```
 
-## Pull Request (PR)
+### Pull Request (PR)
 
 Once your development is complete:
 
@@ -74,7 +76,7 @@ Then:
 
 ---
 
-## Continuing development (while PR is pending)
+### Continuing development (while PR is pending)
 
 ```{warning}
 Avoid working again on the same branch that is already under review.

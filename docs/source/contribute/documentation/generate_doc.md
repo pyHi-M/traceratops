@@ -1,33 +1,5 @@
 # Generate documentation from code
 
-## From """docstring"""
-
-*Generate automatically documentation from your module/class/function docstring.*
-
-Activate your dev env and install:
-```bash
-pip install sphinx-apidoc
-```
-
-Open file: `conf.py`
-add:
-
-```python
-import os
-import sys
-sys.path.insert(0, os.path.abspath("../../<code_source_folder>/"))
-extensions = [
-    "sphinx.ext.autodoc",  # include documentation from docstring
-    "sphinx.ext.napoleon",  # allow google or numpy docstring
-    "myst_parser",  # parse markdown files to be understood by sphinx
-]
-```
-
-Run inside a terminal:
-```bash
-sphinx-apidoc -a -o docs/source/ <code_source_folder>/
-```
-
 ## From `ArgumentParser`
 
 *For more details, see the [official documentation of sphinx-argparse](https://sphinx-argparse.readthedocs.io/en/latest/index.html).*
@@ -100,3 +72,35 @@ sphinx-apidoc -a -o docs/source/ <code_source_folder>/
       :maxdepth: 1
       example_script
    ```
+
+## From """docstring"""
+
+```{warning}
+Not currently used for this project
+```
+
+*Generate automatically documentation from your module/class/function docstring.*
+
+Activate your dev env and install:
+```bash
+pip install sphinx-apidoc
+```
+
+Open file: `conf.py`
+add:
+
+```python
+import os
+import sys
+sys.path.insert(0, os.path.abspath("../../<code_source_folder>/"))
+extensions = [
+    "sphinx.ext.autodoc",  # include documentation from docstring
+    "sphinx.ext.napoleon",  # allow google or numpy docstring
+    "myst_parser",  # parse markdown files to be understood by sphinx
+]
+```
+
+Run inside a terminal:
+```bash
+sphinx-apidoc -a -o docs/source/ <code_source_folder>/
+```

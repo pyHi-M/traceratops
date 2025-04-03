@@ -1,4 +1,4 @@
-# [How to] Setup online documentation
+# Setup documentation (from scratch)
 
 ```{note}
 **If everything is already set up**, simply run this script to build the documentation locally and verify your changes before committing them.

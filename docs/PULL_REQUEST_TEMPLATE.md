@@ -11,7 +11,7 @@
 
 Tests can be performed in two ways:
 
-- [Updating the private repository for manual testing](https://traceratops.readthedocs.io/en/main/contribute/manual_test_checklist.md)
+- [Updating the private repository for manual testing](https://traceratops.readthedocs.io/en/lastest/contribute/checklist/manual_test_checklist.html)
 - A `test/test_*.py` file for automation with [`pytest`](https://docs.pytest.org/en/stable/) [(cheatsheet)](https://cheatography.com/hvid2301/cheat-sheets/pytest-usage/)
 
 Tests are required to:
@@ -23,10 +23,10 @@ Tests are required to:
 
 **Only for Pull Request on `dev` branch.**
 
-- [ ] [Documentation has been updated (tutorial)](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html)
-- [ ] [Feature reliability status is updated](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html#update-the-reliability-status)
+- [ ] [Documentation has been updated (tutorial)](https://traceratops.readthedocs.io/en/lastest/contribute/how_to_document.html)
+- [ ] [Feature reliability status is updated](https://traceratops.readthedocs.io/en/lastest/contribute/how_to_document.html#reliability-status)
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
-- [ ] [Code has been reviewed](https://traceratops.readthedocs.io/en/main/contribute/code_review.html)
+- [ ] [Code has been reviewed](https://traceratops.readthedocs.io/en/lastest/contribute/checklist/code_review.html)
 - [ ] Checks of GitHub Actions pass successfully
 
 ## [MAIN] Checklist
@@ -37,6 +37,6 @@ Tests are required to:
 - [ ] The status of at least one feature are updated to `stable` OR it's a **hotfix** branch
 - [ ] Manual tests are checked
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
-- `codespell` pass successfully
-- `mypy` pass successfully
+- [ ] `codespell` pass successfully
+- [ ] `mypy` pass successfully
 - [ ] Checks of GitHub Actions pass successfully
