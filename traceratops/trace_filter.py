@@ -184,10 +184,15 @@ def check_file_number(trace_files):
         print(f"\n$ {len(trace_files)} trace files to process: \n{f2p}")
 
 
-def filter_duplicat(remove_duplicate_spots, trace, trace_file):
+def filter_duplicat(
+    remove_duplicate_spots, trace, trace_file, localizations_file, localizations_data
+):
     if remove_duplicate_spots:
-        # remove duplicated UID spots
-        trace.remove_duplicates()
+        if localizations_file:
+            trace.remove_duplicates_loc(localization_table=localizations_data)
+        else:
+            # remove duplicated UID spots
+            trace.remove_duplicates()
         # removes barcodes in traces where they are repeated
         trace.filter_repeated_barcodes(trace_file)
     return trace
@@ -237,6 +242,7 @@ def runtime(
             )
         )
 
+    localizations_data = None
     if localizations_file:
         localization_table = LocalizationTable()
         localizations_data, _ = localization_table.load(localizations_file)
@@ -259,20 +265,14 @@ def runtime(
         # reads new trace
         trace.load(trace_file)
 
-        trace = filter_duplicat(remove_duplicate_spots, trace, trace_file)
+        trace = filter_duplicat(
+            remove_duplicate_spots,
+            trace,
+            trace_file,
+            localizations_file,
+            localizations_data,
+        )
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
-
-        # remove duplicated spots
-        if remove_duplicate_spots:
-            if localizations_file:
-                trace.remove_duplicates_loc(localization_table=localizations_data)
-            else:
-                trace.remove_duplicates()
-
-        # filters trace by minimum number of barcodes
-        if n_barcodes > 1:
-            trace.filter_traces_by_n(minimum_number_barcodes=n_barcodes)
-            comments.append("filt:N_barcodes>" + str(n_barcodes))
 
         # filters trace by coordinate
         for coord in ["x", "y", "z"]:
@@ -286,10 +286,6 @@ def runtime(
                     coor_max=coor_max,
                 )
                 comments.append("filt:{}<{}>{}".format(coor_min, coord, coor_max))
-
-        # removes barcodes in traces where they are repeated
-        if remove_duplicate_spots:
-            trace.filter_repeated_barcodes(trace_file)
 
         # removes barcodes from a list provided by user
         if remove_barcode is not None:
@@ -310,20 +306,8 @@ def runtime(
                 intensities_kept, output_file=f"{output_file}_filtered_intensities"
             )
 
-        # defines output file name
-        if label_to_keep is not None:
-            if label_to_keep:
-                trace.trace_keep_label(label_to_keep)
-                file_tag = label_to_keep
-            else:
-                trace.trace_remove_label(label_to_keep)
-                file_tag = "not:" + label_to_keep
-
-            # saves output trace
-            outputfile = trace_file.split(".")[0] + "_" + tag + "_" + file_tag + ".ecsv"
-        else:
-            outputfile = trace_file.split(".")[0] + "_" + tag + ".ecsv"
-
+        # saves output trace
+        outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
         trace.save(outputfile, comments=", ".join(comments))
         print(f"$ Saved output trace file at: {outputfile}")
     return len(trace_files)

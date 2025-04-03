@@ -9,8 +9,15 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from apifish.stack.io import read_table_from_ecsv
-from astropy.table import vstack
+from astropy.table import Table, vstack
+
+
+def read_table_from_ecsv(path):
+    """Read an astropy Table saved as an ``ecsv`` file."""
+    # read ecsv file
+    table = Table.read(path, format="ascii.ecsv")
+
+    return table
 
 
 class LocalizationTable:

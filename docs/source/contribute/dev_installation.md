@@ -48,3 +48,25 @@ pip install -e ".[dev]"
   - To undo: ```git update-index --no-assume-unchanged .pre-commit-config.yaml```
   - to see 'assume unchanged' files ("-v" option ==> use lowercase letters)
     ```git ls-files -v```
+
+### Strange error
+
+- If you get things like this during the installation:
+
+```rest
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+pylint 2.12.2 requires isort<6,>=4.2.5, which is not installed.
+pylint 2.12.2 requires mccabe<0.7,>=0.6, which is not installed.
+pylint 2.12.2 requires toml>=0.9.2, which is not installed.
+```
+
+**OR**
+
+- If a script name seems to refer to another package:
+
+  - Identify the error package name (here it's pylint).
+  - If it's not in the dependancies of your project, it's a "ghost".
+  - To exorcise it:
+    - Identify exe path : `which pylint` (give me `/home/user/.local/bin/pylint`)
+    - Remove it : `rm ~/.local/bin/pylint`
+  - Re-install your package to be sure `pip install -e ".[dev]"`
