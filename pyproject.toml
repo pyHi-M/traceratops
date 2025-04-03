@@ -31,12 +31,13 @@ requires-python = ">=3.9"
 # --> think to duplicate to 'docs/requirements.txt'
 dev = [
     "pytest",
+    "pre-commit",
+    "mypy",
     "sphinx",           # for doc
     "sphinx-rtd-theme", # for doc
     "sphinx-argparse",  # for doc
     "myst-parser",      # for doc
-    "pre-commit",
-    "mypy",
+    "sphinx-panels",    # for doc
 ]
 
 [project.urls]

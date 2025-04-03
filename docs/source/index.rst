@@ -21,6 +21,7 @@ traceratops documentation
    :caption: Contribute
 
    contribute/CONTRIBUTING
-   [DEV] Installation<contribute/dev_installation>
+   Installation [DEV]<contribute/dev_installation>
    contribute/how_to_document
-   contribute/import_pyhim_script
+   contribute/pr_checklists
+   .. contribute/import_pyhim_script
