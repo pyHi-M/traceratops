@@ -1,16 +1,51 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This script will load a trace file and a filter traces based on a series of user arguments
+**Chromatin Trace Filtering Utility**
 
---> Usage
-$ trace_filter.py --input Trace.ecsv --z_min 4 --z_max 5 --y_max 175 --output 'zy_filtered' --n_barcodes 3 --clean_spots
-will analyze 'Trace.ecsv' and remove spots with 4>z>5 amd z>175 and less than 3 barcodes
---clean_spots will remove barcode spots that are repeated within a trace
---remove_barcode will remove the barcode name provided. This needs to be an integer or a comma-separated integer
---> outputs
-.ecsv trace table file.
-.png files with stats of number of spots for the same barcode per trace [only if --clean_spots was used]
+This script processes and filters chromatin trace files based on various criteria:
+
+- Spatial coordinates (x, y, z)
+- Minimum number of barcodes per trace
+- Duplicate spot removal
+- Barcode-specific filtering
+- Label-based filtering
+- Localization intensity thresholding
+
+The script can process single files or multiple files via pipe input.
+
+**Outputs**
+
+1. Filtered trace file (.ecsv) with naming convention:
+    - [original_filename]_[output_tag]_[label_tag].ecsv
+2. For intensity filtering:
+    - Histogram plots of localization intensities (before and after filtering)
+3. For duplicate barcode cleaning:
+    - Statistics plots (.png) showing number of spots with same barcode per trace
+
+**Examples**
+
+.. code-block:: bash
+
+    # Basic filtering with spatial constraints and minimum barcode requirement
+    $ trace_filter --input Trace.ecsv --z_min 4 --z_max 5 --y_max 175 --output zy_filtered --n_barcodes 3
+
+    # Remove duplicate spots and specific barcodes
+    $ trace_filter --input Trace.ecsv --clean_spots --remove_barcode 1,3,5
+
+    # Keep only traces with a specific label
+    $ trace_filter --input Trace.ecsv --keep_label region1
+
+    # Remove traces with a specific label
+    $ trace_filter --input Trace.ecsv --remove_label region1
+
+    # Filter by localization intensity
+    $ trace_filter --input Trace.ecsv --localization_file Localizations.ecsv --intensity_min 1000
+
+    # Process multiple files via pipe
+    $ ls *Trace.ecsv | trace_filter --pipe --n_barcodes 3
+
+**Usage**
 """
 
 import argparse
@@ -19,6 +54,8 @@ import sys
 import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+# from traceratops.core.localization_table import LocalizationTable
 
 
 def check_required_arg(args, parser):
@@ -34,73 +71,80 @@ def check_required_arg(args, parser):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        add_help=True,
-        description="""Depending the arguments, you can:
-        - filter your repeated spots
-        - keep a minimum number of spots by trace
-        - select or remove a label name
-        - remove a barcode ID
-        - filter by the (X,Y,Z) spot localization.""",
+    parser = argparse.ArgumentParser(add_help=True, description=__doc__)
+    psr_basic = parser.add_argument_group(
+        "Basic arguments", description="*One of --input or --pipe is required.*"
     )
-    parser_required = parser.add_argument_group(
-        "Required arguments", description="*One of these two arguments is required.*"
-    )
-
-    parser_required.add_argument(
+    psr_basic.add_argument(
         "--input", help="Name of input trace file (ECSV format).", default=None
     )
-    parser_required.add_argument(
-        "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
-    )
-
-    parser_opt = parser.add_argument_group("Optional arguments")
-    parser_opt.add_argument(
+    psr_basic.add_argument(
         "-O", "--output", help="Tag to add to the output file.", default="filtered"
     )
-
-    parser_opt.add_argument(
-        "--clean_spots",
-        help="Removes both spots with same UID and barcodes repeated in a single trace.",
+    psr_basic.add_argument(
+        "--pipe",
+        help="inputs Trace file list from stdin (for batch processing)",
         action="store_true",
     )
 
-    parser_opt.add_argument(
-        "--remove_label",
-        help="Provide a label name to remove traces with this label.",
-        default=None,
-    )
-    parser_opt.add_argument(
-        "--keep_label",
-        help="Select traces containing this label, removes all other traces.",
-        default=None,
-    )
-    parser_opt.add_argument(
-        "--remove_barcode", help="Name of barcode to remove.", default=None
-    )
-
-    parser_opt.add_argument(
+    psr_opt = parser.add_argument_group("Filtering options")
+    psr_opt.add_argument(
         "--n_barcodes",
         help="Minimum number of barcodes by trace to keep.",
         default=2,
         type=int,
     )
-    parser_opt.add_argument(
+    psr_opt.add_argument(
+        "--clean_spots",
+        help="Removes both spots with same UID and barcodes repeated in a single trace.",
+        action="store_true",
+    )
+    psr_opt.add_argument(
+        "--remove_barcode",
+        help="Comma-separated list of barcode IDs to remove (e.g., ``1,2,3``)",
+        default=None,
+    )
+    psr_opt.add_argument(
+        "--remove_label",
+        help="Provide a label name to remove traces with this label.",
+        default=None,
+    )
+    psr_opt.add_argument(
+        "--keep_label",
+        help="Select traces containing this label, removes all other traces.",
+        default=None,
+    )
+
+    psr_intensity = parser.add_argument_group("Intensity filtering")
+    psr_intensity.add_argument(
+        "--localization_file", default=None, help="Name of input localizations file."
+    )
+    psr_intensity.add_argument(
+        "--intensity_min",
+        type=float,
+        default=0.0,
+        help="Minimum intensity threshold for localizations.",
+    )
+
+    psr_coord = parser.add_argument_group(
+        "Coordinate filtering", description="Coordinate limits (default: 0 to infinity)"
+    )
+    psr_coord.add_argument(
         "--z_min", help="Z minimum for a localization.", default=0, type=float
     )
-    parser_opt.add_argument(
+    psr_coord.add_argument(
         "--z_max", help="Z maximum for a localization.", default=np.inf, type=float
     )
-    parser_opt.add_argument(
+    psr_coord.add_argument(
         "--y_min", help="Y minimum for a localization.", default=0, type=float
     )
-    parser_opt.add_argument(
+    psr_coord.add_argument(
         "--y_max", help="Y maximum for a localization.", default=np.inf, type=float
     )
-    parser_opt.add_argument(
+    psr_coord.add_argument(
         "--x_min", help="X minimum for a localization.", default=0, type=float
     )
-    parser_opt.add_argument(
+    psr_coord.add_argument(
         "--x_max", help="X maximum for a localization.", default=np.inf, type=float
     )
 
@@ -243,6 +287,8 @@ def main():
         remove_barcode=args.remove_barcode,
         label_to_keep=args.keep_label,
         label_to_remove=args.remove_label,
+        localizations_file=args.localization_file,
+        intensity_min=args.intensity_min,
     )
 
     print(f"Processed <{n_traces_processed}> trace file(s)\n")
