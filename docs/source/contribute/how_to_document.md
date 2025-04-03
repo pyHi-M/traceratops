@@ -17,13 +17,21 @@
 ```python
 parser.add_argument("--z_min", help="Z minimum for a localization.", default=0, type=float)
 ```
-- Update the reliability status (development/beta-test/stable) of this new option:
-    - Add at the end of `help` argument: "\n\nStatus: \`\`\<STATE\>\`\`"
-    - `development` = no test available
-    - `beta-test` = only manual test(s)
-    - `stable` = automatic test(s)
-```python
-parser.add_argument("--z_min", help="Z minimum for a localization.\n\nStatus: ``stable``", ...)
+
+### Update the reliability status
+
+Choose the status of your main feature (can be non-exhaustive):
+- `development` = no test available
+- `beta-test` = only manual test(s)
+- `stable` = automatic test(s)
+
+Find the doc file inside `docs/source/scripts/` folder.
+
+Add just after the main title: "**Reliability status:** (in bolt) `status value` (in backtick)"
+```markdown
+# figure_him_matrix
+
+**Reliability status**: `stable`
 ```
 
 ### [Optional] Inside the doc file of this script

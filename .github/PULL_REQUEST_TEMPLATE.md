@@ -22,9 +22,9 @@ Tests are required to:
 
 **Only for Pull Request on `dev` branch.**
 
-- [ ] Tests are available
+- [ ] Tests are available for the main feature (manual or auto)
 - [ ] [Documentation has been updated (tutorial)](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html)
-- [ ] [Argument status are updated](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html#inside-your-python-script)
+- [ ] [Feature reliability status is updated](https://traceratops.readthedocs.io/en/main/contribute/how_to_document.html#update-the-reliability-status)
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
 - [ ] [Code has been reviewed](https://traceratops.readthedocs.io/en/main/contribute/code_review.html)
 - [ ] GitHub Actions checks pass successfully
@@ -34,7 +34,9 @@ Tests are required to:
 **Only for Pull Request on `main` branch.**
 
 - [ ] Version number has been updated inside `pyproject.toml` [(Depending on the type of change)](https://semver.org/)
-- [ ] The status of at least one feature are updated to `stable` (for each argument involved) OR it's a **hotfix** branch
+- [ ] The status of at least one feature are updated to `stable` OR it's a **hotfix** branch
 - [ ] Manual tests are checked
 - [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
+- `codespell` pass successfully
+- `mypy` pass successfully
 - [ ] GitHub Actions checks pass successfully
