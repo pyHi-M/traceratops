@@ -1,5 +1,7 @@
 # figure_him_matrix
 
+**Reliability status**: `stable`
+
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.figure_him_matrix.parse_arguments
