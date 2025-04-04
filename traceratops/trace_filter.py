@@ -89,7 +89,7 @@ def parse_arguments():
     psr_opt = parser.add_argument_group("Filtering options")
     psr_opt.add_argument(
         "--n_barcodes",
-        help="Minimum number of barcodes by trace to keep.",
+        help="Minimum number of barcodes by trace to keep. Filtering performed last because the previous filters generate traces with fewer spots.",
         default=2,
         type=int,
     )
