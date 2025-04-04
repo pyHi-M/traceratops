@@ -89,7 +89,7 @@ def parse_arguments():
     psr_opt = parser.add_argument_group("Filtering options")
     psr_opt.add_argument(
         "--n_barcodes",
-        help="Minimum number of barcodes by trace to keep.",
+        help="Minimum number of barcodes by trace to keep. Filtering performed last because the previous filters generate traces with fewer spots.",
         default=2,
         type=int,
     )
@@ -272,7 +272,6 @@ def runtime(
             localizations_file,
             localizations_data,
         )
-        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # filters trace by coordinate
         for coord in ["x", "y", "z"]:
@@ -305,6 +304,8 @@ def runtime(
             localization_table.plot_intensity_distribution(
                 intensities_kept, output_file=f"{output_file}_filtered_intensities"
             )
+
+        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
         outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
