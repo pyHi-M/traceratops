@@ -272,7 +272,6 @@ def runtime(
             localizations_file,
             localizations_data,
         )
-        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # filters trace by coordinate
         for coord in ["x", "y", "z"]:
@@ -305,6 +304,8 @@ def runtime(
             localization_table.plot_intensity_distribution(
                 intensities_kept, output_file=f"{output_file}_filtered_intensities"
             )
+
+        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
         outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"

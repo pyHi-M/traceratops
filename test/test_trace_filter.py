@@ -197,3 +197,37 @@ def test_label(command):
         result, generated_output_path, filtered_filename, expected_output_path
     )
     os.remove(generated_output_path)
+
+
+@pytest.mark.parametrize(
+    ("bc_list", "output"),
+    [("999", "not_present"), ("1", "one"), ("3,1,5", "list")],
+    ids=["not present", "one", "list"],
+)
+def test_remove_barcode(bc_list, output):
+    input_file = "remove_barcode.ecsv"
+    input_path = os.path.join(INPUT_DIR, input_file)
+    filtered_filename = input_file.replace(".ecsv", f"_{output}.ecsv")
+    generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
+    expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
+    # Delete old filtered file if exist to avoid conflict
+    if os.path.exists(generated_output_path):
+        os.remove(generated_output_path)
+    # Run script with CLI
+    result = subprocess.run(
+        [
+            "trace_filter",
+            "--input",
+            input_path,
+            "--remove_barcode",
+            bc_list,
+            "--output",
+            output,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    check_script_run_normally(
+        result, generated_output_path, filtered_filename, expected_output_path
+    )
+    os.remove(generated_output_path)
