@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "traceratops"
-version = "0.3.2"
+version = "0.3.3"
 description = "Toolbox for trace analysis"
 readme = "README.md"
 authors = [
@@ -49,9 +49,9 @@ trace_merge = "traceratops.trace_merge:main"
 figure_him_matrix = "traceratops.figure_him_matrix:main"
 
 [tool.mypy]
-python_version = "3.11" # Python version used for mypy analysis
+python_version = "3.11"       # Python version used for mypy analysis
 ignore_missing_imports = true # avoids import errors
 disallow_untyped_defs = false # allows untyped functions (legacy code)
-check_untyped_defs = true # even analyses functions without annotations
-warn_unused_ignores = true # alert if a `# type: ignore` is unnecessary
-show_error_codes = true # displays error codes (useful for googling)
+check_untyped_defs = true     # even analyses functions without annotations
+warn_unused_ignores = true    # alert if a `# type: ignore` is unnecessary
+show_error_codes = true       # displays error codes (useful for googling)

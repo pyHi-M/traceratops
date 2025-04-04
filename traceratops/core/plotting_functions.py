@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import sys
+
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import bootstrap, ranksums
 from tqdm import trange
+
+from traceratops.core.him_matrix_operations import (
+    calculate_contact_probability_matrix,
+    shuffle_matrix,
+)
 
 rng = np.random.default_rng()
 
@@ -57,6 +65,76 @@ def bootstraps_matrix(m, N_bootstrap=9999):
 
 def get_position_from_unique_barcode_list(i: int, unique_barcodes: list) -> int:
     return unique_barcodes.index(i)
+
+
+def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
+
+    if os.path.exists(scPWDMatrix_filename):
+        sc_matrix = np.load(scPWDMatrix_filename)
+        print(f"$ Loaded: {scPWDMatrix_filename}")
+    else:
+        print("*** Error: could not find {}".format(scPWDMatrix_filename))
+        sys.exit(-1)
+
+    n_cells = sc_matrix.shape[2]
+
+    cells2Plot = range(n_cells)
+
+    print("$ N traces to plot: {}/{}".format(len(cells2Plot), sc_matrix.shape[2]))
+
+    uniqueBarcodes = list(np.loadtxt(uniqueBarcodes, delimiter=" "))
+    uniqueBarcodes = [int(x) for x in uniqueBarcodes]
+    print(f"$ unique barcodes loaded: {uniqueBarcodes}")
+
+    print(f"$ averaging method: {run_parameters['dist_calc_mode']}")
+
+    if run_parameters["cMax"] == 0:
+        cScale = (
+            sc_matrix[~np.isnan(sc_matrix)].max() / run_parameters["scalingParameter"]
+        )
+    else:
+        cScale = run_parameters["cMax"]
+
+    print(
+        "$ loaded cScale: {} | used cScale: {}".format(
+            run_parameters["scalingParameter"], cScale
+        )
+    )
+
+    outputFileName = (
+        run_parameters["outputFolder"]
+        + os.sep
+        + "Fig_"
+        + os.path.basename(scPWDMatrix_filename).split(".")[0]
+    )
+
+    if run_parameters["shuffle"] == 0:
+        index = range(sc_matrix.shape[0])
+    else:
+        index = [int(i) for i in run_parameters["shuffle"].split(",")]
+        sc_matrix = shuffle_matrix(sc_matrix, index)
+
+    if run_parameters["dist_calc_mode"] == "proximity":
+        # calculates and plots contact probability matrix from merged samples/datasets
+        print("$ calculating proximity matrix")
+        sc_matrix, n_cells = calculate_contact_probability_matrix(
+            sc_matrix,
+            uniqueBarcodes,
+            run_parameters["pixelSize"],
+            threshold=run_parameters["proximity_threshold"],
+            norm=run_parameters["matrix_norm_mode"],
+        )
+
+    fileNameEnding = (
+        "_"
+        + run_parameters["dist_calc_mode"]
+        + "_"
+        + run_parameters["matrix_norm_mode"]
+        + "_"
+        + str(run_parameters["cMax"])
+    )
+
+    return sc_matrix, uniqueBarcodes, cScale, n_cells, outputFileName, fileNameEnding
 
 
 def Wilcoxon_matrix(

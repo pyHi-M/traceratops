@@ -17,5 +17,9 @@
 # - comments: [xyz_unit=micron, genome_assembly=mm10, 'filt:n_barcodes>2']
 # schema: astropy-2.0
 Spot_ID Trace_ID x y z Chrom Chrom_Start Chrom_End "ROI #" Mask_id "Barcode #" label
-0000001 aaaaaaaa 84.0 47.0 7.0 Crôm 0 99 5 3 28 label_1
-0000002 aaaaaaaa 145.0 73.0 4.0 Crôm 0 99 5 4 8 label_1
+0000002 aaaaaaaa 5.0 73.0 4.0 Crôm 0 9999999999999 5 4 2 _
+0000003 aaaaaaaa 2.0 36.0 4.0 Crôm 0 9999999999999 5 5 3 _
+0000004 aaaaaaaa 3.0 62.0 8.0 Crôm 0 9999999999999 5 6 4 _
+0000005 bbbbbbbb 1.0 62.0 8.0 Crôm 0 9999999999999 5 6 5 _
+0000006 bbbbbbbb 2.0 62.0 8.0 Crôm 0 9999999999999 5 6 4 _
+0000007 bbbbbbbb 3.0 62.0 8.0 Crôm 0 9999999999999 5 6 2 _
