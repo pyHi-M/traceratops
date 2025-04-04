@@ -23,16 +23,13 @@
     `<code_source_folder>/example_script.py`
 
     ```python
+    """
+    This is the place of header docstring.
+    """
     import argparse
 
     def parse_arguments():
-        parser = argparse.ArgumentParser(
-            add_help=True,
-            description="""You can use three double quote
-            - To write a description
-            of this script
-            - With different lines""",
-        )
+        parser = argparse.ArgumentParser(description=__doc__) # ref to docstring
         # add_argument_group() is optional
         # you can directly use parser.add_argument()
         parser_required = parser.add_argument_group("Required arguments")

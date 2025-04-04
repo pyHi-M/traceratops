@@ -85,15 +85,20 @@ documentation/rest_with_myst
 
 *Document inside your python script.*
 
-- Update the main docstring of the module / script
-- Link this docstring to the argparse `description` argument:
-    ```python
-    def parse_arguments():
-    parser = argparse.ArgumentParser(description=__doc__)
-    ```
-- If you create a new CLI option with `.add_argument(...)`, add a `help` argument like this:
+- Update the header docstring of the module / script
+- Link this docstring to the argparse `description` argument with `__doc__`
+- If you create a new CLI option with `.add_argument(...)`, add a `help` argument.
+
+Example:
 ```python
-parser.add_argument("--z_min", help="Z minimum for a localization.", default=0, type=float)
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+This is the place of header docstring.
+"""
+def parse_arguments():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--z_min", help="Z minimum for a localization.")
 ```
 
 ### Reliability status
