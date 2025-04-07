@@ -10,6 +10,12 @@ traceratops documentation
 
 .. toctree::
    :maxdepth: 1
+   :caption: Tutorials
+
+   tutorials/filter_intensity
+
+.. toctree::
+   :maxdepth: 1
    :caption: Scripts
 
    scripts/trace_filter
