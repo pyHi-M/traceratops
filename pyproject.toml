@@ -60,6 +60,7 @@ trace_correct_coordinates = "traceratops.trace_correct_coordinates:main"
 trace_combinator = "traceratops.trace_combinator:main"
 trace_assign_mask = "traceratops.trace_assign_mask:main"
 trace_analyzer = "traceratops.trace_analyzer:main"
+pwd_matrix_2_pdb = "traceratops.pwd_matrix_2_pdb:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis
