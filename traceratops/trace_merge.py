@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This just takes a list of trace files and merges them together
+This just takes a list of trace files and merges them together.
 
-$ ls Trace*.ecsv | trace_merge.py
+Usage example:
+
+    ``ls trace*.ecsv | trace_merge``
+
+    or
+
+    ``trace_merge --traces <folder_path_with_trace_files>``
 
 outputs
 
@@ -18,19 +24,7 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="""Simpler version of trace_combinator.
-        This just takes a list of trace files and merges them together.
-
-        Usage example:
-
-        ``ls trace*.ecsv | trace_merge``
-
-        or
-
-        ``trace_merge.py --traces <folder_path_with_trace_files>``
-        """
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-T", "--traces", help="Input folder with traces to merge", default=None
     )

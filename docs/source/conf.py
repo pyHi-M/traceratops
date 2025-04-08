@@ -60,6 +60,7 @@ autodoc_mock_imports = [
     "tqdm",
     "scipy",
     "sklearn",
+    "seaborn",
 ]
 
 
