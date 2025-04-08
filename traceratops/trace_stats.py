@@ -6,7 +6,7 @@ This script reads a chromatin trace file and computes basic statistics:
 - Number of unique chromatin traces
 
 Usage:
-    python trace_stats.py --input trace_file.ecsv
+    python trace_stats --input trace_file.ecsv
 """
 
 import argparse
