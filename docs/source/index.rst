@@ -25,6 +25,7 @@ traceratops documentation
    scripts/trace_export_to_fofct
    scripts/trace_filter_advanced
    scripts/trace_correct_coordinates
+   scripts/trace_combinator
 
 
 .. toctree::
