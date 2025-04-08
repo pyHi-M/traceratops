@@ -20,6 +20,7 @@ traceratops documentation
    scripts/trace_splitter
    scripts/trace_plot
    scripts/trace_pearsons
+   scripts/trace_impute_genomic_coordinates
 
 
 .. toctree::
