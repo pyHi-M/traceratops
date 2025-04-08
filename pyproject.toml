@@ -58,6 +58,7 @@ trace_export_to_fofct = "traceratops.trace_export_to_fofct:main"
 trace_filter_advanced = "traceratops.trace_filter_advanced:main"
 trace_correct_coordinates = "traceratops.trace_correct_coordinates:main"
 trace_combinator = "traceratops.trace_combinator:main"
+trace_assign_mask = "traceratops.trace_assign_mask:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis
