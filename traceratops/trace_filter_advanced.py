@@ -28,10 +28,6 @@ def parse_arguments():
     parser.add_argument(
         "-O", "--output", help="Tag to add to the output file. Default = filtered"
     )
-    parser.add_argument(
-        "--fraction_missing_barcodes",
-        help="fraction of missing barcodes. Default = 0.5",
-    )
     parser.add_argument("--input", help="Name of input trace file.")
     parser.add_argument(
         "--overlapping_threshold", help="overlapping threshold. Default = 0.030"
@@ -58,11 +54,6 @@ def create_dict_args(args):
         p["input"] = args.input
     else:
         p["input"] = None
-
-    if args.fraction_missing_barcodes:
-        p["fraction_missing_barcodes"] = args.fraction_missing_barcodes
-    else:
-        p["fraction_missing_barcodes"] = 0.5
 
     if args.overlapping_threshold:
         p["overlapping_threshold"] = args.overlapping_threshold
@@ -771,7 +762,7 @@ class FilterTraces:
         return distance_flatten
 
 
-if __name__ == "__main__":
+def main():
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()
@@ -783,9 +774,6 @@ if __name__ == "__main__":
     data_files = p["trace_files"]
     dest_folder = data_folder + os.sep + p["output"]
     overlapping_threshold = p["overlapping_threshold"]  # in µm
-    fraction_missing_barcodes = p[
-        "fraction_missing_barcodes"
-    ]  # a fraction of 0.5 means that a maximum of 50% missing barcodes is allowed
 
     print(f"\n$ Will process the following trace files: {data_files}\n")
     create_folder(dest_folder)
@@ -859,3 +847,7 @@ if __name__ == "__main__":
             print(f"\n$ output trace file: {outputfile}")
         else:
             print("! Sorry, all traces seem to contain duplicate barcodes")
+
+
+if __name__ == "__main__":
+    main()
