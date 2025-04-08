@@ -47,6 +47,8 @@ Homepage = "https://github.com/pyHi-M/traceratops"
 trace_filter = "traceratops.trace_filter:main"
 trace_merge = "traceratops.trace_merge:main"
 figure_him_matrix = "traceratops.figure_him_matrix:main"
+trace_to_matrix = "traceratops.trace_to_matrix:main"
+trace_stats = "traceratops.trace_stats:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis

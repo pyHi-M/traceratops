@@ -16,6 +16,7 @@ traceratops documentation
    scripts/trace_merge
    scripts/figure_him_matrix
    scripts/trace_to_matrix
+   scripts/trace_stats
 
 .. toctree::
    :maxdepth: 1
