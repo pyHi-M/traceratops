@@ -50,6 +50,7 @@ figure_him_matrix = "traceratops.figure_him_matrix:main"
 trace_to_matrix = "traceratops.trace_to_matrix:main"
 trace_stats = "traceratops.trace_stats:main"
 trace_splitter = "traceratops.trace_splitter:main"
+trace_plot = "traceratops.trace_plot:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis

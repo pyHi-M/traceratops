@@ -18,6 +18,7 @@ traceratops documentation
    scripts/trace_to_matrix
    scripts/trace_stats
    scripts/trace_splitter
+   scripts/trace_plot
 
 .. toctree::
    :maxdepth: 1
