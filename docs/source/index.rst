@@ -31,6 +31,7 @@ traceratops documentation
    scripts/pwd_matrix_2_pdb
    scripts/process_him_matrix
    scripts/localization_merge
+   scripts/localization_cp_files
 
 
 .. toctree::
