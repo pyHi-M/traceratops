@@ -19,6 +19,8 @@ traceratops documentation
    scripts/trace_stats
    scripts/trace_splitter
    scripts/trace_plot
+   scripts/trace_pearsons
+
 
 .. toctree::
    :maxdepth: 1
