@@ -21,6 +21,7 @@ traceratops documentation
    scripts/trace_plot
    scripts/trace_pearsons
    scripts/trace_impute_genomic_coordinates
+   scripts/trace_import_from_fofct
 
 
 .. toctree::

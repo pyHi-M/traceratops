@@ -53,6 +53,7 @@ trace_splitter = "traceratops.trace_splitter:main"
 trace_plot = "traceratops.trace_plot:main"
 trace_pearsons = "traceratops.trace_pearsons:main"
 trace_impute_genomic_coordinates = "traceratops.trace_impute_genomic_coordinates:main"
+trace_import_from_fofct = "traceratops.trace_import_from_fofct:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis
