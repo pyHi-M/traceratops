@@ -65,6 +65,7 @@ process_him_matrix = "traceratops.process_him_matrix:main"
 localization_merge = "traceratops.localization_merge:main"
 localization_cp_files = "traceratops.localization_cp_files:main"
 compare_pwd_matrices = "traceratops.compare_pwd_matrices:main"
+analyze_localizations = "traceratops.analyze_localizations:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis

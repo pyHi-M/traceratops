@@ -33,6 +33,7 @@ traceratops documentation
    scripts/localization_merge
    scripts/localization_cp_files
    scripts/compare_pwd_matrices
+   scripts/analyze_localizations
 
 
 .. toctree::
