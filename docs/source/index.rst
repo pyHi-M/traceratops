@@ -23,6 +23,7 @@ traceratops documentation
    scripts/trace_impute_genomic_coordinates
    scripts/trace_import_from_fofct
    scripts/trace_export_to_fofct
+   scripts/trace_filter_advanced
 
 
 .. toctree::
