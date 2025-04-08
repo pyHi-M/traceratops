@@ -27,6 +27,7 @@ traceratops documentation
    scripts/trace_correct_coordinates
    scripts/trace_combinator
    scripts/trace_assign_mask
+   scripts/trace_analyzer
 
 
 .. toctree::
