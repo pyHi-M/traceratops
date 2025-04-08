@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-- This script takes JSON file with folders where datasets are
-stored.
-- It searches for Trace files with the expected methods, loads them, and
-- combines them into a single table that is outputted to the buildPWDmatrix folder.
+This script takes JSON file with folders where datasets are stored.
+It searches for Trace files with the expected methods, loads them, and combines them into a single table that is outputted to the buildPWDmatrix folder.
 
 outputs:
 ChromatinTraceTable() object and output .ecsv formatted file with assembled trace tables.

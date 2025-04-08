@@ -1,4 +1,4 @@
-# trace_analyser
+# trace_analyzer
 
 **Reliability status**: `development`
 
@@ -7,8 +7,8 @@
 
 ```{eval-rst}
 .. argparse::
-   :ref: traceratops.trace_assign_mask.parse_arguments
-   :prog: trace_assign_mask
+   :ref: traceratops.trace_analyzer.parse_arguments
+   :prog: trace_analyzer
 ```
 
 ## Description

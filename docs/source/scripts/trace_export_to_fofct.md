@@ -11,13 +11,16 @@
 ## Example BED file
 
 The bed file should have no header.
-```
+
+```text
 chr2L	2343645	2356099	5
 chr2L	2356147	2369783	9
 chr2L	2369828	2381912	13
 chr2L	2381947	2393854	17
 chr2L	2393892	2405589	21
+
 ```
+
 
 ## Notes
 
@@ -44,6 +47,22 @@ We need as run arguments:
 
 ## Example
 
-```
+```sh
 trace_export_to_fofct --ecsv_file /path/to/Trace_3D_barcode_KDtree_ROI-5.ecsv --bed_file /path/to/barcode.bed --json_file /path/to/parameters.json --output_file /path/to/output.csv
 ```
+
+Example json file:
+```json
+{
+  "genome_assembly": "GRCh38",
+  "experimenter_name": "Dr. Pirulo",
+  "experimenter_contact": "pirulo@gmail.com"
+}
+```
+
+To link the traces to the chromosomes, we use a BED file that contains the barcode information.
+We expect the BED file to have the following columns:
+- chrName
+- startSeq
+- endSeq
+- Barcode_ID

@@ -11,20 +11,6 @@ We use a JSON file to store the metadata of the experiment, such as:
 - contact information
 
 required_keys = ["genome_assembly", "experimenter_name", "experimenter_contact"]
-
-Example json file:
-{
-  "genome_assembly": "GRCh38",
-  "experimenter_name": "Dr. Pirulo",
-  "experimenter_contact": "pirulo@gmail.com"
-}
-
-To link the traces to the chromosomes, we use a BED file that contains the barcode information.
-We expect the BED file to have the following columns:
-- chrName
-- startSeq
-- endSeq
-- Barcode_ID
 """
 
 import csv
