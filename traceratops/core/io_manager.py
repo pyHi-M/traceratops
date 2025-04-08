@@ -50,3 +50,17 @@ def load_barcode_dict(file_name):
             bc_dict = barcode_type
 
     return bc_dict
+
+
+def save_json(data, file_name):
+    """Save a python dict as a JSON file
+
+    Parameters
+    ----------
+    data : dict
+        Data to save
+    file_name : str
+        Output JSON file name
+    """
+    with open(file_name, mode="w", encoding="utf-8") as json_f:
+        json.dump(data, json_f, ensure_ascii=False, sort_keys=True, indent=4)

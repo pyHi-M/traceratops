@@ -29,6 +29,7 @@ traceratops documentation
    scripts/trace_assign_mask
    scripts/trace_analyzer
    scripts/pwd_matrix_2_pdb
+   scripts/process_him_matrix
 
 
 .. toctree::
