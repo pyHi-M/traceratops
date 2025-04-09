@@ -21,15 +21,7 @@ def run_trace_filter(args, shell=False):
     return subprocess.run(args, capture_output=True, text=True, shell=shell)
 
 
-def check_output(result, gen_path, filtered_name, expected_path):
-    assert result.returncode == 0, f"Runtime error: {result.stderr}"
-    assert os.path.exists(gen_path), f"Output file {filtered_name} isn't created"
-    assert filecmp.cmp(
-        gen_path, expected_path, shallow=False
-    ), f"Difference detected between {gen_path} and {expected_path}"
-
-
-def check_script_run_normally(result, gen_out_path, filtered, expected):
+def check_output(result, gen_out_path, filtered, expected):
     assert result.returncode == 0, f"Runtime error: {result.stderr}"
     assert os.path.exists(gen_out_path), f"Output file {filtered} isn't created"
     assert filecmp.cmp(
@@ -57,9 +49,7 @@ def test_trace_filter_input(input_file):
 
     # Run script with CLI
     result = run_trace_filter(["trace_filter", "--input", input_path])
-    check_script_run_normally(
-        result, generated_output_path, filtered_filename, expected_output_path
-    )
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
     remove_file_if_exists(generated_output_path)
 
 
@@ -128,9 +118,7 @@ def test_trace_filter_output(input_file):
         ["trace_filter", "--input", input_path, "--output", output_arg]
     )
 
-    check_script_run_normally(
-        result, generated_output_path, filtered_filename, expected_output_path
-    )
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
     remove_file_if_exists(generated_output_path)
 
 
@@ -159,9 +147,7 @@ def test_clean_spots(input_file):
             "--clean_spots",
         ]
     )
-    check_script_run_normally(
-        result, generated_output_path, filtered_filename, expected_output_path
-    )
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
     remove_file_if_exists(generated_output_path)
     in_path_base = input_path.split(".")[0]
     remove_file_if_exists(in_path_base + "_before_filtering.png")
@@ -188,9 +174,7 @@ def test_label(command):
             "label_1",
         ]
     )
-    check_script_run_normally(
-        result, generated_output_path, filtered_filename, expected_output_path
-    )
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
     remove_file_if_exists(generated_output_path)
 
 
@@ -218,7 +202,5 @@ def test_remove_barcode(bc_list, output):
             output,
         ]
     )
-    check_script_run_normally(
-        result, generated_output_path, filtered_filename, expected_output_path
-    )
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
     remove_file_if_exists(generated_output_path)
