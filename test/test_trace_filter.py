@@ -42,10 +42,13 @@ def _test_trace_filter_common(
     remove_file_if_exists(generated_output_path)
 
     if clean_png:
+        all_suffix = ["before_filtering", "filtered", "filtered_intensities"]
+        for suf in all_suffix:
+            remove_file_if_exists(os.path.join(INPUT_DIR, f"{base_name}_{suf}.png"))
+        # just test_intensity():
         remove_file_if_exists(
-            os.path.join(INPUT_DIR, f"{base_name}_before_filtering.png")
+            os.path.join(INPUT_DIR, "intensity_localization_intensities.png")
         )
-        remove_file_if_exists(os.path.join(INPUT_DIR, f"{base_name}_filtered.png"))
 
 
 # ==== FILE LISTS ====
@@ -191,3 +194,24 @@ def test_xyz_min_max():
     ]
 
     _test_trace_filter_common(input_file, args)
+
+
+def test_intensity():
+    input_file = "duplicate_spot.ecsv"
+    input_path = os.path.join(INPUT_DIR, input_file)
+    intensity_path = os.path.join(INPUT_DIR, "intensity.ecsv")
+
+    args = [
+        "trace_filter",
+        "--input",
+        input_path,
+        "--clean_spots",
+        "--localization_file",
+        intensity_path,
+        "--intensity_min",
+        "555",
+        "--output",
+        "intensity",
+    ]
+
+    _test_trace_filter_common(input_file, args, suffix="_intensity", clean_png=True)
