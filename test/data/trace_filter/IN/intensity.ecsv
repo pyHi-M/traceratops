@@ -1,0 +1,28 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: Buid, datatype: string}
+# - {name: 'ROI #', datatype: int64}
+# - {name: 'CellID #', datatype: int64}
+# - {name: 'Barcode #', datatype: int64}
+# - {name: id, datatype: int64}
+# - {name: zcentroid, datatype: float32}
+# - {name: xcentroid, datatype: float32}
+# - {name: ycentroid, datatype: float32}
+# - {name: sharpness, datatype: float32}
+# - {name: roundness1, datatype: float32}
+# - {name: roundness2, datatype: float32}
+# - {name: npix, datatype: int64}
+# - {name: sky, datatype: float32}
+# - {name: peak, datatype: float32}
+# - {name: flux, datatype: float32}
+# - {name: mag, datatype: float32}
+# schema: astropy-2.0
+Buid "ROI #" "CellID #" "Barcode #" id zcentroid xcentroid ycentroid sharpness roundness1 roundness2 npix sky peak flux mag
+0000001 5 0 28 0 7.0 84.0 47.0 0.43809524 8.077993 0.43809524 276 0.0 550.0 11000.0 -10.0
+0000002 5 0 8 1 4.0 145.0 73.0 0.45000000 8.100000 0.45000000 280 0.0 530.0 10800.0 -9.9
+0000003 5 0 15 2 4.0 152.0 36.0 0.44000000 8.050000 0.44000000 270 0.0 540.0 10950.0 -10.1
+0000004 5 0 21 3 8.0 203.0 62.0 0.42000000 8.000000 0.42000000 265 0.0 560.0 11200.0 -10.2
+0000005 5 0 22 4 8.0 201.0 62.0 0.41000000 7.980000 0.41000000 260 0.0 570.0 11300.0 -10.3
+0000006 5 0 24 5 8.0 203.0 62.0 0.40000000 7.950000 0.40000000 255 0.0 580.0 11400.0 -10.4
+0000007 5 0 24 6 8.0 203.0 62.0 0.39000000 7.900000 0.39000000 250 0.0 590.0 11500.0 -10.5
