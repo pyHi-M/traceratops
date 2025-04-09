@@ -50,9 +50,7 @@ def test_trace_filter_input(input_file):
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
 
-    # Delete old filtered file if exist to avoid conflict
-    if os.path.exists(generated_output_path):
-        os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
 
     # Run script with CLI
     result = subprocess.run(
@@ -63,7 +61,7 @@ def test_trace_filter_input(input_file):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
-    os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
 
 
 def test_missing_arguments():
@@ -115,10 +113,8 @@ def test_trace_filter_pipe(input_file):
     assert result.returncode == 0, f"Runtime error: {result.stderr}"
     file1 = os.path.join(INPUT_DIR, "one_trace_four_spots_filtered.ecsv")
     file2 = os.path.join(INPUT_DIR, "two_traces_seven_spots_filtered.ecsv")
-    if os.path.exists(file1):
-        os.remove(file1)
-    if os.path.exists(file2):
-        os.remove(file2)
+    remove_file_if_exists(file1)
+    remove_file_if_exists(file2)
 
 
 input_files = [f for f in os.listdir(INPUT_DIR) if "one_trace_four_spots.ecsv" in f]
@@ -133,9 +129,7 @@ def test_trace_filter_output(input_file):
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
 
-    # Delete old filtered file if exist to avoid conflict
-    if os.path.exists(generated_output_path):
-        os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
 
     # Run script with CLI
     result = subprocess.run(
@@ -147,7 +141,7 @@ def test_trace_filter_output(input_file):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
-    os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
 
 
 input_files = [f for f in os.listdir(INPUT_DIR) if "duplicate_spot" in f]
@@ -162,8 +156,8 @@ def test_clean_spots(input_file):
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
     # Delete old filtered file if exist to avoid conflict
-    if os.path.exists(generated_output_path):
-        os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
+
     # Run script with CLI
     result = subprocess.run(
         [
@@ -180,10 +174,10 @@ def test_clean_spots(input_file):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
-    os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
     in_path_base = input_path.split(".")[0]
-    os.remove(in_path_base + "_before_filtering.png")
-    os.remove(in_path_base + "_filtered.png")
+    remove_file_if_exists(in_path_base + "_before_filtering.png")
+    remove_file_if_exists(in_path_base + "_filtered.png")
 
 
 @pytest.mark.parametrize("command", ["remove_label", "keep_label"])
@@ -195,9 +189,7 @@ def test_label(command):
     filtered_filename = input_file.replace(".ecsv", f"_filtered_{end}.ecsv")
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-    # Delete old filtered file if exist to avoid conflict
-    if os.path.exists(generated_output_path):
-        os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
     # Run script with CLI
     result = subprocess.run(
         [
@@ -213,7 +205,7 @@ def test_label(command):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
-    os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
 
 
 @pytest.mark.parametrize(
@@ -227,9 +219,7 @@ def test_remove_barcode(bc_list, output):
     filtered_filename = input_file.replace(".ecsv", f"_{output}.ecsv")
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-    # Delete old filtered file if exist to avoid conflict
-    if os.path.exists(generated_output_path):
-        os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
     # Run script with CLI
     result = subprocess.run(
         [
@@ -247,4 +237,4 @@ def test_remove_barcode(bc_list, output):
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
-    os.remove(generated_output_path)
+    remove_file_if_exists(generated_output_path)
