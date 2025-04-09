@@ -39,7 +39,7 @@ traceratops documentation
    scripts/plot_4m
    scripts/plot_3way
    scripts/plot_single_cell
-   .. scripts/plot_n_him_matrices
+   scripts/plot_n_him_matrices
    .. scripts/plot_compare2matrices
 
 
