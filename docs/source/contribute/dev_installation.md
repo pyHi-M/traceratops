@@ -1,9 +1,19 @@
 
 # Installation for **developer**
 
-## Inside a virtual environment
+## Create conda environment
 
 ```bash
+conda create -n traceratops python=3.11
+conda activate traceratops
+```
+
+## Download & install the source code
+
+```bash
+cd $HOME/Repositories
+git clone git@github.com:pyHi-M/traceratops.git
+
 cd $HOME/Repositories/traceratops
 pip install -e ".[dev]"
 ```
@@ -49,7 +59,7 @@ pip install -e ".[dev]"
   - to see 'assume unchanged' files ("-v" option ==> use lowercase letters)
     ```git ls-files -v```
 
-### Strange error
+## Strange error
 
 - If you get things like this during the installation:
 

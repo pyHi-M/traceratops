@@ -25,7 +25,7 @@ from tqdm import trange
 
 class AnalysisHiMMatrix:
     """
-    this class is used for loading data processed by processHiMmatrix.py
+    this class is used for loading data processed by process_him_matrix.py
     Main use is to produce paper quality figures of HiM matrices, 3-way interaction matrices and HiM matrix ratios
     """
 
@@ -502,7 +502,6 @@ def load_sc_data(list_data, dataset_name, p):
         run_name.append(os.path.basename(os.path.dirname(root_folder)))
 
         # [makes list of files with Tables to load]
-        # tries to load files from newer version of proceesingPipeline.py
         files_to_process_compatibility = glob.glob(
             f"{root_folder}/buildsPWDmatrix{dim_tag}_order*ROI*.ecsv"
         )
