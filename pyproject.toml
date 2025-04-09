@@ -66,6 +66,13 @@ localization_merge = "traceratops.localization_merge:main"
 localization_cp_files = "traceratops.localization_cp_files:main"
 compare_pwd_matrices = "traceratops.compare_pwd_matrices:main"
 analyze_localizations = "traceratops.analyze_localizations:main"
+replot_3way = "traceratops.replot_3way:main"
+# plot_bootstrapping = "traceratops.plot_bootstrapping:main"
+# plot_4m = "traceratops.plot_4m:main"
+# plot_3way = "traceratops.plot_3way:main"
+# plot_single_cell = "traceratops.plot_single_cell:main"
+# plot_n_him_matrices = "traceratops.plot_n_him_matrices:main"
+# plot_compare2matrices = "traceratops.plot_compare2matrices:main"
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis
