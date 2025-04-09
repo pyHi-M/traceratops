@@ -36,7 +36,7 @@ traceratops documentation
    scripts/analyze_localizations
    scripts/replot_3way
    scripts/plot_bootstrapping
-   .. scripts/plot_4m
+   scripts/plot_4m
    .. scripts/plot_3way
    .. scripts/plot_single_cell
    .. scripts/plot_n_him_matrices
