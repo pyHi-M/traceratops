@@ -166,3 +166,28 @@ def test_n_barcodes(min):
     input_path = os.path.join(INPUT_DIR, input_file)
     args = ["trace_filter", "--input", input_path, "--n_barcodes", min, "--output", min]
     _test_trace_filter_common(input_file, args, suffix=f"_{min}")
+
+
+def test_xyz_min_max():
+    input_file = "xyz_min_max.ecsv"
+    input_path = os.path.join(INPUT_DIR, input_file)
+
+    args = [
+        "trace_filter",
+        "--input",
+        input_path,
+        "--x_min",
+        "80",
+        "--x_max",
+        "200",
+        "--y_min",
+        "30",
+        "--y_max",
+        "70",
+        "--z_min",
+        "5",
+        "--z_max",
+        "8",
+    ]
+
+    _test_trace_filter_common(input_file, args)
