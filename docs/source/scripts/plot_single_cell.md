@@ -1,6 +1,6 @@
 # plot_single_cell
 
-**Reliability status**: `development`
+**Reliability status**: `deprecated ?`
 
 ```{eval-rst}
 .. argparse::
