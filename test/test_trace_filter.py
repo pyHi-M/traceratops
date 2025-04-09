@@ -15,6 +15,9 @@ def remove_file_if_exists(path):
 
 
 def run_trace_filter(args, shell=False):
+    """
+    If shell == True: Allows shell commands like `|`
+    """
     return subprocess.run(args, capture_output=True, text=True, shell=shell)
 
 
@@ -53,11 +56,7 @@ def test_trace_filter_input(input_file):
     remove_file_if_exists(generated_output_path)
 
     # Run script with CLI
-    result = subprocess.run(
-        ["trace_filter", "--input", input_path],
-        capture_output=True,
-        text=True,
-    )
+    result = run_trace_filter(["trace_filter", "--input", input_path])
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
     )
@@ -66,11 +65,7 @@ def test_trace_filter_input(input_file):
 
 def test_missing_arguments():
     """Test the case when no arguments are provided to trace_filter.py."""
-    result = subprocess.run(
-        ["trace_filter"],  # Run the script without arguments
-        capture_output=True,
-        text=True,
-    )
+    result = run_trace_filter(["trace_filter"])  # Run the script without arguments
 
     # Capture standard output
     output = result.stdout
@@ -99,11 +94,8 @@ forpipe_files = [
 def test_trace_filter_pipe(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
     # Run script with CLI
-    result = subprocess.run(
-        f"cd {INPUT_DIR} && cat {input_path} | trace_filter --pipe",
-        capture_output=True,
-        text=True,
-        shell=True,  # Allows shell commands like `|`
+    result = run_trace_filter(
+        f"cd {INPUT_DIR} && cat {input_path} | trace_filter --pipe", shell=True
     )
     # Print the output explicitly so pytest displays it
     print("\n===== STDOUT =====")
@@ -132,10 +124,8 @@ def test_trace_filter_output(input_file):
     remove_file_if_exists(generated_output_path)
 
     # Run script with CLI
-    result = subprocess.run(
-        ["trace_filter", "--input", input_path, "--output", output_arg],
-        capture_output=True,
-        text=True,
+    result = run_trace_filter(
+        ["trace_filter", "--input", input_path, "--output", output_arg]
     )
 
     check_script_run_normally(
@@ -159,7 +149,7 @@ def test_clean_spots(input_file):
     remove_file_if_exists(generated_output_path)
 
     # Run script with CLI
-    result = subprocess.run(
+    result = run_trace_filter(
         [
             "trace_filter",
             "--input",
@@ -167,9 +157,7 @@ def test_clean_spots(input_file):
             "--output",
             output_arg,
             "--clean_spots",
-        ],
-        capture_output=True,
-        text=True,
+        ]
     )
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
@@ -191,16 +179,14 @@ def test_label(command):
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
     remove_file_if_exists(generated_output_path)
     # Run script with CLI
-    result = subprocess.run(
+    result = run_trace_filter(
         [
             "trace_filter",
             "--input",
             input_path,
             f"--{command}",
             "label_1",
-        ],
-        capture_output=True,
-        text=True,
+        ]
     )
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
@@ -221,7 +207,7 @@ def test_remove_barcode(bc_list, output):
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
     remove_file_if_exists(generated_output_path)
     # Run script with CLI
-    result = subprocess.run(
+    result = run_trace_filter(
         [
             "trace_filter",
             "--input",
@@ -230,9 +216,7 @@ def test_remove_barcode(bc_list, output):
             bc_list,
             "--output",
             output,
-        ],
-        capture_output=True,
-        text=True,
+        ]
     )
     check_script_run_normally(
         result, generated_output_path, filtered_filename, expected_output_path
