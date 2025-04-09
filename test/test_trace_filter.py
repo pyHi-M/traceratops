@@ -15,9 +15,7 @@ def remove_file_if_exists(path):
 
 
 def run_trace_filter(args, shell=False):
-    """
-    If shell == True: Allows shell commands like `|`
-    """
+    """If shell == True: Allows shell commands like `|`"""
     return subprocess.run(args, capture_output=True, text=True, shell=shell)
 
 
@@ -30,41 +28,47 @@ def check_output(result, gen_out_path, filtered, expected):
 
 
 def _test_trace_filter_common(
-    cmd_args,
-    generated_output_path,
-    filtered_filename,
-    expected_output_path,
-    shell=False,
+    input_file, args, suffix="_filtered", clean_png=False, shell=False
 ):
-    """Helper to run trace_filter, check output, and clean generated files."""
-    remove_file_if_exists(generated_output_path)
-    result = run_trace_filter(cmd_args, shell=shell)
-    check_output(result, generated_output_path, filtered_filename, expected_output_path)
-    remove_file_if_exists(generated_output_path)
-
-
-# ==== INPUT FILES SETUP ====
-
-input_files = [
-    f
-    for f in os.listdir(INPUT_DIR)
-    if f.endswith(".ecsv") and "_filtered" not in f and "trace" in f
-]
-
-
-@pytest.mark.parametrize("input_file", input_files)
-def test_trace_filter_input(input_file):
-    input_path = os.path.join(INPUT_DIR, input_file)
-    filtered_filename = input_file.replace(".ecsv", "_filtered.ecsv")
+    """Helper to run trace_filter, check output and clean generated files."""
+    base_name = os.path.splitext(input_file)[0]
+    filtered_filename = f"{base_name}{suffix}.ecsv"
     generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
     expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
 
-    _test_trace_filter_common(
-        ["trace_filter", "--input", input_path],
-        generated_output_path,
-        filtered_filename,
-        expected_output_path,
-    )
+    remove_file_if_exists(generated_output_path)
+    result = run_trace_filter(args, shell=shell)
+    check_output(result, generated_output_path, filtered_filename, expected_output_path)
+    remove_file_if_exists(generated_output_path)
+
+    if clean_png:
+        remove_file_if_exists(
+            os.path.join(INPUT_DIR, f"{base_name}_before_filtering.png")
+        )
+        remove_file_if_exists(os.path.join(INPUT_DIR, f"{base_name}_filtered.png"))
+
+
+# ==== FILE LISTS ====
+
+INPUT_FILES = os.listdir(INPUT_DIR)
+
+trace_input_files = [
+    f
+    for f in INPUT_FILES
+    if f.endswith(".ecsv") and "_filtered" not in f and "trace" in f
+]
+forpipe_files = [f for f in INPUT_FILES if f.endswith(".txt") and "forpipe" in f]
+one_trace_files = [f for f in INPUT_FILES if "one_trace_four_spots.ecsv" in f]
+duplicate_spot_files = [f for f in INPUT_FILES if "duplicate_spot" in f]
+
+
+# ==== TESTS ====
+
+
+@pytest.mark.parametrize("input_file", trace_input_files)
+def test_trace_filter_input(input_file):
+    input_path = os.path.join(INPUT_DIR, input_file)
+    _test_trace_filter_common(input_file, ["trace_filter", "--input", input_path])
 
 
 def test_missing_arguments():
@@ -72,6 +76,7 @@ def test_missing_arguments():
     result = run_trace_filter(["trace_filter"])  # Run the script without arguments
 
     output = result.stdout
+
     assert (
         "Error: No argument provided" in output
     ), "Expected error message not found in output"
@@ -82,13 +87,6 @@ def test_missing_arguments():
     assert (
         result.returncode == 0
     ), "Script should exit normally (code 0) when missing arguments"
-
-
-# ==== PIPE FILES SETUP ====
-
-forpipe_files = [
-    f for f in os.listdir(INPUT_DIR) if f.endswith(".txt") and "forpipe" in f
-]
 
 
 @pytest.mark.parametrize("input_file", forpipe_files)
@@ -103,76 +101,44 @@ def test_trace_filter_pipe(input_file):
 
     assert result.returncode == 0, f"Runtime error: {result.stderr}"
 
-    # Clean up generated files
     remove_file_if_exists(os.path.join(INPUT_DIR, "one_trace_four_spots_filtered.ecsv"))
     remove_file_if_exists(
         os.path.join(INPUT_DIR, "two_traces_seven_spots_filtered.ecsv")
     )
 
 
-input_files = [f for f in os.listdir(INPUT_DIR) if "one_trace_four_spots.ecsv" in f]
-
-
-@pytest.mark.parametrize("input_file", input_files)
+@pytest.mark.parametrize("input_file", one_trace_files)
 def test_trace_filter_output(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
-    output_arg = "custom_out"
-    filtered_filename = input_file.replace(".ecsv", f"_{output_arg}.ecsv")
-    generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
-    expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-
     _test_trace_filter_common(
-        ["trace_filter", "--input", input_path, "--output", output_arg],
-        generated_output_path,
-        filtered_filename,
-        expected_output_path,
+        input_file,
+        ["trace_filter", "--input", input_path, "--output", "custom_out"],
+        suffix="_custom_out",
     )
 
 
-input_files = [f for f in os.listdir(INPUT_DIR) if "duplicate_spot" in f]
-
-
-@pytest.mark.parametrize("input_file", input_files)
+@pytest.mark.parametrize("input_file", duplicate_spot_files)
 def test_clean_spots(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
-    output_arg = "cleaned"
-    filtered_filename = input_file.replace(".ecsv", f"_{output_arg}.ecsv")
-    generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
-    expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-
     _test_trace_filter_common(
-        [
-            "trace_filter",
-            "--input",
-            input_path,
-            "--output",
-            output_arg,
-            "--clean_spots",
-        ],
-        generated_output_path,
-        filtered_filename,
-        expected_output_path,
+        input_file,
+        ["trace_filter", "--input", input_path, "--output", "cleaned", "--clean_spots"],
+        suffix="_cleaned",
+        clean_png=True,
     )
-
-    base_path = os.path.splitext(input_path)[0]
-    remove_file_if_exists(base_path + "_before_filtering.png")
-    remove_file_if_exists(base_path + "_filtered.png")
 
 
 @pytest.mark.parametrize("command", ["remove_label", "keep_label"])
 def test_label(command):
     input_file = "two_traces_seven_spots.ecsv"
     input_path = os.path.join(INPUT_DIR, input_file)
-    end = "not-label_1" if command == "remove_label" else "label_1"
-    filtered_filename = input_file.replace(".ecsv", f"_filtered_{end}.ecsv")
-    generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
-    expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-
+    suffix = (
+        "_filtered_not-label_1" if command == "remove_label" else "_filtered_label_1"
+    )
     _test_trace_filter_common(
+        input_file,
         ["trace_filter", "--input", input_path, f"--{command}", "label_1"],
-        generated_output_path,
-        filtered_filename,
-        expected_output_path,
+        suffix=suffix,
     )
 
 
@@ -184,11 +150,8 @@ def test_label(command):
 def test_remove_barcode(bc_list, output):
     input_file = "remove_barcode.ecsv"
     input_path = os.path.join(INPUT_DIR, input_file)
-    filtered_filename = input_file.replace(".ecsv", f"_{output}.ecsv")
-    generated_output_path = os.path.join(INPUT_DIR, filtered_filename)
-    expected_output_path = os.path.join(OUTPUT_DIR, filtered_filename)
-
     _test_trace_filter_common(
+        input_file,
         [
             "trace_filter",
             "--input",
@@ -198,7 +161,5 @@ def test_remove_barcode(bc_list, output):
             "--output",
             output,
         ],
-        generated_output_path,
-        filtered_filename,
-        expected_output_path,
+        suffix=f"_{output}",
     )
