@@ -9,6 +9,23 @@ INPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_filter", "IN")
 OUTPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_filter", "OUT")
 
 
+def remove_file_if_exists(path):
+    if os.path.exists(path):
+        os.remove(path)
+
+
+def run_trace_filter(args, shell=False):
+    return subprocess.run(args, capture_output=True, text=True, shell=shell)
+
+
+def check_output(result, gen_path, filtered_name, expected_path):
+    assert result.returncode == 0, f"Runtime error: {result.stderr}"
+    assert os.path.exists(gen_path), f"Output file {filtered_name} isn't created"
+    assert filecmp.cmp(
+        gen_path, expected_path, shallow=False
+    ), f"Difference detected between {gen_path} and {expected_path}"
+
+
 def check_script_run_normally(result, gen_out_path, filtered, expected):
     assert result.returncode == 0, f"Runtime error: {result.stderr}"
     assert os.path.exists(gen_out_path), f"Output file {filtered} isn't created"
