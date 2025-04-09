@@ -158,3 +158,11 @@ def test_remove_barcode(bc_list, output):
         output,
     ]
     _test_trace_filter_common(input_file, args, suffix=f"_{output}")
+
+
+@pytest.mark.parametrize("min", ["4", "5"])
+def test_n_barcodes(min):
+    input_file = "two_traces_seven_spots.ecsv"
+    input_path = os.path.join(INPUT_DIR, input_file)
+    args = ["trace_filter", "--input", input_path, "--n_barcodes", min, "--output", min]
+    _test_trace_filter_common(input_file, args, suffix=f"_{min}")
