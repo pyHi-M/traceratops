@@ -68,7 +68,8 @@ duplicate_spot_files = [f for f in INPUT_FILES if "duplicate_spot" in f]
 @pytest.mark.parametrize("input_file", trace_input_files)
 def test_trace_filter_input(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
-    _test_trace_filter_common(input_file, ["trace_filter", "--input", input_path])
+    args = ["trace_filter", "--input", input_path]
+    _test_trace_filter_common(input_file, args)
 
 
 def test_missing_arguments():
@@ -110,36 +111,33 @@ def test_trace_filter_pipe(input_file):
 @pytest.mark.parametrize("input_file", one_trace_files)
 def test_trace_filter_output(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
-    _test_trace_filter_common(
-        input_file,
-        ["trace_filter", "--input", input_path, "--output", "custom_out"],
-        suffix="_custom_out",
-    )
+    args = ["trace_filter", "--input", input_path, "--output", "custom_out"]
+    _test_trace_filter_common(input_file, args, suffix="_custom_out")
 
 
 @pytest.mark.parametrize("input_file", duplicate_spot_files)
 def test_clean_spots(input_file):
     input_path = os.path.join(INPUT_DIR, input_file)
-    _test_trace_filter_common(
-        input_file,
-        ["trace_filter", "--input", input_path, "--output", "cleaned", "--clean_spots"],
-        suffix="_cleaned",
-        clean_png=True,
-    )
+    args = [
+        "trace_filter",
+        "--input",
+        input_path,
+        "--output",
+        "cleaned",
+        "--clean_spots",
+    ]
+    _test_trace_filter_common(input_file, args, suffix="_cleaned", clean_png=True)
 
 
 @pytest.mark.parametrize("command", ["remove_label", "keep_label"])
 def test_label(command):
     input_file = "two_traces_seven_spots.ecsv"
     input_path = os.path.join(INPUT_DIR, input_file)
+    args = ["trace_filter", "--input", input_path, f"--{command}", "label_1"]
     suffix = (
         "_filtered_not-label_1" if command == "remove_label" else "_filtered_label_1"
     )
-    _test_trace_filter_common(
-        input_file,
-        ["trace_filter", "--input", input_path, f"--{command}", "label_1"],
-        suffix=suffix,
-    )
+    _test_trace_filter_common(input_file, args, suffix=suffix)
 
 
 @pytest.mark.parametrize(
@@ -150,16 +148,13 @@ def test_label(command):
 def test_remove_barcode(bc_list, output):
     input_file = "remove_barcode.ecsv"
     input_path = os.path.join(INPUT_DIR, input_file)
-    _test_trace_filter_common(
-        input_file,
-        [
-            "trace_filter",
-            "--input",
-            input_path,
-            "--remove_barcode",
-            bc_list,
-            "--output",
-            output,
-        ],
-        suffix=f"_{output}",
-    )
+    args = [
+        "trace_filter",
+        "--input",
+        input_path,
+        "--remove_barcode",
+        bc_list,
+        "--output",
+        output,
+    ]
+    _test_trace_filter_common(input_file, args, suffix=f"_{output}")
