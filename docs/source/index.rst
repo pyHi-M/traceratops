@@ -40,7 +40,7 @@ traceratops documentation
    scripts/plot_3way
    scripts/plot_single_cell
    scripts/plot_n_him_matrices
-   .. scripts/plot_compare2matrices
+   scripts/plot_compare2matrices
 
 
 .. toctree::
@@ -51,4 +51,3 @@ traceratops documentation
    Installation [DEV]<contribute/dev_installation>
    contribute/how_to_document
    contribute/pr_checklists
-   .. contribute/import_pyhim_script
