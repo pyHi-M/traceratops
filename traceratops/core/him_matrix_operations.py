@@ -1792,7 +1792,10 @@ def adjust_colorbar(cbar, pos, c_min, clim):
     ticks = cbar.get_ticks()
 
     # Filter ticks to keep them inside [c_min, clim]
-    ticks = [tick for tick in ticks if c_min <= tick <= clim]
+    # Safety margin: avoid selecting ticks that are too close to c_min or clim.
+    # Prevents generating a huge number of ticks when c_min ≈ clim (especially with Matplotlib <3.7).
+    delta = 1e-3
+    ticks = [tick for tick in ticks if c_min + delta <= tick <= clim - delta]
 
     # Ensure c_min and clim are included in ticks
     if c_min not in ticks:
