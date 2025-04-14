@@ -12,7 +12,8 @@ traceratops documentation
    :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/filter_intensity
+   Filter by intensity<tutorials/filter_intensity>
+   Plot interactions<tutorials/plot_interactions>
 
 .. toctree::
    :maxdepth: 1

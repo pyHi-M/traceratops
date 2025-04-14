@@ -5,7 +5,7 @@
 Use a generic path (with `*`) to give a set of files:
 
 ```
-localization_cp_files.py --files /user/DATA/exp_7/*/localizations.dat --destination_folder .
+localization_cp_files --files /user/DATA/exp_7/*/localizations.dat --destination_folder .
 ```
 
 ```{note}
@@ -16,13 +16,13 @@ You can check your generic path with:
 ## merges localization files
 
 ```
-ls *.dat | localization_merge.py
+ls *.dat | localization_merge
 ```
 
 ## filters repeated spots while keeping only the one with highest intensity
 
 ```
-trace_filter.py --input merged_traces.ecsv --clean_spots --localization_file merged_localizations.ecsv
+trace_filter --input merged_traces.ecsv --clean_spots --localization_file merged_localizations.ecsv
 ```
 
 ## Compare results
