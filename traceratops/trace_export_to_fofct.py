@@ -28,8 +28,8 @@ def parse_arguments():
     parser.add_argument("--bed_file", help="Path to the BED file")
     parser.add_argument(
         "--json_file",
-        default=os.getcwd() + os.sep + "parameters.json",
-        help="Path to the JSON file with the metadata. Default: parameters.json",
+        default=None,
+        help="Path to the JSON file with the metadata. (Default: ``parameters.json``)",
     )
     # Optional argument
     parser.add_argument(
@@ -229,7 +229,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load the metadata
-    metadata = load_json_file(args.json_file)
+    args_json_file = args.json_file or os.path.join(os.getcwd(), "parameters.json")
+    metadata = load_json_file(args_json_file)
     check_metadata(metadata)
 
     output = get_output_file(args.ecsv_file, args.output_file)

@@ -50,7 +50,20 @@ def inject_pr_template():
     __convert_checkboxes(destination_md)
 
 
+def copy_changelog():
+    source_md = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "CHANGELOG.md")
+    )
+    destination_md = os.path.join(
+        os.path.dirname(__file__),
+        "quickstart",
+        "changelog_COPY.md",
+    )
+    shutil.copyfile(source_md, destination_md)
+
+
 inject_pr_template()
+copy_changelog()
 
 autodoc_mock_imports = [
     "numpy",

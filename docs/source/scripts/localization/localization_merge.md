@@ -17,15 +17,19 @@ $ find . -name "*.ecsv" | localization_merge [options]
 ```
 
 1. Merge all .ecsv files in the current directory and save to the default output:
-   `$ ls *.ecsv | localization_merge`
+
+   ```$ ls *.ecsv | localization_merge```
 
 2. Merge specific files and save with a custom name:
+
     `$ echo -e "file1.ecsv\nfile2.ecsv\nfile3.ecsv" | localization_merge -o combined.ecsv`
 
 3. Merge files and save to a specific directory:
+
     `$ find ./data -name "loc_*.ecsv" | localization_merge -O ./results -o merged.ecsv`
 
 4. Process files listed in a text file:
+
     `$ cat files_to_merge.txt | localization_merge`
 
 ## Notes

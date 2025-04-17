@@ -46,20 +46,21 @@
         output_path = args.output
     ```
 
-- Create a .rst (or .md) file inside your source folder:
+- Create a .md (or .rst) file inside your source folder:
 
-    ```touch docs/source/example_script.rst```
+    ```touch docs/source/example_script.md```
 
 - Add title and keywords to generate automatically the doc:
 
-    ```rst
-    example\_script
-    ====================
+    ````markdown
+    # example_script
 
+    ```{eval-rst}
     .. argparse::
-    :ref: <code_source_folder>.example_script.parse_arguments
-    :prog: example_script
+       :ref: traceratops.example_script.parse_arguments
+       :prog: example_script
     ```
+    ````
 
 - Link this file inside your `index.rst`:
 

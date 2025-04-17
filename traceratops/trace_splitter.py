@@ -2,16 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Split chromatin traces using K-means clustering when their radius of gyration exceeds a threshold.
-
-Usage:
-    python trace_splitter --input original_traces.ecsv --std_threshold 1.5 --num_clusters 3
-
-Example:
-    Given a chromatin trace table, this script:
-      - Computes radius of gyration (Rg) for all traces.
-      - Identifies traces with Rg larger than `mean + N * std_dev`.
-      - Uses K-means to split these traces into `num_clusters`.
-      - Saves the modified trace table with updated Trace_IDs.
 """
 
 import argparse

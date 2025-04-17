@@ -37,7 +37,12 @@ def parse_arguments():
     parser.add_argument(
         "-N", "--name", help="Output file name", default="merged_traces.ecsv"
     )
-    parser.add_argument("-F", "--folder", help="Output folder", default=os.getcwd())
+    parser.add_argument(
+        "-F",
+        "--folder",
+        help="Output folder (default: ``Current Working Directory``)",
+        default=None,
+    )
     return parser
 
 
@@ -103,8 +108,8 @@ def main():
     print(f"Number of trace files to merge: {len(trace_files)}")
     if len(trace_files) < 2:
         raise ValueError("\nNothing to process...\n")
-
-    create_out_folder(args.folder)
+    args_folder = args.folder or os.getcwd()
+    create_out_folder(args_folder)
     traces = load_traces(trace_files)
     traces.save(
         args.name,

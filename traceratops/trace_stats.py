@@ -2,11 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 This script reads a chromatin trace file and computes basic statistics:
-- Number of unique ROIs
-- Number of unique chromatin traces
-
-Usage:
-    python trace_stats --input trace_file.ecsv
+   - Number of unique ROIs
+   - Number of unique chromatin traces
 """
 
 import argparse
