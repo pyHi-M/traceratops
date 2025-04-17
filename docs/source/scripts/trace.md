@@ -15,7 +15,7 @@
 - Combinator ([trace_combinator](trace/trace_combinator.md))
 - Assign Mask ([trace_assign_mask](trace/trace_assign_mask.md))
 - Analyzer ([trace_analyzer](trace/trace_analyzer.md))
-- Compute and Plot 3-Way ([trace_3way_coloc](trace/trace_3way_coloc.md))
+- Compute and Plot 3-Way co-localization ([trace_3way_coloc](trace/trace_3way_coloc.md))
 
 ```{toctree}
 :maxdepth: 1
