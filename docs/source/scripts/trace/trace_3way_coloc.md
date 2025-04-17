@@ -1,30 +1,30 @@
-# plot_3way
+# trace_3way_coloc
 
 **Reliability status**: `development`
 
 ```{eval-rst}
 .. argparse::
-   :ref: traceratops.plot_3way.parse_arguments
-   :prog: plot_3way
+   :ref: traceratops.trace_3way_coloc.parse_arguments
+   :prog: trace_3way_coloc
 ```
 
 ## Usage
 
 ```bash
-plot_3way --input TRACE_FILE.ecsv --anchor BARCODE_NUMBER [options]
-cat file_list.txt | plot_3way --pipe --anchor BARCODE_NUMBER [options]
+trace_3way_coloc --input TRACE_FILE.ecsv --anchor BARCODE_NUMBER [options]
+cat file_list.txt | trace_3way_coloc --pipe --anchor BARCODE_NUMBER [options]
 ```
 
 ## Examples
 
 1. Analyze a single trace file with default parameters:
    ```bash
-   plot_3way --input traces.ecsv --anchor 42
+   trace_3way_coloc --input traces.ecsv --anchor 42
    ```
 
 2. Analyze with custom distance cutoff and more bootstrap cycles:
    ```bash
-   plot_3way --input traces.ecsv --anchor 42 --cutoff 0.25 --bootstrapping_cycles 100
+   trace_3way_coloc --input traces.ecsv --anchor 42 --cutoff 0.25 --bootstrapping_cycles 100
    ```
 
 ## Output

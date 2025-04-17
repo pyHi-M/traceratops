@@ -112,7 +112,7 @@ Find the doc file inside `docs/source/scripts/` folder.
 
 Add just after the main title: "**Reliability status:** (in bolt) `status value` (in backtick)"
 ```markdown
-# figure_him_matrix
+# plot_him_matrix
 
 **Reliability status**: `stable`
 ```
@@ -126,7 +126,7 @@ Add just after the main title: "**Reliability status:** (in bolt) `status value`
 ````rst
 ```{eval-rst}
 .. argparse::
-:ref: traceratops.figure_him_matrix.parse_arguments
-:prog: figure_him_matrix
+:ref: traceratops.plot_him_matrix.parse_arguments
+:prog: plot_him_matrix
 ```
 ````
