@@ -8,6 +8,7 @@
 - Plot Single Cell ([plot_single_cell](plot/plot_single_cell.md))
 - Plot N HiM Matrices ([plot_n_him_matrices](plot/plot_n_him_matrices.md))
 - Plot Compare 2 Matrices ([plot_compare2matrices](plot/plot_compare2matrices.md))
+- Compare ([plot_matrix_comparison](plot/plot_matrix_comparison.md))
 
 ```{toctree}
 :maxdepth: 1
@@ -21,4 +22,5 @@ plot/plot_3way
 plot/plot_single_cell
 plot/plot_n_him_matrices
 plot/plot_compare2matrices
+plot/plot_matrix_comparison
 ```
