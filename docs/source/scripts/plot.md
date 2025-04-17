@@ -1,5 +1,6 @@
 # Plot
 
+- Plot ([plot_him_matrix](plot/plot_him_matrix.md))
 - Replot 3-Way ([replot_3way](plot/replot_3way.md))
 - Plot Bootstrapping ([plot_bootstrapping](plot/plot_bootstrapping.md))
 - Plot 4M ([plot_4m](plot/plot_4m.md))
@@ -12,6 +13,7 @@
 :maxdepth: 1
 :hidden:
 
+plot/plot_him_matrix
 plot/replot_3way
 plot/plot_bootstrapping
 plot/plot_4m
