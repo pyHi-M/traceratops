@@ -46,7 +46,8 @@ Homepage = "https://github.com/pyHi-M/traceratops"
 [project.scripts]
 trace_filter = "traceratops.trace_filter:main"
 trace_merge = "traceratops.trace_merge:main"
-figure_him_matrix = "traceratops.figure_him_matrix:main"
+figure_him_matrix = "traceratops.plot_him_matrix:main" # Deprecated name
+plot_him_matrix = "traceratops.plot_him_matrix:main"
 trace_to_matrix = "traceratops.trace_to_matrix:main"
 trace_stats = "traceratops.trace_stats:main"
 trace_splitter = "traceratops.trace_splitter:main"

@@ -1,21 +1,21 @@
-# figure_him_matrix
+# plot_him_matrix
 
 **Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
-   :ref: traceratops.figure_him_matrix.parse_arguments
-   :prog: figure_him_matrix
+   :ref: traceratops.plot_him_matrix.parse_arguments
+   :prog: plot_him_matrix
 ```
 
 
 ## Example
 
-Here is examples usage of figure_him_matrix:
+Here is examples usage of plot_him_matrix:
 
 ### Proximity matrix with all data (including bin with NaN value)
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --keep_nan
+plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --keep_nan
 ```
 
 <p align="center">
@@ -28,13 +28,13 @@ figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --keep_nan
 
 
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
+plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
 ```
 
 **VS.**
 
 ```bash
-figure_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --mode KDE --c_map Spectral
+plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --mode KDE --c_map Spectral
 ```
 
 <p align="center">

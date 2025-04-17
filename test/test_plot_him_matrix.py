@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
-INPUT_DIR = os.path.join(TESTS_DIR, "data", "figure_him_matrix", "IN")
-OUTPUT_DIR = os.path.join(TESTS_DIR, "data", "figure_him_matrix", "OUT")
+INPUT_DIR = os.path.join(TESTS_DIR, "data", "plot_him_matrix", "IN")
+OUTPUT_DIR = os.path.join(TESTS_DIR, "data", "plot_him_matrix", "OUT")
 INPUT_NPY = INPUT_DIR + os.sep + "n_cells_250_pwd_sc_matrix.npy"
 INPUT_ECSV = INPUT_DIR + os.sep + "unique_barcodes.ecsv"
 FAKE_MATRIX_PATH = ""
@@ -106,7 +106,7 @@ def test_real_data():
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             INPUT_NPY,
             "-B",
@@ -125,9 +125,9 @@ def test_real_data():
 
 
 missing_args_cases = [
-    ["figure_him_matrix"],
-    ["figure_him_matrix", "-M", INPUT_NPY],
-    ["figure_him_matrix", "-B", INPUT_ECSV],
+    ["plot_him_matrix"],
+    ["plot_him_matrix", "-M", INPUT_NPY],
+    ["plot_him_matrix", "-B", INPUT_ECSV],
 ]
 
 
@@ -135,7 +135,7 @@ missing_args_cases = [
     "bad_args", missing_args_cases, ids=["BOTH", "--barcodes", "--matrix"]
 )
 def test_missing_arguments(bad_args):
-    """Test the case when no arguments are provided to figure_him_matrix.py"""
+    """Test the case when no arguments are provided to plot_him_matrix.py"""
     result = subprocess.run(
         bad_args,  # Run the script without arguments
         capture_output=True,
@@ -177,7 +177,7 @@ def test_plot_format(format):
     # Run script with CLI
     _ = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -218,7 +218,7 @@ def test_mode(config):
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -251,7 +251,7 @@ def test_visualization_args():
     # Run script with CLI
     _ = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -304,7 +304,7 @@ def test_thresholds(threshold):
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -342,7 +342,7 @@ def test_norm():
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -391,7 +391,7 @@ def test_shuffle(shuffle_case, c_max):
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             FAKE_MATRIX_PATH,
             "-B",
@@ -433,7 +433,7 @@ def test_matplotlib_v3_5_1_error():
     # Run script with CLI
     result = subprocess.run(
         [
-            "figure_him_matrix",
+            "plot_him_matrix",
             "-M",
             INPUT_NPY,
             "-B",
