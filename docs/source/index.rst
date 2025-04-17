@@ -8,6 +8,7 @@ traceratops documentation
    :caption: Getting Started
 
    quickstart/installation
+   quickstart/changelog_COPY
 
 .. toctree::
    :maxdepth: 1
