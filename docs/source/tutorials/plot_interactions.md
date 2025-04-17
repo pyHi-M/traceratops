@@ -18,7 +18,7 @@ Result:
 To plot the 3-way interactions for a cutoff distance of `0.20` microns, for anchor `25` using `2` bootstrapping cycles:
 
 ```
-plot_3way --input merged_traces_filtered.ecsv --cutoff 0.20 --bootstrapping_cycles 2 --anchor 25
+trace_3way_coloc --input merged_traces_filtered.ecsv --cutoff 0.20 --bootstrapping_cycles 2 --anchor 25
 ```
 
 The results look like this:
