@@ -1,13 +1,12 @@
-# Contributing guide
+# 🛠️ Contributing guide
 
-Thank you for your interest in contributing to this project!
-Please follow the guidelines below to ensure smooth collaboration and maintain a clean and structured codebase.
+*Guidelines to ensure smooth collaboration and maintain a clean and structured codebase.*
 
 ---
 
 ## Branching model
 
-- `main`: The **stable production branch**. It contains only **squashed commits** that correspond to each official release.
+- `main`: The **stable production branch**, corresponding to the official releases.
 - `dev`: The **development branch**. It contains **integrated features** and **bug fixes**, pending final validation through manual testing on real data before going into production.
 
 ---
@@ -70,13 +69,13 @@ git push origin <your-branch-name>
 
 Then:
 - Open a **pull request to `dev`**
-- A **PR template is provided** with a checklist to support the validation process
+- A [**PR template is provided**](file:///home/xdevos/Repositories/pyHi-M/traceratops/docs/build/html/contribute/checklist/pr_template_COPY.html) with a checklist to support the validation process
 - Select **"Squash & merge"** when merging the PR
 - Use a **clear and descriptive PR title** — it will become the commit message on `dev`
 
 ---
 
-### Continuing development (while PR is pending)
+### [OPTIONAL] Continuing development (while PR is pending)
 
 ```{warning}
 Avoid working again on the same branch that is already under review.
@@ -122,17 +121,6 @@ If the PR is not closed, it will automatically integrate your new conflict resol
 
 ---
 
-## Release
-
-- This is done **via a pull request** from `dev` to `main`, and must use **squash & merge**.
-- It's a **significant product update**.
-- The commit message on `main` should clearly describe the release content, e.g.:
-  `release: v1.3.0 - performance improvements & dashboard redesign`
-
-After the merge:
-- Tag the new release commit on `main` with a semantic version, e.g.: `v1.3.0`.
-
----
 
 ## Testing & Validation
 

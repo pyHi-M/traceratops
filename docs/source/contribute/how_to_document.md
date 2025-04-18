@@ -1,4 +1,4 @@
-# Documentation
+# 📘 Documentation
 
 *This current documentation was created and configured using [this tutorial](documentation/doc_from_scratch.md). It's a set of text files in Markdown (MD) or reStructuredText (RST or ReST) language.*
 

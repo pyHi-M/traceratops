@@ -1,5 +1,5 @@
 
-# Installation for **developer**
+# 💾 Installation [DEV]
 
 ## Create conda environment
 

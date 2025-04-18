@@ -32,6 +32,7 @@ traceratops documentation
    :caption: Contribute
 
    contribute/CONTRIBUTING
-   Installation [DEV]<contribute/dev_installation>
+   contribute/dev_installation
    contribute/how_to_document
    contribute/pr_checklists
+   contribute/release_guide
