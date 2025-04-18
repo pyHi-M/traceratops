@@ -33,10 +33,11 @@ Tests are required to:
 
 **Only for Pull Request on `main` branch.**
 
+*For more details, follow the [release guide](https://traceratops.readthedocs.io/en/latest/contribute/release_guide.html).*
+
 - [ ] Version number has been updated inside `pyproject.toml` [(Depending on the type of change)](https://semver.org/)
-- [ ] The status of at least one feature are updated to `stable` OR it's a **hotfix** branch
+- [ ] The status of at least one feature are updated to `stable`
 - [ ] Manual tests are checked
-- [ ] **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit
-- [ ] `codespell` pass successfully
-- [ ] `mypy` pass successfully
+- [ ] `codespell` does not identify any major problems
+- [ ] `mypy` does not identify any major problems
 - [ ] Checks of GitHub Actions pass successfully

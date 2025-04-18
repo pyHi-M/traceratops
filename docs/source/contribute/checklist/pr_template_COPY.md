@@ -35,10 +35,11 @@ Tests are required to:
 
 **Only for Pull Request on `main` branch.**
 
+*For more details, follow the [release guide](https://traceratops.readthedocs.io/en/latest/contribute/release_guide.html).*
+
 <label><input type="checkbox"> Version number has been updated inside `pyproject.toml` [(Depending on the type of change)](https://semver.org/)</label>
-<label><input type="checkbox"> The status of at least one feature are updated to `stable` OR it's a **hotfix** branch</label>
+<label><input type="checkbox"> The status of at least one feature are updated to `stable`</label>
 <label><input type="checkbox"> Manual tests are checked</label>
-<label><input type="checkbox"> **Squash commits**: I understand that the detailed commit history of this branch will be squashed into a single commit</label>
-<label><input type="checkbox"> `codespell` pass successfully</label>
-<label><input type="checkbox"> `mypy` pass successfully</label>
+<label><input type="checkbox"> `codespell` does not identify any major problems</label>
+<label><input type="checkbox"> `mypy` does not identify any major problems</label>
 <label><input type="checkbox"> Checks of GitHub Actions pass successfully</label>
