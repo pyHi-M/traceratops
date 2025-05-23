@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -65,7 +65,8 @@ localization_merge = "traceratops.localization_merge:main"
 localization_cp_files = "traceratops.localization_cp_files:main"
 compare_pwd_matrices = "traceratops.plot_matrix_comparison:main" # Deprecated name
 plot_matrix_comparison = "traceratops.plot_matrix_comparison:main"
-analyze_localizations = "traceratops.analyze_localizations:main"
+analyze_localizations = "traceratops.localization_analyzer:main"
+localization_analyzer = "traceratops.localization_analyzer:main"
 replot_3way = "traceratops.plot_3way_coloc:main" # Deprecated name
 plot_3way_coloc = "traceratops.plot_3way_coloc:main"
 plot_bootstrapping = "traceratops.plot_bootstrapping:main"

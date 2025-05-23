@@ -91,10 +91,9 @@ Outputs:
     )
     parser_proximity.add_argument(
         "-K",
-        "--keep_nan",
-        help="Matrix normalization mode. By default, NaN values per bin are removed before compute statistics for proximity. Activate this mode to keep NaN values.",
-        action="store_true",
-        default=False,
+        "--matrix_norm_mode",
+        help="Matrix normalization mode. By default ('nonNANs'), NaN values per bin are removed before compute statistics for proximity. Can be 'n_cells' or 'nonNANs'.",
+        default="nonNANs",
     )
 
     parser_visu = parser.add_argument_group(
@@ -217,7 +216,7 @@ def main():
         u_barcodes, sc_matrices = new_shuffle_matrix(
             args.shuffle, u_barcodes, sc_matrices
         )
-    rm_nan = not args.keep_nan
+    rm_nan = args.matrix_norm_mode == "nonNANs"
     matrix_to_plot = merge_matrices(args.mode, sc_matrices, args.threshold, rm_nan)
     nan_matrix = calculate_nan_matrix(sc_matrices)
     if args.nan_threshold:

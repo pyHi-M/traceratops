@@ -217,7 +217,11 @@ class LocalizationTable:
             y = barcode_map["ycentroid"]
             z = barcode_map["zcentroid"]
             colors = [color_dict[str(x)] for x in barcode_map["Barcode #"]]
-            titles = ["Z-projection", "X-projection", "Y-projection"]
+            titles = [
+                "Z-projection (pixel)",
+                "X-projection (pixel)",
+                "Y-projection (pixel)",
+            ]
 
             # makes plot
             plots_localization_projection(x, y, ax[0], colors, titles[0])

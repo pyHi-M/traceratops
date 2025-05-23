@@ -1,9 +1,9 @@
-# analyze_localizations
+# localization_analyzer
 
 **Reliability status**: `development`
 
 ```{eval-rst}
 .. argparse::
-   :ref: traceratops.analyze_localizations.parse_arguments
-   :prog: analyze_localizations
+   :ref: traceratops.localization_analyzer.parse_arguments
+   :prog: localization_analyzer
 ```
