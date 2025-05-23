@@ -15,7 +15,7 @@ Here is examples usage of plot_him_matrix:
 
 ### Proximity matrix with all data (including bin with NaN value)
 ```bash
-plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --keep_nan
+plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --matrix_norm_mode n_cells
 ```
 
 <p align="center">
