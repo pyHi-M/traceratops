@@ -1,4 +1,4 @@
-# 💾 Installation
+# Installation
 
 |OS|Linux|Windows|Mac|
 |:-:|:-:|:-:|:-:|

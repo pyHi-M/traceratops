@@ -1,4 +1,4 @@
-# 🛠️ Contributing guide
+# Contributing guide
 
 *Guidelines to ensure smooth collaboration and maintain a clean and structured codebase.*
 

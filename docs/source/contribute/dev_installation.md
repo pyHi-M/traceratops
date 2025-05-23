@@ -1,5 +1,5 @@
 
-# 💾 Installation [DEV]
+# Installation [DEV]
 
 ## Create conda environment
 
