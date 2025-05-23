@@ -11,7 +11,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import Table, vstack
+from matplotlib.colors import ListedColormap
 from tqdm import tqdm
+
+from traceratops.core.localization_table import (
+    build_color_dict,
+    decode_rois,
+    plots_localization_projection,
+)
 
 font = {"weight": "normal", "size": 22}
 matplotlib.rc("font", **font)
@@ -37,19 +44,15 @@ def save_table_to_ecsv(data, path):
     )
 
 
-def decode_rois(data):
-    data_indexed = data.group_by("ROI #")
-    number_rois = len(data_indexed.groups.keys)
-    print(f"\n$ rois detected: {number_rois}")
-    return data_indexed, number_rois
-
-
-def build_color_dict(data, key="Barcode #"):
-    unique_barcodes = np.unique(data[key])
-    output_array = range(unique_barcodes.shape[0])
-    return {
-        str(barcode): output for barcode, output in zip(unique_barcodes, output_array)
-    }
+def random_label_cmap(n_labels=256, seed=42):
+    """
+    Generates a random colormap similar to stardist (so you don't have to import this library just to do it).
+    Label 0 (background) is black, the others are given random colours.
+    """
+    rng = np.random.default_rng(seed)
+    colors = np.zeros((n_labels, 3))  # RGB
+    colors[1:] = rng.random((n_labels - 1, 3))  # labels > 0
+    return ListedColormap(colors)
 
 
 class ChromatinTraceTable:
@@ -1009,3 +1012,147 @@ class ChromatinTraceTable:
         )
 
         self.data = trace_table
+
+    def plots_traces(
+        self, filename_list, masks=np.zeros((2048, 2048)), pixel_size=None
+    ):
+        """
+        This function plots 3 subplots (xy, xz, yz) with the localizations.
+        One figure is produced per ROI.
+
+        Parameters
+        ----------
+
+        filename_list: list
+            filename
+        """
+
+        if pixel_size is None:
+            pixel_size = [0.1, 0.1, 0.25]
+        data = self.data
+
+        # indexes table by ROI
+        data_indexed, number_rois = decode_rois(data)
+
+        im_size = 60
+        print(f"> Will make plots for {number_rois} ROI(s)")
+        for i_roi in range(number_rois):
+            # creates sub Table for this ROI
+            data_roi = data_indexed.groups[i_roi]
+            n_roi = data_roi["ROI #"][0]
+            print(f"> Plotting barcode localization map for ROI: {n_roi}")
+            color_dict = build_color_dict(data_roi, key="Barcode #")
+
+            # initializes figure
+            fig = plt.figure(constrained_layout=False)
+            fig.set_size_inches((im_size * 2, im_size))
+            gs = fig.add_gridspec(2, 2)
+            ax = [
+                fig.add_subplot(gs[:, 0]),
+                fig.add_subplot(gs[0, 1]),
+                fig.add_subplot(gs[1, 1]),
+            ]
+
+            # defines variables
+            x = data_roi["x"]
+            y = data_roi["y"]
+            z = data_roi["z"]
+
+            colors = [color_dict[str(x)] for x in data_roi["Barcode #"]]
+            titles = [
+                "Z-projection (pixel)",
+                "X-projection (pixel)",
+                "Y-projection (pixel)",
+            ]
+
+            # plots masks if available
+            if len(masks.shape) == 3:
+                masks = np.max(masks, axis=0)
+            ax[0].imshow(masks, cmap=random_label_cmap(), alpha=0.3)
+
+            # calculates mean trace positions and sizes by looping over traces
+            data_traces = data_roi.group_by("Trace_ID")
+            color_dict_traces = build_color_dict(data_traces, key="Trace_ID")
+            colors_traces = [color_dict_traces[str(x)] for x in data_traces["Trace_ID"]]
+            cmap_traces = plt.cm.get_cmap("hsv", np.max(colors_traces))
+            number_traces = len(colors_traces)
+
+            print(f"$ Plotting {number_traces} traces...")
+            for trace, color, trace_id in zip(
+                data_traces.groups, colors_traces, data_traces.groups.keys
+            ):
+                # Sort by barcode number
+                sorted_trace = trace[np.argsort(trace["Barcode #"])]
+
+                # Extract coordinates
+                x_trace = sorted_trace["x"].data / pixel_size[0]
+                y_trace = sorted_trace["y"].data / pixel_size[1]
+                z_trace = (
+                    sorted_trace["z"].data / pixel_size[2]
+                )  # If needed for other plots
+
+                # Plot scatter points
+                ax[0].scatter(
+                    x_trace,
+                    y_trace,
+                    color=cmap_traces(color),
+                    s=5,
+                    label=f"Trace {trace_id}",
+                    alpha=0.1,
+                )
+
+                # Plot line connecting the points in this trace
+                ax[0].plot(x_trace, y_trace, color="k", linewidth=1, alpha=0.4)
+
+                # Repeat for the other projections
+                ax[1].scatter(x_trace, z_trace, color=cmap_traces(color), s=5)
+                ax[1].plot(x_trace, z_trace, color="k", linewidth=1, alpha=0.4)
+
+                ax[2].scatter(y_trace, z_trace, color=cmap_traces(color), s=5)
+                ax[2].plot(y_trace, z_trace, color="k", linewidth=1, alpha=0.4)
+
+            print(f"$ Pixel_size = {pixel_size}")
+            # makes plot
+            plots_localization_projection(
+                x / pixel_size[0], y / pixel_size[1], ax[0], colors, titles[0]
+            )
+            plots_localization_projection(
+                x / pixel_size[0], z / pixel_size[2], ax[1], colors, titles[1]
+            )
+            plots_localization_projection(
+                y / pixel_size[1], z / pixel_size[2], ax[2], colors, titles[2]
+            )
+
+            fig.tight_layout()
+
+            """
+            for trace, color, trace_id in zip(
+                data_traces.groups, colors_traces, data_traces.groups.keys
+            ):
+
+                # Plots polygons for each trace
+                poly_coord = np.array(
+                    [
+                        (trace["x"].data) / pixel_size[0],
+                        (trace["y"].data) / pixel_size[1],
+                    ]
+                ).T
+                polygon = Polygon(
+                    poly_coord,
+                    closed=False,
+                    fill=False,
+                    edgecolor=cmap_traces(color),
+                    linewidth=1,
+                    alpha=1,
+                )
+                ax[0].add_patch(polygon) # this does not work so I commented it out
+            """
+
+            # saves output figure
+            filename_list_i = filename_list.copy()
+            filename_list_i.insert(-1, f"_ROI{str(n_roi)}")
+            traces = "".join(filename_list_i)
+            try:
+                fig.savefig(traces)
+            except ValueError:
+                print(f"\nValue error while saving output figure with traces:{traces}")
