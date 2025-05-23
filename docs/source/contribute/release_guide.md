@@ -1,4 +1,4 @@
-# 🚀 Release guide
+# Release guide
 
 *This guide describes the release process used in this project.*
 
