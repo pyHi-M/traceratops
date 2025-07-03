@@ -3,6 +3,9 @@ traceratops documentation
 
 **Date**: |today| **Version**: |release|
 
+A toolbox for trace analysis, visualization and quality assessment.
+Corresponding to the post-processing of pyHiM data, compatible with the `4DN FISH Omics Format <https://fish-omics-format.readthedocs.io/en/latest/>`_.
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
