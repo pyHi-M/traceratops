@@ -170,8 +170,7 @@ def main():
                 f"Applying K-means clustering with {args.num_clusters} clusters on traces with Rg > mean + {args.std_threshold} * std_dev..."
             )
             split_large_traces(trace_table, args.std_threshold, args.num_clusters)
-
-            trace_table.save(output_filename, trace_table.data)
+            trace_table.save(output_filename)
             # print(f"Saved modified trace table: {output_filename}")
 
     else:
