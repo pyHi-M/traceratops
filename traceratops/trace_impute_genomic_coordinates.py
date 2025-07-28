@@ -154,7 +154,6 @@ def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
     )
     trace_table.save(
         output_file,
-        trace_table.data,
         comments=f"Genomic coordinates imputed from BED file. {matched_count}/{total_count} rows matched.",
     )
     print(f"Updated trace file saved to {output_file}")
