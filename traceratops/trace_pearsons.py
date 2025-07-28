@@ -28,9 +28,10 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "-O",
         "--output",
-        default="trace_correlation_matrix.png",
-        help="Output filename for the correlation matrix plot (default: trace_correlation_matrix.png)",
+        default=".",
+        help="Output folder name for the correlation matrix plot (filename: trace_correlation_matrix.png)",
     )
     parser.add_argument(
         "--vmin", type=float, default=-10, help="Minimum value for colormap scaling"
@@ -288,9 +289,9 @@ def plot_correlation_matrix(
     plt.savefig(output_filename, dpi=300)
     print(f"$ Saved correlation matrix as {output_filename}")
 
-    np.save(output_filename.split(".")[0] + ".npy", matrix)
+    np.save(output_filename[:-4] + ".npy", matrix)
     print(
-        f"$ Saved correlation matrix data in NPY format: {output_filename.split('.')[0]+'.npy'}"
+        f"$ Saved correlation matrix data in NPY format: {output_filename[:-4]+'.npy'}"
     )
 
     plt.close()
@@ -330,7 +331,11 @@ def main():
 
     # Plot and save the correlation matrix
     plot_correlation_matrix(
-        files, corr_matrix, output_filename=args.output, vmin=args.vmin, vmax=args.vmax
+        files,
+        corr_matrix,
+        output_filename=os.path.join(args.output, "trace_correlation_matrix.png"),
+        vmin=args.vmin,
+        vmax=args.vmax,
     )
 
 

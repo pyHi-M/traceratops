@@ -112,7 +112,7 @@ def main():
     create_out_folder(args_folder)
     traces = load_traces(trace_files)
     traces.save(
-        args.name,
+        os.path.join(args_folder, args.name),
         comments="appended_trace_files=" + str(traces.number_traces),
     )
 

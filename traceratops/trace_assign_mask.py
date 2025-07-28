@@ -115,7 +115,7 @@ def process_traces(trace_files=[], mask_file="", label="labeled", pixel_size=0.1
             trace.load(trace_file)
             trace = assign_masks(trace, mask_file, label=label, pixel_size=pixel_size)
             outputfile = trace_file.rstrip(".ecsv") + "_" + label + ".ecsv"
-            trace.save(outputfile, trace.data, comments=label)
+            trace.save(outputfile, comments=label)
             print(f"$ Saved output trace file at: {outputfile}")
 
 

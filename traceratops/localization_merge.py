@@ -25,7 +25,9 @@ def parse_arguments():
         "--output_file",
         help="Output File name. Default = merged_localizations.ecsv",
     )
-    parser.add_argument("-O", "--output_folder", help="Output File name. Default = ./")
+    parser.add_argument(
+        "-O", "--output_folder", help="Output folder name. Default = ./"
+    )
     return parser
 
 
@@ -94,7 +96,7 @@ def run(p):
     # loads and merges traces
     collected_tables, number_loc_tables = load_localizations(loc_files=p["loc_files"])
     # saves merged trace table
-    output_file = p["output_file"]
+    output_file = os.path.join(p["outputFolder"], p["output_file"])
     localizations.save(
         output_file,
         collected_tables,

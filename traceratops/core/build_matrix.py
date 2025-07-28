@@ -130,7 +130,7 @@ class BuildMatrix:
         sc_matrix = np.zeros(
             (number_unique_barcodes, number_unique_barcodes, number_matrices)
         )
-        sc_matrix[:] = np.NaN
+        sc_matrix[:] = np.nan
 
         # loops over traces
         print("> Processing traces...", "INFO")
@@ -270,13 +270,12 @@ class BuildMatrix:
         )
 
         # calculates and plots contact probability matrix from merged samples/datasets
-        him_matrix, n_cells = calculate_contact_probability_matrix(
+        him_matrix = calculate_contact_probability_matrix(
             self.sc_matrix,
-            self.unique_barcodes,
             pixel_size,
-            norm="nonNANs",
-        )  # norm: n_cells (default), nonNANs
-
+            remove_nan=True,
+        )
+        n_cells = self.sc_matrix.shape[2]
         c_scale = him_matrix.max()
         plot_matrix(
             him_matrix,
