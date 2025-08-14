@@ -54,6 +54,7 @@ def plot_distribution_fluxes(barcode_map, filename_list, trace_ids, nbins=40):
     # Comptes
     counts_in, _ = np.histogram(flux[is_in_trace], bins=bins)
     counts_out, _ = np.histogram(flux[~is_in_trace], bins=bins)
+    count_all, _ = np.histogram(flux, bins=bins)
 
     # plots data
     ax[0].plot(centers, counts_in, label="Inside trace", linewidth=2)
@@ -65,27 +66,96 @@ def plot_distribution_fluxes(barcode_map, filename_list, trace_ids, nbins=40):
     ax[0].grid(True, alpha=0.3)
     ax[0].legend()
 
+    # ---------- POINT D'INTERSECTION ----------
+    diff = counts_in - counts_out
+    sign_change = np.where(np.sign(diff[:-1]) != np.sign(diff[1:]))[0]
+
+    if len(sign_change) > 0:
+        idx = sign_change[0]
+        # interpolation linéaire pour une valeur plus précise
+        x0, x1 = centers[idx], centers[idx + 1]
+        y0, y1 = diff[idx], diff[idx + 1]
+        cross_x = x0 - y0 * (x1 - x0) / (y1 - y0)
+        cross_y = counts_in[idx] + (counts_in[idx + 1] - counts_in[idx]) * (
+            (cross_x - x0) / (x1 - x0)
+        )
+
+        ax[0].axvline(cross_x, color="black", linestyle="--", alpha=0.6)
+        ax[0].scatter([cross_x], [cross_y], color="black", zorder=5)
+        ax[0].annotate(
+            f"Cross: {cross_x:.2f}",
+            xy=(cross_x, cross_y),
+            xytext=(cross_x, cross_y * 1.5),
+            arrowprops=dict(facecolor="black", arrowstyle="->"),
+            fontsize=10,
+        )
+
     ax[1].scatter(flux, zcentroid, c=colors, alpha=0.2, s=5)
     ax[1].set_title("Red: Inside trace | Blue: off trace")
     ax[1].set_xlabel("flux")
     ax[1].set_ylabel("zcentroid")
 
     # ---------- PLOT 3 : sum ----------
-    sum_in = np.cumsum(counts_in)
-    sum_out = np.cumsum(counts_out)
+    # sum_in = np.cumsum(counts_in)
+    # sum_out = np.cumsum(counts_out)
 
-    ax[2].plot(centers, sum_in, label="Inside trace", linewidth=2)
-    ax[2].plot(centers, sum_out, label="Off trace", linewidth=2)
+    ax[2].plot(centers, count_all, label="Inside trace", linewidth=2)
     ax[2].set_xlabel("flux")
-    ax[2].set_ylabel("Cumulative number")
-    ax[2].set_title("Cumul localizations")
+    ax[2].set_ylabel("Localization count")
+    # ax[2].set_yscale("log")
+    ax[2].set_title("Distribution of all localizations")
     ax[2].grid(True, alpha=0.3)
-    ax[2].legend()
+
+    # ---------- ELBOW METHOD ----------
+    # Normalisation pour éviter l'effet d'échelle
+    y = count_all.astype(float)
+    x = centers.astype(float)
+
+    # On suppose que le "coude" est l'endroit où la distance à la ligne reliant
+    # le premier et le dernier point est maximale
+    p1 = np.array([x[0], y[0]])
+    p2 = np.array([x[-1], y[-1]])
+    distances = []
+    for i in range(len(x)):
+        p = np.array([x[i], y[i]])
+        # distance point-ligne (p1,p2)
+        d = np.abs(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
+        distances.append(d)
+    distances = np.array(distances)
+    elbow_idx = np.argmax(distances)
+    elbow_x = x[elbow_idx]
+    elbow_y = y[elbow_idx]
+
+    # Tracé de la courbe de distance (pour visualisation du coude)
+    ax2 = ax[2].twinx()
+    ax2.plot(
+        x, distances, color="orange", linestyle="--", alpha=0.7, label="Elbow distance"
+    )
+    ax2.set_ylabel("Distance to baseline")
+    ax2.legend(loc="upper right")
+
+    # Annotation de la valeur du coude sur le graphe principal
+    ax[2].axvline(elbow_x, color="red", linestyle="--", alpha=0.6)
+    ax[2].scatter([elbow_x], [elbow_y], color="red", zorder=5)
+    ax[2].annotate(
+        f"Elbow: {elbow_x:.2f}",
+        xy=(elbow_x, elbow_y),
+        xytext=(elbow_x, elbow_y * 1.1),
+        arrowprops=dict(facecolor="black", arrowstyle="->"),
+        fontsize=10,
+    )
 
     # saves figure
     fig.tight_layout()
-    fig.savefig("".join(filename_list))
+    filename = "".join(filename_list)
+    print(f"save to : {filename}")
+    fig.savefig(filename)
     plt.close(fig)
+
+
+def get_roi(trace_file="Trace_3D_barcode_mask-mask1_ROI-13.ecsv"):
+    basename = trace_file.split(".")[-2]
+    return basename.split("_")[-1]
 
 
 def process_intensities(loc_file, trace_file):
@@ -99,10 +169,10 @@ def process_intensities(loc_file, trace_file):
 
     # Récupération des IDs de traces
     trace_ids = trace_data["Spot_ID"]
-
+    roi = get_roi(trace_file)
     localization_stats_file = [
-        loc_file.split(".")[0],
-        "localization_table_stats",
+        "localization_table_stats_",
+        roi,
         ".png",
     ]
     plot_distribution_fluxes(barcode_map, localization_stats_file, trace_ids)
