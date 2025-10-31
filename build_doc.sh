@@ -4,6 +4,10 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda create -n test_build_doc python=3.11 --yes
 conda activate test_build_doc
+
+echo ">>> Installing pandoc (simulating RTD docker image)..."
+conda install -c conda-forge pandoc -y
+
 pip install --no-deps .
 pip install -r docs/requirements.txt
 rm -r docs/build/html

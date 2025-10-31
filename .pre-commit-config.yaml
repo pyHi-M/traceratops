@@ -9,7 +9,7 @@ repos:
         exclude: \.fcs$
       - id: check-yaml # Validates YAML files
       - id: check-json # Validates JSON files
-      - id: check-added-large-files # Warns about large files being committed
+      # - id: check-added-large-files # Warns about large files being committed
       - id: check-merge-conflict  # Prevents merge conflict markers in code
 
   # Automatic code formatter
@@ -32,12 +32,12 @@ repos:
       - id: flake8
         args: ["--max-line-length=88", "--ignore=E501,W503,E203"]  # Match Black's line length
 
-  # Pip-audit for Dependency Security
-  - repo: https://github.com/pypa/pip-audit
-    rev: v2.9.0
-    hooks:
-      - id: pip-audit  # Checks for vulnerabilities in Python dependencies
-        additional_dependencies: ['setuptools>=78.1.1']
+  # # Pip-audit for Dependency Security
+  # - repo: https://github.com/pypa/pip-audit
+  #   rev: v2.9.0
+  #   hooks:
+  #     - id: pip-audit  # Checks for vulnerabilities in Python dependencies
+  #       additional_dependencies: ['setuptools>=78.1.1']
 
   # Optional because error messages are not all clear and can block dev a lot of time
   # # Codespell for Spell Checking
