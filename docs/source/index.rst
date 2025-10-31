@@ -19,6 +19,9 @@ Corresponding to the post-processing of pyHiM data, compatible with the `4DN FIS
 
    Filter by intensity<tutorials/filter_intensity>
    Plot interactions<tutorials/plot_interactions>
+   File preparation<tutorials/file_preparation.ipynb>
+   Descriptive statistics<tutorials/descriptive_statistics.ipynb>
+   Analysis overview<tutorials/preprocess.ipynb>
 
 .. toctree::
    :maxdepth: 1
