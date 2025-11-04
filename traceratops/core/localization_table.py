@@ -210,7 +210,7 @@ class LocalizationTable:
         if len(self.data.meta["comments"]):
             self.data.meta["comments"] = list(dict.fromkeys(self.data.meta["comments"]))
 
-    def save(self, file_name, barcode_map, comments="", format="4dn"):
+    def save(self, file_name, barcode_map, comments="", format="ecsv"):
         """
         Saves output table
 
