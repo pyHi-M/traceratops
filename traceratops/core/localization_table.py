@@ -117,7 +117,7 @@ class LocalizationTable:
         """
         Converts an Astropy table back to .4dn format with appropriate headers.
         """
-        output_file = output_file.strip(".ecsv") + ".4dn"
+        output_file = output_file.strip(".ecsv").strip(".4dn") + ".4dn"
 
         csv_data = table.to_pandas()
         csv_data.rename(
@@ -184,7 +184,8 @@ class LocalizationTable:
         elif file_ext == ".4dn":
             print("$ Importing table from fof-ct format")
             self._read_metadata_from_4dn(file)
-            self.data = self._convert_4dn_to_astropy(file)
+            barcode_map = self._convert_4dn_to_astropy(file)
+            self.data = barcode_map
             self.original_format = "4dn"
         else:
             raise ValueError("Unsupported file format. Use .ecsv or .4dn")
