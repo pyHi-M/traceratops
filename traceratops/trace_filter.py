@@ -251,7 +251,7 @@ def runtime(
     if localizations_file and intensity_min:
 
         # Plot intensity distribution to help user choose a threshold
-        intensities = [row["peak"] for row in localizations_data]
+        intensities = [row["Peak_intensity"] for row in localizations_data]
         output_file = localizations_file.split(".")[0]
         localization_table.plot_intensity_distribution(
             intensities, output_file=output_file + "_localization_intensities.png"
