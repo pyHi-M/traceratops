@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - process_him_matrix: unused & deprecated script
 - trace_combinator: unused & deprecated script
+- pwd_matrix_2_pdb: unused & deprecated script
 
 
 ## [0.4.0] - 2025-04-09
