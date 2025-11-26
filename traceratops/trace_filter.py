@@ -184,7 +184,7 @@ def check_file_number(trace_files):
         print(f"\n$ {len(trace_files)} trace files to process: \n{f2p}")
 
 
-def filter_duplicat(
+def filter_duplicate(
     remove_duplicate_spots, trace, trace_file, localizations_file, localizations_data
 ):
     if remove_duplicate_spots:
@@ -265,7 +265,7 @@ def runtime(
         # reads new trace
         trace.load(trace_file)
 
-        trace = filter_duplicat(
+        trace = filter_duplicate(
             remove_duplicate_spots,
             trace,
             trace_file,
