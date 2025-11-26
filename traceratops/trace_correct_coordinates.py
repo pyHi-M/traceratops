@@ -9,6 +9,8 @@ to minimize their deviation from the center of mass (CoM) of their respective tr
 
 import argparse
 import os
+import select
+import sys
 
 import numpy as np
 from astropy.table import Table
@@ -16,8 +18,12 @@ from astropy.table import Table
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--input", required=True, help="Path to the input trace file (ECSV format)."
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
+        "--input", help="Path to the input trace file (ECSV format)."
+    )
+    input_group.add_argument(
+        "--pipe", action="store_true", help="Read input filenames from stdin (pipe)."
     )
     parser.add_argument(
         "--output",
@@ -36,6 +42,21 @@ def parse_arguments():
         help="Convergence threshold for Z shifts (default: 0.01).",
     )
     return parser
+
+
+def get_trace_files(args):
+    if args.pipe:
+        if select.select([sys.stdin], [], [], 0.0)[0]:
+            trace_files = [line.strip() for line in sys.stdin if line.strip()]
+        else:
+            print(
+                "Error: No filenames received from stdin. Provide input with --pipe or use --input."
+            )
+            sys.exit(1)
+    else:
+        trace_files = [args.input]
+
+    return trace_files
 
 
 def compute_center_of_mass(trace_table):
@@ -125,28 +146,36 @@ def main():
     parser = parse_arguments()
     args = parser.parse_args()
 
-    # Determine output filename
-    if args.output:
-        output_filename = args.output
-    else:
-        base, ext = os.path.splitext(args.input)
-        output_filename = f"{base}_corrected{ext}"
+    trace_files = get_trace_files(args)
+    if args.output and len(trace_files) > 1:
+        print("Error: --output can only be used when processing a single input file.")
+        sys.exit(1)
 
-    # Load the trace table
-    print(f"Loading trace table: {args.input}")
-    trace_table = Table.read(args.input, format="ascii.ecsv")
+    for trace_file in trace_files:
+        # Determine output filename
+        if args.output:
+            output_filename = args.output
+        else:
+            base, ext = os.path.splitext(trace_file)
+            output_filename = f"{base}_corrected{ext}"
 
-    # Apply Z-offset correction
-    print(
-        f"Optimizing Z-offsets with max {args.max_iter} iterations and tolerance {args.tolerance}..."
-    )
-    corrected_trace_table = optimize_z_offsets(
-        trace_table, args.max_iter, args.tolerance
-    )
+        # Load the trace table
+        print(f"Loading trace table: {trace_file}")
+        trace_table = Table.read(trace_file, format="ascii.ecsv")
 
-    # Save the corrected trace table
-    corrected_trace_table.write(output_filename, format="ascii.ecsv", overwrite=True)
-    print(f"Saved corrected trace table: {output_filename}")
+        # Apply Z-offset correction
+        print(
+            f"Optimizing Z-offsets with max {args.max_iter} iterations and tolerance {args.tolerance}..."
+        )
+        corrected_trace_table = optimize_z_offsets(
+            trace_table, args.max_iter, args.tolerance
+        )
+
+        # Save the corrected trace table
+        corrected_trace_table.write(
+            output_filename, format="ascii.ecsv", overwrite=True
+        )
+        print(f"Saved corrected trace table: {output_filename}")
 
 
 if __name__ == "__main__":

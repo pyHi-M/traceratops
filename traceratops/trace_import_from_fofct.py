@@ -12,6 +12,8 @@ Required inputs:
 The script will produce an ECSV file that restores the missing columns (`Barcode #`, `Mask_id`, and `label`).
 """
 
+import select
+import sys
 from argparse import ArgumentParser
 
 import pandas as pd
@@ -21,12 +23,31 @@ from astropy.table import Table
 
 def parse_arguments():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("--fofct_file", help="Path to the FOFCT file", required=True)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--fofct_file", help="Path to the FOFCT file")
+    input_group.add_argument(
+        "--pipe", action="store_true", help="Read input filenames from stdin (pipe)."
+    )
     parser.add_argument("--bed_file", help="Path to the BED file", required=True)
     parser.add_argument(
         "--output_file", default=None, help="Path to the output ECSV file"
     )
     return parser
+
+
+def get_trace_files(args):
+    if args.pipe:
+        if select.select([sys.stdin], [], [], 0.0)[0]:
+            trace_files = [line.strip() for line in sys.stdin if line.strip()]
+        else:
+            print(
+                "Error: No filenames received from stdin. Provide input with --pipe or use --fofct_file."
+            )
+            sys.exit(1)
+    else:
+        trace_files = [args.fofct_file]
+
+    return trace_files
 
 
 def read_column_names_from_csv(csv_file):
@@ -126,28 +147,33 @@ def main():
     parser = parse_arguments()
     args = parser.parse_args()
 
-    # Read column names from the CSV file
-    column_names = read_column_names_from_csv(args.fofct_file)
+    trace_files = get_trace_files(args)
 
-    # Load the files
-    csv_data = load_csv_file(args.fofct_file, column_names)
-    bed_data = load_barcode_bed_file(args.bed_file)
+    if args.output_file and len(trace_files) > 1:
+        print("Error: --output_file can only be used when processing a single input file.")
+        sys.exit(1)
 
-    # Add missing columns
-    csv_data = add_missing_columns(csv_data, bed_data)
+    for fofct_file in trace_files:
+        # Read column names from the CSV file
+        column_names = read_column_names_from_csv(fofct_file)
 
-    # Rename columns to match ECSV format
-    csv_data = rename_columns_for_ecsv(csv_data)
+        # Load the files
+        csv_data = load_csv_file(fofct_file, column_names)
+        bed_data = load_barcode_bed_file(args.bed_file)
 
-    # Define the output ECSV file path
-    output_file = (
-        args.output_file
-        if args.output_file
-        else args.fofct_file.replace(".csv", ".ecsv")
-    )
+        # Add missing columns
+        csv_data = add_missing_columns(csv_data, bed_data)
 
-    # Convert to ECSV format and save
-    convert_csv_to_ecsv(csv_data, output_file)
+        # Rename columns to match ECSV format
+        csv_data = rename_columns_for_ecsv(csv_data)
+
+        # Define the output ECSV file path
+        output_file = (
+            args.output_file if args.output_file else fofct_file.replace(".csv", ".ecsv")
+        )
+
+        # Convert to ECSV format and save
+        convert_csv_to_ecsv(csv_data, output_file)
 
 
 if __name__ == "__main__":
