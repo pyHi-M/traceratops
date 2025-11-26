@@ -24,7 +24,7 @@ from astropy.table import Table
 def parse_arguments():
     parser = ArgumentParser(description=__doc__)
     input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument("--fofct_file", help="Path to the FOFCT file")
+    input_group.add_argument("--input", help="Path to the FOFCT file")
     input_group.add_argument(
         "--pipe", action="store_true", help="Read input filenames from stdin (pipe)."
     )
@@ -41,11 +41,11 @@ def get_trace_files(args):
             trace_files = [line.strip() for line in sys.stdin if line.strip()]
         else:
             print(
-                "Error: No filenames received from stdin. Provide input with --pipe or use --fofct_file."
+                "Error: No filenames received from stdin. Provide input with --pipe or use --input."
             )
             sys.exit(1)
     else:
-        trace_files = [args.fofct_file]
+        trace_files = [args.input]
 
     return trace_files
 
