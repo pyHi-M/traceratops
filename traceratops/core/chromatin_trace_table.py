@@ -123,7 +123,7 @@ class ChromatinTraceTable:
             sys.exit()
 
         file_ext = os.path.splitext(file)[1].lower()
-        if file_ext == ".ecsv":
+        if file_ext in (".ecsv", ".dat"):
             print("$ Importing table from pyHiM format")
             self.data = read_table_from_ecsv(file)
             self.original_format = "ecsv"
@@ -133,7 +133,7 @@ class ChromatinTraceTable:
             self.data = self._convert_4dn_to_astropy(file)
             self.original_format = "4dn"
         else:
-            raise ValueError("Unsupported file format. Use .ecsv or .4dn")
+            raise ValueError("Unsupported file format. Use .ecsv, .dat, or .4dn")
 
         print(f"Successfully loaded trace table: {file}")
         return self.data

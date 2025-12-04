@@ -177,7 +177,7 @@ class LocalizationTable:
             sys.exit()
 
         file_ext = os.path.splitext(file)[1].lower()
-        if file_ext == ".ecsv":
+        if file_ext in (".ecsv", ".dat"):
             print("$ Importing table from pyHiM format")
             barcode_map = read_table_from_ecsv(file)
             self.original_format = "ecsv"
@@ -188,7 +188,7 @@ class LocalizationTable:
             self.data = barcode_map
             self.original_format = "4dn"
         else:
-            raise ValueError("Unsupported file format. Use .ecsv or .4dn")
+            raise ValueError("Unsupported file format. Use .ecsv, .dat, or .4dn")
 
         print(f"$ Successfully loaded barcode localizations file: {file}")
 
