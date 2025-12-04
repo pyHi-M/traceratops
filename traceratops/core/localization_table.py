@@ -180,6 +180,7 @@ class LocalizationTable:
         if file_ext in (".ecsv", ".dat"):
             print("$ Importing table from pyHiM format")
             barcode_map = read_table_from_ecsv(file)
+            self.data = barcode_map
             self.original_format = "ecsv"
         elif file_ext == ".4dn":
             print("$ Importing table from fof-ct format")
