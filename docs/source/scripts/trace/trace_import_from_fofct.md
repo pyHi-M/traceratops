@@ -12,7 +12,7 @@
 To convert a CSV file back to the ECSV format using the specified BED and JSON files, you would run:
 
 ```
-trace_import_from_fofct --fofct_file output.csv --bed_file barcode.bed --output_file Trace_3D_barcode_KDtree_ROI-5.ecsv
+trace_import_from_fofct --input output.csv --bed_file barcode.bed --output_file Trace_3D_barcode_KDtree_ROI-5.ecsv
 ```
 
 If the `--output_file` argument is not provided, the script will save the ECSV file with the same name as the input CSV file but with an `.ecsv` extension.
