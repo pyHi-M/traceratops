@@ -431,11 +431,11 @@ def get_trace_files(args):
 def main():
     parser = parse_arguments()
     args = parser.parse_args()
-    trace_files = get_trace_files(args)
+    _, trace_files = get_trace_files(args)
 
     if len(trace_files) > 0:
         for trace_file in trace_files:
-            print(f"Processing file: {trace_file}")
+            print(f">> Processing file: {trace_file}")
 
             # Initialize and load trace table
             trace = ChromatinTraceTable()
