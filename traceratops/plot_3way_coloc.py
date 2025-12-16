@@ -35,6 +35,11 @@ def parse_arguments():
     parser.add_argument(
         "--label_map_file", help="Text file with barcode numbers per row"
     )
+    parser.add_argument(
+        "--plot_format",
+        help="Available options: svg, pdf, png",
+        default="png",
+    )
     return parser
 
 
@@ -47,6 +52,7 @@ def plot_threeway_matrix(
     vmax=None,
     cmap="RdBu",
     label_map=None,
+    file_format="png",
 ):
     all_barcodes = set()
     for b1, b2 in pair_means.keys():
@@ -118,8 +124,9 @@ def plot_threeway_matrix(
     ax.set_ylabel("Barcode #", fontsize=14)
     plt.tight_layout()
     output_filename = f"{output_file.split('.')[0]}_anchor_{anchor_barcode}_replot"
-    plt.savefig(f"{output_filename}.png", dpi=300)
-    print(f"Saved three-way co-localization heatmap to: {output_filename}")
+    output_path = f"{output_filename}.{file_format}"
+    plt.savefig(output_path, dpi=300)
+    print(f"Saved three-way co-localization heatmap to: {output_path}")
     plt.close()
 
 
@@ -196,6 +203,7 @@ def main():
             vmax=args.vmax,
             cmap=args.cmap,
             label_map=label_map,
+            file_format=args.plot_format,
         )
 
 
