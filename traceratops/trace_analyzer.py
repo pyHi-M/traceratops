@@ -14,9 +14,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
-from scipy.stats import norm
-from sklearn.mixture import GaussianMixture
-from sklearn.neighbors import KernelDensity
+from scipy.optimize import minimize
+from scipy.stats import gamma
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
@@ -249,10 +248,9 @@ def plot_radius_of_gyration(
 ):
     """Plot the distribution of radius of gyration (Rg) across traces.
 
-    Three panels are generated:
-        - Histogram with single-species (one Gaussian) fit
-        - Histogram with two-species (two Gaussian mixture) fit
-        - Kernel density estimation with experimental datapoints as rug plot
+    Two panels are generated:
+        - Histogram with single-species (one Gamma) fit on $Rg^2$
+        - Histogram with two-species (Gamma mixture) fit on $Rg^2$
 
     Parameters
     ----------
@@ -288,81 +286,114 @@ def plot_radius_of_gyration(
     if len(rg_values) == 0:
         print("! No Rg values passed the minimum threshold.")
         return
-    min_rg, max_rg = np.min(rg_values), np.max(rg_values)
-    if min_rg == max_rg:
-        min_rg -= 0.5
-        max_rg += 0.5
-    x_range = np.linspace(min_rg, max_rg, 500)
 
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8), constrained_layout=True)
+    rg_squared = rg_values ** 2
+    min_rg_sq, max_rg_sq = np.min(rg_squared), np.max(rg_squared)
+    if min_rg_sq == max_rg_sq:
+        min_rg_sq -= 0.5
+        max_rg_sq += 0.5
+    x_range = np.linspace(min_rg_sq, max_rg_sq, 500)
+
+    fig, axes = plt.subplots(1, 2, figsize=(18, 8), constrained_layout=True)
     fig.suptitle("Radius of gyration across traces", fontsize=30)
 
-    # Panel 1: Single-species (one Gaussian) fit
-    mu, sigma = np.mean(rg_values), np.std(rg_values)
-    sigma = sigma if sigma > 0 else 1e-6
+    # Panel 1: Single-species (one Gamma) fit
+    shape, loc, scale = gamma.fit(rg_squared, floc=0)
+    gamma_fit = gamma.pdf(x_range, shape, loc=loc, scale=scale)
+
     axes[0].hist(
-        rg_values, bins=50, density=True, alpha=0.5, color="tab:blue", label="Rg samples"
+        rg_squared,
+        bins=50,
+        density=True,
+        alpha=0.5,
+        color="tab:blue",
+        label="$Rg^2$ samples",
     )
-    axes[0].plot(x_range, norm.pdf(x_range, mu, sigma), color="black", lw=2, label="1-species fit")
-    axes[0].set_xlabel("Rg (um)", fontsize=20)
+    axes[0].plot(x_range, gamma_fit, color="black", lw=2, label="1-species gamma fit")
+    axes[0].set_xlabel(r"$Rg^2$ ($\mu m^2$)", fontsize=20)
     axes[0].set_ylabel("Density", fontsize=20)
     axes[0].legend(fontsize=12)
-    axes[0].set_title(f"$n$ = {len(rg_values)} | $\mu$ = {mu:.3f}, $\sigma$ = {sigma:.3f}")
-
-    # Panel 2: Two-species Gaussian mixture fit
-    axes[1].hist(
-        rg_values, bins=50, density=True, alpha=0.5, color="tab:green", label="Rg samples"
+    axes[0].set_title(
+        f"$n$ = {len(rg_squared)} | $k$ = {shape:.3f}, $\theta$ = {scale:.3f}"
     )
-    if len(rg_values) > 1:
-        try:
-            gmm = GaussianMixture(n_components=2, random_state=42)
-            gmm.fit(rg_values.reshape(-1, 1))
-            gmm_density = np.exp(gmm.score_samples(x_range.reshape(-1, 1)))
-            axes[1].plot(x_range, gmm_density, color="black", lw=2, label="2-species fit")
 
-            means = gmm.means_.flatten()
-            stds = np.sqrt(gmm.covariances_).flatten()
-            weights = gmm.weights_
-            for mean_val, std_val, weight in zip(means, stds, weights):
-                component_pdf = weight * norm.pdf(x_range, mean_val, std_val)
-                axes[1].plot(x_range, component_pdf, lw=1.5, linestyle="--")
+    # Panel 2: Two-species Gamma mixture fit
+    axes[1].hist(
+        rg_squared,
+        bins=50,
+        density=True,
+        alpha=0.5,
+        color="tab:green",
+        label="$Rg^2$ samples",
+    )
 
+    def _gamma_mixture_pdf(x, k1, theta1, k2, theta2, weight):
+        weight = np.clip(weight, 1e-6, 1 - 1e-6)
+        return weight * gamma.pdf(x, k1, scale=theta1) + (1 - weight) * gamma.pdf(
+            x, k2, scale=theta2
+        )
+
+    def _neg_log_likelihood(params, data):
+        k1, theta1, k2, theta2, weight = params
+        if np.any(np.array(params[:4]) <= 0):
+            return np.inf
+        pdf_vals = _gamma_mixture_pdf(data, k1, theta1, k2, theta2, weight)
+        return -np.sum(np.log(np.clip(pdf_vals, 1e-12, None)))
+
+    if len(rg_squared) > 1:
+        mean_sq = np.mean(rg_squared)
+        initial_scale = mean_sq if mean_sq > 0 else 1e-6
+        initial_params = [
+            2.0,
+            initial_scale,
+            5.0,
+            initial_scale,
+            0.5,
+        ]
+        bounds = [
+            (1e-3, None),
+            (1e-6, None),
+            (1e-3, None),
+            (1e-6, None),
+            (1e-3, 1 - 1e-3),
+        ]
+        result = minimize(
+            _neg_log_likelihood,
+            x0=initial_params,
+            args=(rg_squared,),
+            bounds=bounds,
+            method="L-BFGS-B",
+        )
+        if result.success:
+            k1, theta1, k2, theta2, weight = result.x
+            mixture_density = _gamma_mixture_pdf(x_range, k1, theta1, k2, theta2, weight)
+            axes[1].plot(x_range, mixture_density, color="black", lw=2, label="2-species gamma fit")
+
+            component_1 = weight * gamma.pdf(x_range, k1, scale=theta1)
+            component_2 = (1 - weight) * gamma.pdf(x_range, k2, scale=theta2)
+            axes[1].plot(x_range, component_1, lw=1.5, linestyle="--")
+            axes[1].plot(x_range, component_2, lw=1.5, linestyle="--")
             axes[1].set_title(
                 " | ".join(
                     [
-                        f"$\mu_{i+1}$={mean_val:.3f}, $\sigma_{i+1}$={std_val:.3f}, $w_{i+1}$={weight:.2f}"
-                        for i, (mean_val, std_val, weight) in enumerate(
-                            zip(means, stds, weights)
-                        )
+                        f"$k_1$={k1:.3f}, $\theta_1$={theta1:.3f}, $w_1$={weight:.2f}",
+                        f"$k_2$={k2:.3f}, $\theta_2$={theta2:.3f}, $w_2$={(1 - weight):.2f}",
                     ]
                 )
             )
-        except ValueError as exc:  # pragma: no cover - defensive programming
-            print(f"! Could not fit two-species model: {exc}")
+        else:  # pragma: no cover - defensive programming
+            print(f"! Could not fit two-species gamma model: {result.message}")
             axes[1].set_title("Two-species fit unavailable")
     else:
         axes[1].set_title("Two-species fit unavailable (insufficient data)")
 
-    axes[1].set_xlabel("Rg (um)", fontsize=20)
+    axes[1].set_xlabel(r"$Rg^2$ ($\mu m^2$)", fontsize=20)
     axes[1].set_ylabel("Density", fontsize=20)
     axes[1].legend(fontsize=12)
 
-    # Panel 3: Kernel density estimation with rug plot
-    bandwidth = 1.06 * np.std(rg_values) * (len(rg_values) ** (-1 / 5)) if len(rg_values) > 1 else 0.1
-    bandwidth = bandwidth if bandwidth > 0 else 0.1
-    kde = KernelDensity(kernel="gaussian", bandwidth=bandwidth)
-    kde.fit(rg_values.reshape(-1, 1))
-    kde_density = np.exp(kde.score_samples(x_range.reshape(-1, 1)))
-
-    axes[2].plot(x_range, kde_density, color="black", lw=2, label="KDE")
-    axes[2].scatter(rg_values, np.zeros_like(rg_values), color="tab:red", marker="|", s=200, alpha=0.7)
-    axes[2].set_xlabel("Rg (um)", fontsize=20)
-    axes[2].set_ylabel("Density", fontsize=20)
-    axes[2].legend(fontsize=12)
-    axes[2].set_title(f"Bandwidth = {bandwidth:.3f}")
-
     plt.savefig(output_filename)
     print(f"$ Saved radius of gyration plot: {output_filename}")
+
 
 
 def barcode_detection_efficiency(
