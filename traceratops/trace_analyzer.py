@@ -14,6 +14,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
+from scipy.stats import norm
+from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import KernelDensity
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
@@ -217,6 +220,113 @@ def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
     return mean_dx, mean_dy, mean_dz, std_dx, std_dy, std_dz
 
 
+def compute_radius_of_gyration(coords):
+    """Computes the radius of gyration (Rg) for a given trace."""
+
+    center_of_mass = np.mean(coords, axis=0)
+    return np.sqrt(np.mean(np.sum((coords - center_of_mass) ** 2, axis=1)))
+
+
+def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
+    """Plot the distribution of radius of gyration (Rg) across traces.
+
+    Three panels are generated:
+        - Histogram with single-species (one Gaussian) fit
+        - Histogram with two-species (two Gaussian mixture) fit
+        - Kernel density estimation with experimental datapoints as rug plot
+    """
+
+    trace_table = trace.data
+    trace_by_ID = trace_table.group_by("Trace_ID")
+
+    rg_values = []
+    for sub_trace_table in trace_by_ID.groups:
+        coords = np.vstack((sub_trace_table["x"], sub_trace_table["y"], sub_trace_table["z"])).T
+        if len(coords) > 0:
+            rg_values.append(compute_radius_of_gyration(coords))
+
+    if len(rg_values) == 0:
+        print("! No traces available to compute radius of gyration.")
+        return
+
+    rg_values = np.array(rg_values)
+    min_rg, max_rg = np.min(rg_values), np.max(rg_values)
+    if min_rg == max_rg:
+        min_rg -= 0.5
+        max_rg += 0.5
+    x_range = np.linspace(min_rg, max_rg, 500)
+
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), constrained_layout=True)
+    fig.suptitle("Radius of gyration across traces", fontsize=30)
+
+    # Panel 1: Single-species (one Gaussian) fit
+    mu, sigma = np.mean(rg_values), np.std(rg_values)
+    sigma = sigma if sigma > 0 else 1e-6
+    axes[0].hist(
+        rg_values, bins=30, density=True, alpha=0.5, color="tab:blue", label="Rg samples"
+    )
+    axes[0].plot(x_range, norm.pdf(x_range, mu, sigma), color="black", lw=2, label="1-species fit")
+    axes[0].set_xlabel("Rg (um)", fontsize=20)
+    axes[0].set_ylabel("Density", fontsize=20)
+    axes[0].legend()
+    axes[0].set_title(f"$n$ = {len(rg_values)} | $\mu$ = {mu:.3f}, $\sigma$ = {sigma:.3f}")
+
+    # Panel 2: Two-species Gaussian mixture fit
+    axes[1].hist(
+        rg_values, bins=30, density=True, alpha=0.5, color="tab:green", label="Rg samples"
+    )
+    if len(rg_values) > 1:
+        try:
+            gmm = GaussianMixture(n_components=2, random_state=42)
+            gmm.fit(rg_values.reshape(-1, 1))
+            gmm_density = np.exp(gmm.score_samples(x_range.reshape(-1, 1)))
+            axes[1].plot(x_range, gmm_density, color="black", lw=2, label="2-species fit")
+
+            means = gmm.means_.flatten()
+            stds = np.sqrt(gmm.covariances_).flatten()
+            weights = gmm.weights_
+            for mean_val, std_val, weight in zip(means, stds, weights):
+                component_pdf = weight * norm.pdf(x_range, mean_val, std_val)
+                axes[1].plot(x_range, component_pdf, lw=1.5, linestyle="--")
+
+            axes[1].set_title(
+                " | ".join(
+                    [
+                        f"$\mu_{i+1}$={mean_val:.3f}, $\sigma_{i+1}$={std_val:.3f}, $w_{i+1}$={weight:.2f}"
+                        for i, (mean_val, std_val, weight) in enumerate(
+                            zip(means, stds, weights)
+                        )
+                    ]
+                )
+            )
+        except ValueError as exc:  # pragma: no cover - defensive programming
+            print(f"! Could not fit two-species model: {exc}")
+            axes[1].set_title("Two-species fit unavailable")
+    else:
+        axes[1].set_title("Two-species fit unavailable (insufficient data)")
+
+    axes[1].set_xlabel("Rg (um)", fontsize=20)
+    axes[1].set_ylabel("Density", fontsize=20)
+    axes[1].legend()
+
+    # Panel 3: Kernel density estimation with rug plot
+    bandwidth = 1.06 * np.std(rg_values) * (len(rg_values) ** (-1 / 5)) if len(rg_values) > 1 else 0.1
+    bandwidth = bandwidth if bandwidth > 0 else 0.1
+    kde = KernelDensity(kernel="gaussian", bandwidth=bandwidth)
+    kde.fit(rg_values.reshape(-1, 1))
+    kde_density = np.exp(kde.score_samples(x_range.reshape(-1, 1)))
+
+    axes[2].plot(x_range, kde_density, color="black", lw=2, label="KDE")
+    axes[2].scatter(rg_values, np.zeros_like(rg_values), color="tab:red", marker="|", s=200, alpha=0.7)
+    axes[2].set_xlabel("Rg (um)", fontsize=20)
+    axes[2].set_ylabel("Density", fontsize=20)
+    axes[2].legend()
+    axes[2].set_title(f"Bandwidth = {bandwidth:.3f}")
+
+    plt.savefig(output_filename)
+    print(f"$ Saved radius of gyration plot: {output_filename}")
+
+
 def barcode_detection_efficiency(
     trace, output_prefix="barcode_detection_efficiency", format="png"
 ):
@@ -348,6 +458,10 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
     print(
         f"$ Mean distances between neighboring barcodes: X={mean_dx:.3f}, Y={mean_dy:.3f}, Z={mean_dz:.3f}"
     )
+
+    # Plot radius of gyration distribution
+    rg_output = f"{base_filename}_radius_of_gyration.{format}"
+    plot_radius_of_gyration(trace, output_filename=rg_output)
 
     # Plots how often barcodes are repeated in a single trace
     collective_barcode_stats = trace.barcode_statistics(trace_table)
