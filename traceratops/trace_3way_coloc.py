@@ -20,7 +20,7 @@ import argparse
 import itertools
 import select
 import sys
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -457,11 +457,13 @@ def main():
                 )
 
                 # Create the plots
+                trace_file_basename = os.path.basename(trace_file)
+                output_filename = f"{args.output.split('.')[0]}_{trace_file_basename.split('.')[0]}.png"
                 plot_threeway_matrix(
                     pair_means,
                     pair_sems,
                     anchor,
-                    args.output,
+                    output_filename,
                     distance_cutoff=args.cutoff,
                     vmin=args.vmin,
                     vmax=args.vmax,
