@@ -288,12 +288,14 @@ def plot_radius_of_gyration(
         return
 
     rg_squared = rg_values ** 2
-    min_rg_sq, max_rg_sq = np.min(rg_squared), np.max(rg_squared)
+    #min_rg_sq, max_rg_sq = np.min(rg_squared), np.max(rg_squared)
+    min_rg_sq = min_rg_threshold*min_rg_threshold
+    max_rg_sq = 0.4
     if min_rg_sq == max_rg_sq:
         min_rg_sq -= 0.5
         max_rg_sq += 0.5
     x_range = np.linspace(min_rg_sq, max_rg_sq, 500)
-
+    print(f">> min/max: {min_rg_sq}/{max_rg_sq}")
     fig, axes = plt.subplots(1, 2, figsize=(18, 8), constrained_layout=True)
     fig.suptitle("Radius of gyration across traces", fontsize=30)
 
