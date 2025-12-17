@@ -295,7 +295,7 @@ def plot_radius_of_gyration(
     x_range = np.linspace(min_rg, max_rg, 500)
 
     fig, axes = plt.subplots(1, 3, figsize=(24, 8), constrained_layout=True)
-    fig.suptitle("Radius of gyration across traces", fontsize=30)
+    fig.suptitle("Radius of gyration across traces", fontsize=20)
 
     # Panel 1: Single-species (one Gaussian) fit
     mu, sigma = np.mean(rg_values), np.std(rg_values)
@@ -306,7 +306,7 @@ def plot_radius_of_gyration(
     axes[0].plot(x_range, norm.pdf(x_range, mu, sigma), color="black", lw=2, label="1-species fit")
     axes[0].set_xlabel("Rg (um)", fontsize=20)
     axes[0].set_ylabel("Density", fontsize=20)
-    axes[0].legend(fontsize=12)
+    axes[0].legend(fontsize=10)
     axes[0].set_title(f"$n$ = {len(rg_values)} | $\mu$ = {mu:.3f}, $\sigma$ = {sigma:.3f}")
 
     # Panel 2: Two-species Gaussian mixture fit
@@ -345,7 +345,7 @@ def plot_radius_of_gyration(
 
     axes[1].set_xlabel("Rg (um)", fontsize=20)
     axes[1].set_ylabel("Density", fontsize=20)
-    axes[1].legend(fontsize=12)
+    axes[1].legend(fontsize=10)
 
     # Panel 3: Kernel density estimation with rug plot
     bandwidth = 1.06 * np.std(rg_values) * (len(rg_values) ** (-1 / 5)) if len(rg_values) > 1 else 0.1
@@ -358,7 +358,7 @@ def plot_radius_of_gyration(
     axes[2].scatter(rg_values, np.zeros_like(rg_values), color="tab:red", marker="|", s=200, alpha=0.7)
     axes[2].set_xlabel("Rg (um)", fontsize=20)
     axes[2].set_ylabel("Density", fontsize=20)
-    axes[2].legend(fontsize=12)
+    axes[2].legend(fontsize=10)
     axes[2].set_title(f"Bandwidth = {bandwidth:.3f}")
 
     plt.savefig(output_filename)
