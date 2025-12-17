@@ -43,6 +43,18 @@ def parse_arguments():
         choices=["png", "svg"],
         help="Output image format (png or svg)",
     )
+    parser.add_argument(
+        "--rgMin",
+        type=float,
+        default=0.02,
+        help="Minimum Rg value to include in the analysis (default: 0.02).",
+    )
+    parser.add_argument(
+        "--rgBarcodes",
+        type=int,
+        nargs="+",
+        help="List of barcode IDs to include when computing the radius of gyration.",
+    )
     return parser
 
 
@@ -52,6 +64,8 @@ def create_dict_args(args):
     p["rootFolder"] = args.rootFolder
     p["plotXYZ"] = args.plotXYZ
     p["format"] = args.format
+    p["rgMin"] = args.rgMin
+    p["rgBarcodes"] = args.rgBarcodes
 
     p["trace_files"] = []
     if args.pipe:
@@ -227,16 +241,35 @@ def compute_radius_of_gyration(coords):
     return np.sqrt(np.mean(np.sum((coords - center_of_mass) ** 2, axis=1)))
 
 
-def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
+def plot_radius_of_gyration(
+    trace,
+    output_filename="radius_of_gyration.png",
+    min_rg_threshold=0.02,
+    selected_barcodes=None,
+):
     """Plot the distribution of radius of gyration (Rg) across traces.
 
     Three panels are generated:
         - Histogram with single-species (one Gaussian) fit
         - Histogram with two-species (two Gaussian mixture) fit
         - Kernel density estimation with experimental datapoints as rug plot
+
+    Parameters
+    ----------
+    trace : ChromatinTraceTable
+        Trace table containing barcode coordinates.
+    output_filename : str
+        Path to save the output plot.
+    min_rg_threshold : float, optional
+        Minimum Rg value to keep when plotting. Defaults to 0.02.
+    selected_barcodes : list[int] | None, optional
+        If provided, only positions from these barcodes are used to compute Rg.
     """
 
     trace_table = trace.data
+    if selected_barcodes is not None:
+        trace_table = trace_table[np.isin(trace_table["Barcode #"], selected_barcodes)]
+
     trace_by_ID = trace_table.group_by("Trace_ID")
 
     rg_values = []
@@ -250,6 +283,11 @@ def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
         return
 
     rg_values = np.array(rg_values)
+    rg_values = rg_values[rg_values >= min_rg_threshold]
+
+    if len(rg_values) == 0:
+        print("! No Rg values passed the minimum threshold.")
+        return
     min_rg, max_rg = np.min(rg_values), np.max(rg_values)
     if min_rg == max_rg:
         min_rg -= 0.5
@@ -263,17 +301,17 @@ def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
     mu, sigma = np.mean(rg_values), np.std(rg_values)
     sigma = sigma if sigma > 0 else 1e-6
     axes[0].hist(
-        rg_values, bins=30, density=True, alpha=0.5, color="tab:blue", label="Rg samples"
+        rg_values, bins=50, density=True, alpha=0.5, color="tab:blue", label="Rg samples"
     )
     axes[0].plot(x_range, norm.pdf(x_range, mu, sigma), color="black", lw=2, label="1-species fit")
     axes[0].set_xlabel("Rg (um)", fontsize=20)
     axes[0].set_ylabel("Density", fontsize=20)
-    axes[0].legend()
+    axes[0].legend(fontsize=12)
     axes[0].set_title(f"$n$ = {len(rg_values)} | $\mu$ = {mu:.3f}, $\sigma$ = {sigma:.3f}")
 
     # Panel 2: Two-species Gaussian mixture fit
     axes[1].hist(
-        rg_values, bins=30, density=True, alpha=0.5, color="tab:green", label="Rg samples"
+        rg_values, bins=50, density=True, alpha=0.5, color="tab:green", label="Rg samples"
     )
     if len(rg_values) > 1:
         try:
@@ -307,7 +345,7 @@ def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
 
     axes[1].set_xlabel("Rg (um)", fontsize=20)
     axes[1].set_ylabel("Density", fontsize=20)
-    axes[1].legend()
+    axes[1].legend(fontsize=12)
 
     # Panel 3: Kernel density estimation with rug plot
     bandwidth = 1.06 * np.std(rg_values) * (len(rg_values) ** (-1 / 5)) if len(rg_values) > 1 else 0.1
@@ -320,7 +358,7 @@ def plot_radius_of_gyration(trace, output_filename="radius_of_gyration.png"):
     axes[2].scatter(rg_values, np.zeros_like(rg_values), color="tab:red", marker="|", s=200, alpha=0.7)
     axes[2].set_xlabel("Rg (um)", fontsize=20)
     axes[2].set_ylabel("Density", fontsize=20)
-    axes[2].legend()
+    axes[2].legend(fontsize=12)
     axes[2].set_title(f"Bandwidth = {bandwidth:.3f}")
 
     plt.savefig(output_filename)
@@ -409,7 +447,14 @@ def barcode_detection_efficiency(
     print(f"$ Exporting barcode detection plot to: {output_prefix}.{format}")
 
 
-def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
+def analyze_trace(
+    trace,
+    trace_file,
+    plotXYZ=False,
+    format="png",
+    min_rg_threshold=0.02,
+    rg_barcodes=None,
+):
     """
     Perform comprehensive analysis on a chromatin trace file.
 
@@ -429,6 +474,10 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
         Flag to control whether XYZ traces should be plotted. Default is False.
     format : str, optional
         Output file format for figures ('png' or 'svg'). Default is 'png'.
+    min_rg_threshold : float, optional
+        Minimum Rg value to include when computing the radius of gyration. Default is 0.02.
+    rg_barcodes : list[int] | None, optional
+        Barcodes to include when computing the radius of gyration. If None, all barcodes are used.
 
     Returns
     -------
@@ -461,7 +510,12 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
 
     # Plot radius of gyration distribution
     rg_output = f"{base_filename}_radius_of_gyration.{format}"
-    plot_radius_of_gyration(trace, output_filename=rg_output)
+    plot_radius_of_gyration(
+        trace,
+        output_filename=rg_output,
+        min_rg_threshold=min_rg_threshold,
+        selected_barcodes=rg_barcodes,
+    )
 
     # Plots how often barcodes are repeated in a single trace
     collective_barcode_stats = trace.barcode_statistics(trace_table)
@@ -517,7 +571,14 @@ def process_traces(p):
                 )
 
             print(f"> Analyzing traces for {trace_file}")
-            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["format"])
+            analyze_trace(
+                trace,
+                trace_file,
+                plotXYZ=p["plotXYZ"],
+                format=p["format"],
+                min_rg_threshold=p["rgMin"],
+                rg_barcodes=p["rgBarcodes"],
+            )
 
     else:
         print(
