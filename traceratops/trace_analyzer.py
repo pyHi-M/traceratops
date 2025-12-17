@@ -389,7 +389,7 @@ def plot_radius_of_gyration(
 
     axes[1].set_xlabel(r"$Rg^2$ ($\mu m^2$)", fontsize=20)
     axes[1].set_ylabel("Density", fontsize=20)
-    axes[1].legend(fontsize=12)
+    axes[1].legend(fontsize=10)
 
     plt.savefig(output_filename)
     print(f"$ Saved radius of gyration plot: {output_filename}")
