@@ -288,23 +288,34 @@ def plot_radius_of_gyration(
         return
 
     rg_squared = rg_values ** 2
-    #min_rg_sq, max_rg_sq = np.min(rg_squared), np.max(rg_squared)
-    min_rg_sq = min_rg_threshold*min_rg_threshold
-    max_rg_sq = 0.4
-    if min_rg_sq == max_rg_sq:
-        min_rg_sq -= 0.5
-        max_rg_sq += 0.5
+    min_rg_sq = min_rg_threshold * min_rg_threshold
+    median_rg_sq = np.median(rg_squared)
+    std_rg_sq = np.std(rg_squared)
+    max_rg_sq = median_rg_sq + 3 * std_rg_sq
+    max_rg_sq = max(min_rg_sq + 1e-6, max_rg_sq)
+
+    rg_squared_window = rg_squared[
+        (rg_squared >= min_rg_sq) & (rg_squared <= max_rg_sq)
+    ]
+    if len(rg_squared_window) == 0:
+        print(
+            "! No Rg values fall within the plotting window after applying thresholds."
+        )
+        return
+
     x_range = np.linspace(min_rg_sq, max_rg_sq, 500)
-    print(f">> min/max: {min_rg_sq}/{max_rg_sq}")
+    print(
+        f">> Rg^2 window: min={min_rg_sq:.4f}, median={median_rg_sq:.4f}, max={max_rg_sq:.4f}"
+    )
     fig, axes = plt.subplots(1, 2, figsize=(18, 8), constrained_layout=True)
     fig.suptitle("Radius of gyration across traces", fontsize=30)
 
     # Panel 1: Single-species (one Gamma) fit
-    shape, loc, scale = gamma.fit(rg_squared, floc=0)
+    shape, loc, scale = gamma.fit(rg_squared_window, floc=0)
     gamma_fit = gamma.pdf(x_range, shape, loc=loc, scale=scale)
 
     axes[0].hist(
-        rg_squared,
+        rg_squared_window,
         bins=50,
         density=True,
         alpha=0.5,
@@ -316,12 +327,12 @@ def plot_radius_of_gyration(
     axes[0].set_ylabel("Density", fontsize=20)
     axes[0].legend(fontsize=12)
     axes[0].set_title(
-        f"$n$ = {len(rg_squared)} | $k$ = {shape:.3f}, $\theta$ = {scale:.3f}"
+        f"$n$ = {len(rg_squared_window)} | $k$ = {shape:.3f}, $\theta$ = {scale:.3f}"
     )
 
     # Panel 2: Two-species Gamma mixture fit
     axes[1].hist(
-        rg_squared,
+        rg_squared_window,
         bins=50,
         density=True,
         alpha=0.5,
@@ -342,15 +353,32 @@ def plot_radius_of_gyration(
         pdf_vals = _gamma_mixture_pdf(data, k1, theta1, k2, theta2, weight)
         return -np.sum(np.log(np.clip(pdf_vals, 1e-12, None)))
 
-    if len(rg_squared) > 1:
-        mean_sq = np.mean(rg_squared)
+    if len(rg_squared_window) > 1:
+        mean_sq = np.mean(rg_squared_window)
         initial_scale = mean_sq if mean_sq > 0 else 1e-6
-        initial_params = [
-            2.0,
-            initial_scale,
-            5.0,
-            initial_scale,
-            0.5,
+        single_k, _, single_theta = gamma.fit(rg_squared_window, floc=0)
+        candidate_params = [
+            [
+                max(single_k * 0.5, 1e-3),
+                max(single_theta * 0.5, 1e-6),
+                max(single_k * 1.5, 1e-3),
+                max(single_theta * 1.5, 1e-6),
+                0.5,
+            ],
+            [
+                max(single_k, 1e-3),
+                max(single_theta, 1e-6),
+                5.0,
+                initial_scale,
+                0.3,
+            ],
+            [
+                2.0,
+                initial_scale,
+                5.0,
+                initial_scale,
+                0.7,
+            ],
         ]
         bounds = [
             (1e-3, None),
@@ -359,15 +387,21 @@ def plot_radius_of_gyration(
             (1e-6, None),
             (1e-3, 1 - 1e-3),
         ]
-        result = minimize(
-            _neg_log_likelihood,
-            x0=initial_params,
-            args=(rg_squared,),
-            bounds=bounds,
-            method="L-BFGS-B",
-        )
-        if result.success:
-            k1, theta1, k2, theta2, weight = result.x
+        best_result = None
+        for initial_params in candidate_params:
+            result = minimize(
+                _neg_log_likelihood,
+                x0=initial_params,
+                args=(rg_squared_window,),
+                bounds=bounds,
+                method="L-BFGS-B",
+                options={"maxiter": 20000},
+            )
+            if result.success and (best_result is None or result.fun < best_result.fun):
+                best_result = result
+
+        if best_result and best_result.success:
+            k1, theta1, k2, theta2, weight = best_result.x
             mixture_density = _gamma_mixture_pdf(x_range, k1, theta1, k2, theta2, weight)
             axes[1].plot(x_range, mixture_density, color="black", lw=2, label="2-species gamma fit")
 
@@ -384,7 +418,12 @@ def plot_radius_of_gyration(
                 )
             )
         else:  # pragma: no cover - defensive programming
-            print(f"! Could not fit two-species gamma model: {result.message}")
+            message = (
+                best_result.message
+                if best_result is not None
+                else "Optimization did not converge"
+            )
+            print(f"! Could not fit two-species gamma model: {message}")
             axes[1].set_title("Two-species fit unavailable")
     else:
         axes[1].set_title("Two-species fit unavailable (insufficient data)")
