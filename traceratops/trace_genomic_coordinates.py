@@ -3,7 +3,8 @@
 """
 Assign genomic coordinates to a chromatin trace table.
 It assigns genomic coordinates (Chrom, Chrom_Start, Chrom_End) from the BED file to each row
-in the trace table based on the 'Barcode #' column.
+in the trace table based on the 'Barcode #' column. If the BED file provides a fifth column,
+the barcode in the trace table is updated to the new value.
 """
 
 import argparse
@@ -57,8 +58,9 @@ def create_dict_args(args):
 
 
 def load_bed_file(bed_file):
-    """Loads the BED file into a dictionary mapping barcode numbers to genomic coordinates.
-    Handles files with inconsistent tab spacing by using regex splitting."""
+    """Loads the BED file into a dictionary mapping barcodes to genomic coordinates.
+    The expected format is either 4 columns (chrom, start, end, barcode) or 5 columns
+    (chrom, start, end, barcode, new_barcode)."""
     bed_dict = {}
 
     with open(bed_file, "r") as f:
@@ -71,8 +73,8 @@ def load_bed_file(bed_file):
             # This handles inconsistent tabs/spaces more robustly
             fields = line.strip().split()
 
-            # Ensure we have exactly 4 fields
-            if len(fields) != 4:
+            # Ensure we have 4 or 5 fields
+            if len(fields) not in (4, 5):
                 print(f"Warning: Skipping malformed line: {line.strip()}")
                 continue
 
@@ -81,11 +83,13 @@ def load_bed_file(bed_file):
                 chrom_start = int(fields[1])
                 chrom_end = int(fields[2])
                 barcode = int(fields[3])
+                new_barcode = int(fields[4]) if len(fields) == 5 else None
 
                 bed_dict[barcode] = {
                     "Chrom": chrom,
                     "Chrom_Start": chrom_start,
                     "Chrom_End": chrom_end,
+                    "New_Barcode": new_barcode,
                 }
             except ValueError as e:
                 print(f"Warning: Skipping line with invalid data types: {line.strip()}")
@@ -99,7 +103,7 @@ def load_bed_file(bed_file):
 
 
 def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
-    """Updates the Chrom, Chrom_Start, and Chrom_End columns in the trace file based on the BED file."""
+    """Updates the Chrom, Chrom_Start, Chrom_End, and Barcode # columns in the trace file based on the BED file."""
     trace_table = ChromatinTraceTable()
     trace_table.load(trace_file)
 
@@ -119,6 +123,8 @@ def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
             row["Chrom"] = bed_dict[barcode]["Chrom"]
             row["Chrom_Start"] = bed_dict[barcode]["Chrom_Start"]
             row["Chrom_End"] = bed_dict[barcode]["Chrom_End"]
+            if bed_dict[barcode]["New_Barcode"] is not None:
+                row["Barcode #"] = bed_dict[barcode]["New_Barcode"]
             matched_count += 1
         else:
             unmatched_barcodes.add(barcode)
@@ -140,10 +146,10 @@ def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
             )
             print(f"  ... and {len(unmatched_barcodes) - 10} more")
 
-        # Ask the user if they want to continue if more than 10% of barcodes are unmatched
-        if missing_percent > 10 and not p.get("auto_continue", False):
+        # Ask the user if they want to continue if any barcodes are unmatched
+        if missing_percent > 0 and not p.get("auto_continue", False):
             response = input(
-                "More than 10% of barcodes couldn't be matched. Continue anyway? (y/n): "
+                "One or more barcodes couldn't be matched. Continue anyway? (y/n): "
             )
             if response.lower() != "y":
                 print("Operation aborted by user.")
