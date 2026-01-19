@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * trace_splitter
     * trace_plot
     * trace_pearsons
-    * trace_impute_genomic_coordinates
+    * trace_genomic_coordinates
     * trace_import_from_fofct
     * trace_export_to_fofct
     * trace_filter_advanced
