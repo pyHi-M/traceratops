@@ -63,6 +63,21 @@ def load_bed_file(bed_file):
     (chrom, start, end, barcode, new_barcode)."""
     bed_dict = {}
 
+    def parse_barcode_value(value, line):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+
+        if value.startswith("barcode_"):
+            suffix = value.split("barcode_", 1)[1]
+            try:
+                return int(suffix)
+            except ValueError:
+                pass
+
+        raise ValueError(f"Invalid barcode value: {value} (line: {line.strip()})")
+
     with open(bed_file, "r") as f:
         for line in f:
             # Skip empty lines
@@ -82,8 +97,10 @@ def load_bed_file(bed_file):
                 chrom = fields[0]
                 chrom_start = int(fields[1])
                 chrom_end = int(fields[2])
-                barcode = int(fields[3])
-                new_barcode = int(fields[4]) if len(fields) == 5 else None
+                barcode = parse_barcode_value(fields[3], line)
+                new_barcode = (
+                    parse_barcode_value(fields[4], line) if len(fields) == 5 else None
+                )
 
                 bed_dict[barcode] = {
                     "Chrom": chrom,
