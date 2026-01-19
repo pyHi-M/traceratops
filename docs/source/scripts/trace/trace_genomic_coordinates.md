@@ -1,18 +1,18 @@
-# trace_impute_genomic_coordinates
+# trace_genomic_coordinates
 
 **Reliability status**: `development`
 
 ```{eval-rst}
 .. argparse::
-   :ref: traceratops.trace_impute_genomic_coordinates.parse_arguments
-   :prog: trace_impute_genomic_coordinates
+   :ref: traceratops.trace_genomic_coordinates.parse_arguments
+   :prog: trace_genomic_coordinates
 ```
 
 
 ## Usage example
 
 ```sh
-trace_impute_genomic_coordinates --input trace_file.ecsv --bed bed_file.bed --output output_file.ecsv
+trace_genomic_coordinates --input trace_file.ecsv --bed bed_file.bed --output output_file.ecsv
 ```
 
 ## BED file format

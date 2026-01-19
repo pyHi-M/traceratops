@@ -7,7 +7,7 @@
 - Splitter ([trace_splitter](trace/trace_splitter.md))
 - Plot ([trace_plot](trace/trace_plot.md))
 - Pearsons ([trace_pearsons](trace/trace_pearsons.md))
-- Impute Genomic Coordinates ([trace_impute_genomic_coordinates](trace/trace_impute_genomic_coordinates.md))
+- Impute Genomic Coordinates ([trace_genomic_coordinates](trace/trace_genomic_coordinates.md))
 - Import From FOFCT ([trace_import_from_fofct](trace/trace_import_from_fofct.md))
 - Export To FOFCT ([trace_export_to_fofct](trace/trace_export_to_fofct.md))
 - Filter Advanced ([trace_filter_advanced](trace/trace_filter_advanced.md))
@@ -27,7 +27,7 @@ trace/trace_stats
 trace/trace_splitter
 trace/trace_plot
 trace/trace_pearsons
-trace/trace_impute_genomic_coordinates
+trace/trace_genomic_coordinates
 trace/trace_import_from_fofct
 trace/trace_export_to_fofct
 trace/trace_filter_advanced
