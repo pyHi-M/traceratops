@@ -23,6 +23,9 @@ Corresponding to the post-processing of pyHiM data, compatible with the `4DN FIS
    File preparation<tutorials/file_preparation.ipynb>
    Descriptive statistics<tutorials/descriptive_statistics.ipynb>
    Analysis overview<tutorials/preprocess.ipynb>
+   Data exploration<tutorials/data_exploration.ipynb>
+   Data analysis<tutorials/data_analysis.ipynb>
+   Data publication<tutorials/data_publication.ipynb>
 
 .. toctree::
    :maxdepth: 1
