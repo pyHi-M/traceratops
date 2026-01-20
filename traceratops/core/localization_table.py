@@ -237,6 +237,7 @@ class LocalizationTable:
             self._convert_astropy_to_4dn(barcode_map, file_name)
         else:
             print(f"$ Saving output table as {file_name} ...")
+            self.data = barcode_map
             self.remove_empty_comments()
             self.remove_duplicate_comments()
             try:
