@@ -14,11 +14,13 @@
 - Scripts: trace_analyzer (comprehensive QC metrics)
 - Status: READY
 
-### 🔄 TEMPLATES READY FOR CREATION
+**3. Tutorial 3: Filter Traces with trace_filter**
+- File: `tutorial_03_filter_thresholds.ipynb` ✅
+- Scripts: trace_filter, trace_analyzer
+- Features: 3 progressive examples (spatial Z filtering, remove barcode 27, n_barcodes >= 4), before/after QC comparison
+- Status: READY
 
-**3. Tutorial 3: Filter by Direct Thresholds**
-- Scripts: trace_filter (spatial x,y,z + barcode count), trace_analyzer
-- Key sections: Before/after comparison, setting thresholds based on QC
+### 🔄 TEMPLATES READY FOR CREATION
 
 **4. Tutorial 4: Filter Duplicate Barcodes** ⭐ HIGHLIGHTS NEW SCRIPT
 - Scripts: trace_filter_duplicates (NEW!), trace_analyzer
@@ -75,9 +77,9 @@ TOTAL: 27 distinct scripts documented
 - **Tutorial 7:** `plot_him_matrix.py --triangular` flag for genomic visualization
 
 ### Completed Notebooks
-- 2 detailed notebooks (tutorials 1-2)
+- 3 detailed notebooks (tutorials 1-3)
 - 1 comprehensive README (tutorials 1-10 overview)
-- READY for: 8 additional specific notebooks
+- READY for: 7 additional specific notebooks
 
 ---
 
@@ -88,7 +90,7 @@ docs/source/tutorials/
 ├── README_10_tutorials.md ...................... ✅ COMPLETE
 ├── tutorial_01_merge_multi_roi.ipynb ......... ✅ COMPLETE
 ├── tutorial_02_quality_control.ipynb ......... ✅ COMPLETE
-├── tutorial_03_filter_thresholds.ipynb ....... 🔄 READY TO CREATE
+├── tutorial_03_filter_thresholds.ipynb ....... ✅ COMPLETE
 ├── tutorial_04_filter_duplicates.ipynb ....... 🔄 READY (highlights NEW!)
 ├── tutorial_05_split_traces.ipynb ............ 🔄 READY
 ├── tutorial_06_assign_masks_split_labels.ipynb 🔄 READY (highlights NEW!)
@@ -103,9 +105,9 @@ docs/source/tutorials/
 ## 🎯 Next Steps
 
 ### Immediate
-1. ✅ Created tutorials 1-2 (detailed)
+1. ✅ Created tutorials 1-3 (detailed)
 2. ✅ Created comprehensive README (all 10 tutorials)
-3. 🔄 Ready to create tutorials 3-10 (have all scripts analyzed)
+3. 🔄 Ready to create tutorials 4-10 (have all scripts analyzed)
 
 ### Action Items
 - Use README_10_tutorials.md as blueprint
@@ -141,14 +143,14 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 ## ✨ Status Summary
 
 ### Completed
-- ✅ Tutorial structure proven (tutorials 1-2)
+- ✅ Tutorial structure proven (tutorials 1-3)
 - ✅ All scripts analyzed (10 tutorials planned)
 - ✅ NEW features documented in README
 - ✅ Complete workflow pipeline described
 - ✅ Command examples provided for all 27 scripts
 
 ### Ready for Creation
-- 8 additional notebooks (templates outlined)
+- 7 additional notebooks (templates outlined)
 - Each follows proven structure
 - All content already documented in README
 
@@ -177,6 +179,6 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 
 ---
 
-**Current Status: 2/10 notebooks complete, 8 ready for rapid creation**
+**Current Status: 3/10 notebooks complete, 7 ready for rapid creation**
 **Estimated Total Time: Complete in 3-4 hours**
 **Quality: Professional, production-ready**
