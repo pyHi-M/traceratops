@@ -303,8 +303,8 @@ def collect_files(
 # ---------------------------------------------------------------------------
 
 
-def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse command-line arguments."""
+def parse_arguments() -> argparse.ArgumentParser:
+    """Build and return the argument parser (used by sphinx-argparse)."""
     parser = argparse.ArgumentParser(
         prog="collect_files",
         description=(
@@ -354,12 +354,12 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
             "data_013_ROI.dat). Automatic when --variable-part is omitted."
         ),
     )
-    return parser.parse_args(argv)
+    return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     """Entry point.  Returns 0 on success, 1 on business-logic failure."""
-    args = parse_arguments(argv)
+    args = parse_arguments().parse_args(argv)
 
     if not args.root.is_dir():
         print(f"Error: {args.root} is not a directory", file=sys.stderr)

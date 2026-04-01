@@ -94,6 +94,8 @@ extensions = [
     "nbsphinx",  # include jupyter notebook file, WARNING: incompatible with mermaid on ReadTheDocs
 ]
 
+nbsphinx_execute = "never"  # notebooks are pre-executed; don't re-run during doc build
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 

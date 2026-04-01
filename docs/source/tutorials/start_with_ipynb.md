@@ -54,8 +54,4 @@ jupyter-lab my_tutorial.ipynb
 
 4. Once you spin up a jupyter lab, select the `my-kernel` (the kernel that you defined at step 3.) by clicking on panel "Kernel > Change Kernel..." to be able to run your specific functions.
 
-![select_kernel_screenshot](../_static/select_kernel.png)
-
-5. Now you can follow the tutorial by running each cell with the `run` icon (or `Shift+Enter` on keyboard):
-
-![run_notebook_screenshot](../_static/run_notebook.png)
+5. Now you can follow the tutorial by running each cell with the `run` icon (or `Shift+Enter` on keyboard).

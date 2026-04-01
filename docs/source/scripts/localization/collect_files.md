@@ -60,5 +60,5 @@ This matches `ROI-14.ecsv`, `ROI-25.ecsv`, etc. but rejects `ROI-021.ecsv`
 
 ## Replaces
 
-This script replaces `localization_cp_files` (deprecated) and the `find -exec cp`
+This script replaces the former `localization_cp_files` script and the `find -exec cp`
 pattern previously used for trace files.
