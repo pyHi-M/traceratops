@@ -5,7 +5,8 @@
 
 **1. Tutorial 1: Merge Multi-ROI Data**
 - File: `tutorial_01_merge_multi_roi.ipynb` ✅
-- Scripts: 6 covered (collect_files, localization_merge, trace_merge, trace_pearsons, trace_stats, trace_analyzer)
+- Scripts: 4 covered (collect_files, trace_pearsons, trace_merge, trace_stats)
+- Features: ROI quality filtering via Pearson correlation threshold
 - Status: READY
 
 **2. Tutorial 2: Quality Control**
@@ -53,8 +54,7 @@
 
 ### Scripts by Tutorial
 ```
-Tutorial 1: 6 scripts (collect_files, localization_merge, trace_merge,
-                      trace_pearsons, trace_stats, trace_analyzer)
+Tutorial 1: 4 scripts (collect_files, trace_pearsons, trace_merge, trace_stats)
 Tutorial 2: 1 script  (trace_analyzer)
 Tutorial 3: 2 scripts (trace_filter, trace_analyzer)
 Tutorial 4: 2 scripts (trace_filter_duplicates NEW!, trace_analyzer)
