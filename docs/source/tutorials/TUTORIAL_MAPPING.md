@@ -28,9 +28,11 @@
 - Features: Two methods — trace-only (removes all repeated) vs intensity-based (keeps best spot via localization file)
 - Status: READY
 
-**5. Tutorial 5: Split Oversized Traces**
-- Scripts: trace_splitter (Rg clustering), trace_analyzer, trace_plot (PDB output)
-- Key sections: K-means parameters, PyMOL visualization
+**5. Tutorial 5: Split Oversized Traces** ✅
+- File: `tutorial_05_split_traces.ipynb` ✅
+- Scripts: trace_splitter, trace_analyzer
+- Features: Rg-based detection, K-means splitting, before/after QC comparison, parameter guidance
+- Status: READY
 
 **6. Tutorial 6: Assign Masks & Split by Labels** ⭐ HIGHLIGHTS NEW SCRIPT
 - Scripts: trace_assign_mask (2D mask labeling), trace_split_labels (NEW!)
@@ -62,7 +64,7 @@ Tutorial 1: 4 scripts (collect_files, trace_pearsons, trace_merge, trace_stats)
 Tutorial 2: 1 script  (trace_analyzer)
 Tutorial 3: 2 scripts (trace_filter, trace_analyzer)
 Tutorial 4: 4 scripts (trace_filter --clean_spots, trace_analyzer, collect_files, localization_merge)
-Tutorial 5: 3 scripts (trace_splitter, trace_analyzer, trace_plot)
+Tutorial 5: 2 scripts (trace_splitter, trace_analyzer)
 Tutorial 6: 2 scripts (trace_assign_mask, trace_split_labels NEW!)
 Tutorial 7: 2 scripts (trace_to_matrix, plot_him_matrix --triangular NEW!)
 Tutorial 8: 3 scripts (trace_3way_coloc, plot_3way_coloc, plot_4m)
@@ -79,9 +81,9 @@ TOTAL: 27 distinct scripts documented
 - **Tutorial 7:** `plot_him_matrix.py --triangular` flag for genomic visualization
 
 ### Completed Notebooks
-- 4 detailed notebooks (tutorials 1-4)
+- 5 detailed notebooks (tutorials 1-5)
 - 1 comprehensive README (tutorials 1-10 overview)
-- READY for: 6 additional specific notebooks
+- READY for: 5 additional specific notebooks
 
 ---
 
@@ -94,7 +96,7 @@ docs/source/tutorials/
 ├── tutorial_02_quality_control.ipynb ......... ✅ COMPLETE
 ├── tutorial_03_filter_thresholds.ipynb ....... ✅ COMPLETE
 ├── tutorial_04_filter_duplicates.ipynb ....... ✅ COMPLETE
-├── tutorial_05_split_traces.ipynb ............ 🔄 READY
+├── tutorial_05_split_traces.ipynb ............ ✅ COMPLETE
 ├── tutorial_06_assign_masks_split_labels.ipynb 🔄 READY (highlights NEW!)
 ├── tutorial_07_matrix_visualization.ipynb .... 🔄 READY (highlights NEW!)
 ├── tutorial_08_multiway_coloc.ipynb .......... 🔄 READY
@@ -145,14 +147,14 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 ## ✨ Status Summary
 
 ### Completed
-- ✅ Tutorial structure proven (tutorials 1-4)
+- ✅ Tutorial structure proven (tutorials 1-5)
 - ✅ All scripts analyzed (10 tutorials planned)
 - ✅ NEW features documented in README
 - ✅ Complete workflow pipeline described
 - ✅ Command examples provided for all 27 scripts
 
 ### Ready for Creation
-- 6 additional notebooks (templates outlined)
+- 5 additional notebooks (templates outlined)
 - Each follows proven structure
 - All content already documented in README
 
@@ -181,6 +183,6 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 
 ---
 
-**Current Status: 4/10 notebooks complete, 6 ready for rapid creation**
+**Current Status: 5/10 notebooks complete, 5 ready for rapid creation**
 **Estimated Total Time: Complete in 3-4 hours**
 **Quality: Professional, production-ready**
