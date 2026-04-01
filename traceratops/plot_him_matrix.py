@@ -119,6 +119,17 @@ Outputs:
     parser_visu.add_argument(
         "--fontsize", help="Size of fonts to be used in matrix", default=22
     )
+    parser_visu.add_argument(
+        "--triangular",
+        action="store_true",
+        help="Plot only upper triangle (useful for genomic coordinate visualization)",
+    )
+    parser_visu.add_argument(
+        "--triangular_mode",
+        choices=["upper", "lower"],
+        default="upper",
+        help="Which triangle to display (upper or lower)",
+    )
     return parser
 
 
@@ -205,6 +216,40 @@ def apply_nan_threshold(matrix, nan_matrix, threshold):
     return matrix
 
 
+def apply_triangular_mask(matrix, mode="upper"):
+    """
+    Apply triangular mask to matrix.
+
+    Parameters:
+    -----------
+    matrix : np.ndarray
+        2D matrix to mask
+    mode : str
+        'upper' to keep upper triangle (i <= j)
+        'lower' to keep lower triangle (i >= j)
+
+    Returns:
+    --------
+    np.ndarray
+        Masked matrix with NaN values in masked region
+    """
+    matrix_masked = matrix.copy()
+    n = matrix.shape[0]
+
+    if mode == "upper":
+        # Keep upper triangle, mask lower
+        for i in range(n):
+            for j in range(i):
+                matrix_masked[i, j] = np.nan
+    else:  # lower
+        # Keep lower triangle, mask upper
+        for i in range(n):
+            for j in range(i + 1, n):
+                matrix_masked[i, j] = np.nan
+
+    return matrix_masked
+
+
 def main():
     parser = parse_arguments()
     args = parser.parse_args()
@@ -222,6 +267,13 @@ def main():
     if args.nan_threshold:
         matrix_to_plot = apply_nan_threshold(
             matrix_to_plot, nan_matrix, args.nan_threshold
+        )
+
+    # Apply triangular mask if requested
+    if args.triangular:
+        print(f"$ Applying {args.triangular_mode} triangular mask")
+        matrix_to_plot = apply_triangular_mask(
+            matrix_to_plot, mode=args.triangular_mode
         )
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
     n_cells = sc_matrices.shape[2]
