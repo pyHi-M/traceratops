@@ -22,9 +22,11 @@
 
 ### 🔄 TEMPLATES READY FOR CREATION
 
-**4. Tutorial 4: Filter Duplicate Barcodes** ⭐ HIGHLIGHTS NEW SCRIPT
-- Scripts: trace_filter_duplicates (NEW!), trace_analyzer
-- Key sections: SIMPLE vs ADVANCED modes, statistics plots
+**4. Tutorial 4: Filter Duplicate Barcodes** ✅
+- File: `tutorial_04_filter_duplicates.ipynb` ✅
+- Scripts: trace_filter (--clean_spots), trace_analyzer, collect_files, localization_merge
+- Features: Two methods — trace-only (removes all repeated) vs intensity-based (keeps best spot via localization file)
+- Status: READY
 
 **5. Tutorial 5: Split Oversized Traces**
 - Scripts: trace_splitter (Rg clustering), trace_analyzer, trace_plot (PDB output)
@@ -59,7 +61,7 @@
 Tutorial 1: 4 scripts (collect_files, trace_pearsons, trace_merge, trace_stats)
 Tutorial 2: 1 script  (trace_analyzer)
 Tutorial 3: 2 scripts (trace_filter, trace_analyzer)
-Tutorial 4: 2 scripts (trace_filter_duplicates NEW!, trace_analyzer)
+Tutorial 4: 4 scripts (trace_filter --clean_spots, trace_analyzer, collect_files, localization_merge)
 Tutorial 5: 3 scripts (trace_splitter, trace_analyzer, trace_plot)
 Tutorial 6: 2 scripts (trace_assign_mask, trace_split_labels NEW!)
 Tutorial 7: 2 scripts (trace_to_matrix, plot_him_matrix --triangular NEW!)
@@ -72,14 +74,14 @@ TOTAL: 27 distinct scripts documented
 ```
 
 ### New Features Highlighted
-- **Tutorial 4:** `trace_filter_duplicates.py` with SIMPLE & ADVANCED modes
+- **Tutorial 4:** `trace_filter --clean_spots` with optional `--localization_file` for intensity-based resolution
 - **Tutorial 6:** `trace_split_labels.py` for keep/remove label operations
 - **Tutorial 7:** `plot_him_matrix.py --triangular` flag for genomic visualization
 
 ### Completed Notebooks
-- 3 detailed notebooks (tutorials 1-3)
+- 4 detailed notebooks (tutorials 1-4)
 - 1 comprehensive README (tutorials 1-10 overview)
-- READY for: 7 additional specific notebooks
+- READY for: 6 additional specific notebooks
 
 ---
 
@@ -91,7 +93,7 @@ docs/source/tutorials/
 ├── tutorial_01_merge_multi_roi.ipynb ......... ✅ COMPLETE
 ├── tutorial_02_quality_control.ipynb ......... ✅ COMPLETE
 ├── tutorial_03_filter_thresholds.ipynb ....... ✅ COMPLETE
-├── tutorial_04_filter_duplicates.ipynb ....... 🔄 READY (highlights NEW!)
+├── tutorial_04_filter_duplicates.ipynb ....... ✅ COMPLETE
 ├── tutorial_05_split_traces.ipynb ............ 🔄 READY
 ├── tutorial_06_assign_masks_split_labels.ipynb 🔄 READY (highlights NEW!)
 ├── tutorial_07_matrix_visualization.ipynb .... 🔄 READY (highlights NEW!)
@@ -143,14 +145,14 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 ## ✨ Status Summary
 
 ### Completed
-- ✅ Tutorial structure proven (tutorials 1-3)
+- ✅ Tutorial structure proven (tutorials 1-4)
 - ✅ All scripts analyzed (10 tutorials planned)
 - ✅ NEW features documented in README
 - ✅ Complete workflow pipeline described
 - ✅ Command examples provided for all 27 scripts
 
 ### Ready for Creation
-- 7 additional notebooks (templates outlined)
+- 6 additional notebooks (templates outlined)
 - Each follows proven structure
 - All content already documented in README
 
@@ -179,6 +181,6 @@ Cell N: Markdown - Summary, Key Points, Next Tutorial Link
 
 ---
 
-**Current Status: 3/10 notebooks complete, 7 ready for rapid creation**
+**Current Status: 4/10 notebooks complete, 6 ready for rapid creation**
 **Estimated Total Time: Complete in 3-4 hours**
 **Quality: Professional, production-ready**
