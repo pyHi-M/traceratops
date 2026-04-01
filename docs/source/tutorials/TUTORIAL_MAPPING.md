@@ -5,7 +5,7 @@
 
 **1. Tutorial 1: Merge Multi-ROI Data**
 - File: `tutorial_01_merge_multi_roi.ipynb` ✅
-- Scripts: 6 covered (localization_cp_files, merge, trace_pearsons, stats, genomic_coordinates)
+- Scripts: 6 covered (collect_files, localization_merge, trace_merge, trace_pearsons, trace_stats, trace_analyzer)
 - Status: READY
 
 **2. Tutorial 2: Quality Control**
@@ -53,8 +53,8 @@
 
 ### Scripts by Tutorial
 ```
-Tutorial 1: 6 scripts (localization_cp_files, localization_merge, trace_merge,
-                      trace_pearsons, trace_stats, trace_genomic_coordinates)
+Tutorial 1: 6 scripts (collect_files, localization_merge, trace_merge,
+                      trace_pearsons, trace_stats, trace_analyzer)
 Tutorial 2: 1 script  (trace_analyzer)
 Tutorial 3: 2 scripts (trace_filter, trace_analyzer)
 Tutorial 4: 2 scripts (trace_filter_duplicates NEW!, trace_analyzer)

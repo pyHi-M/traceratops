@@ -1,6 +1,11 @@
 # localization_cp_files
 
-**Reliability status**: `development`
+```{warning}
+**Deprecated.** Use [collect_files](collect_files.md) instead, which handles both
+localization files (exact match mode) and trace files (variable match mode).
+```
+
+**Reliability status**: `deprecated`
 
 ```{eval-rst}
 .. argparse::

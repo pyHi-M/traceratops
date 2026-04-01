@@ -79,6 +79,10 @@ trace_3way_coloc = "traceratops.trace_3way_coloc:main"
 plot_single_cell = "traceratops.plot_single_cell:main"
 plot_n_him_matrices = "traceratops.plot_n_him_matrices:main"
 plot_compare2matrices = "traceratops.plot_compare2matrices:main"
+collect_files = "traceratops.collect_files:main"
+
+[tool.setuptools.packages.find]
+include = ["traceratops*"]
 
 [tool.mypy]
 python_version = "3.11"       # Python version used for mypy analysis
