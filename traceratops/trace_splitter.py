@@ -120,9 +120,9 @@ def split_large_traces(trace_table, std_threshold, num_clusters):
         rg = compute_radius_of_gyration(coords)
 
         if rg > rg_threshold and len(coords) > num_clusters:
-            print(
-                f"$ Splitting trace {original_trace_id} (Rg={rg:.3f}) into {num_clusters} clusters."
-            )
+            # print(
+            #     f"$ Splitting trace {original_trace_id} (Rg={rg:.3f}) into {num_clusters} clusters."
+            # )
             kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
             labels = kmeans.fit_predict(coords)
 
