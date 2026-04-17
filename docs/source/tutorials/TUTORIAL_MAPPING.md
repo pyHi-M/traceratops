@@ -46,11 +46,7 @@
 - Scripts: trace_3way_coloc, plot_3way_coloc, plot_4m
 - Key sections: Anchor selection, bootstrapping, distance thresholds
 
-**9. Tutorial 9: FOF-CT Format**
-- Scripts: trace_export_to_fofct, trace_import_from_fofct
-- Key sections: BED file mapping, genomic coordinate reconstruction
-
-**10. Tutorial 10: Compare Datasets**
+**9. Tutorial 9: Compare Datasets**
 - Scripts: plot_bootstrapping, plot_compare2matrices, plot_matrix_comparison, trace_pearsons
 - Key sections: Statistical tests (Wilcoxon), bootstrap confidence intervals
 
@@ -68,8 +64,7 @@ Tutorial 5: 2 scripts (trace_splitter, trace_analyzer)
 Tutorial 6: 2 scripts (trace_assign_mask, trace_split_labels NEW!)
 Tutorial 7: 2 scripts (trace_to_matrix, plot_him_matrix --triangular NEW!)
 Tutorial 8: 3 scripts (trace_3way_coloc, plot_3way_coloc, plot_4m)
-Tutorial 9: 2 scripts (trace_export_to_fofct, trace_import_from_fofct)
-Tutorial 10: 4 scripts (plot_bootstrapping, plot_compare2matrices,
+Tutorial 9: 4 scripts (plot_bootstrapping, plot_compare2matrices,
                        plot_matrix_comparison, trace_pearsons)
 ────────────────────────────────────────────────
 TOTAL: 27 distinct scripts documented
@@ -100,8 +95,7 @@ docs/source/tutorials/
 ├── tutorial_06_assign_masks_split_labels.ipynb 🔄 READY (highlights NEW!)
 ├── tutorial_07_matrix_visualization.ipynb .... 🔄 READY (highlights NEW!)
 ├── tutorial_08_multiway_coloc.ipynb .......... 🔄 READY
-├── tutorial_09_fofc_interaction.ipynb ........ 🔄 READY
-└── tutorial_10_compare_datasets.ipynb ........ 🔄 READY
+└── tutorial_9_compare_datasets.ipynb ........ 🔄 READY
 ```
 
 ---
