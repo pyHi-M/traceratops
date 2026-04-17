@@ -27,8 +27,7 @@ Corresponding to the post-processing of pyHiM data, compatible with the `4DN FIS
    06 - Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
    07 - Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
    08 - Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
-   09 - FOF-CT Interaction<tutorials/tutorial_09_fofc_interaction.ipynb>
-   10 - Compare Datasets<tutorials/tutorial_10_compare_datasets.ipynb>
+   09 - Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
 
 .. toctree::
    :maxdepth: 1
