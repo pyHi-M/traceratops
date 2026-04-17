@@ -25,6 +25,14 @@ from scipy.stats import pearsonr
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
 
+def silent_load_trace(trace, path):
+    import contextlib
+    import io
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        trace.load(path)
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     input_group = parser.add_mutually_exclusive_group(required=True)
@@ -48,6 +56,7 @@ def parse_arguments():
     parser.add_argument(
         "--vmax", type=float, default=10, help="Maximum value for colormap scaling"
     )
+    parser.add_argument("--verbose", action="store_true", help="Increase verbosity")
     return parser
 
 
@@ -289,7 +298,7 @@ def plot_correlation_matrix(
         vmin = np.min(matrix)
     if vmax == 10:
         vmax = np.max(matrix)
-    im = ax.imshow(matrix, cmap="RdBu", interpolation="nearest", vmin=vmin, vmax=vmax)
+    im = ax.imshow(matrix, cmap="RdBu", interpolation="nearest", vmin=0, vmax=1)
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
@@ -336,14 +345,18 @@ def main():
     for fpath in trace_files:
         print(f"Processing {os.path.basename(fpath)}")
         trace = ChromatinTraceTable()
-        trace.load(fpath)
+        if args.verbose:
+            trace.load(fpath)
+        else:
+            silent_load_trace(trace, fpath)
         distance_maps[fpath] = accumulate_distances(trace.data)
 
     # Compare distance maps and generate correlation matrix
     files, corr_matrix = compare_distance_maps(distance_maps)
 
-    print("\nPearson Correlation Matrix:")
-    print(corr_matrix)
+    if args.verbose:
+        print("\nPearson Correlation Matrix:")
+        print(corr_matrix)
 
     # Plot and save the correlation matrix
     plot_correlation_matrix(
