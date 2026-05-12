@@ -117,12 +117,10 @@ def gets_matrix(run_parameters, scPWDMatrix_filename="", uniqueBarcodes=""):
     if run_parameters["dist_calc_mode"] == "proximity":
         # calculates and plots contact probability matrix from merged samples/datasets
         print("$ calculating proximity matrix")
-        sc_matrix, n_cells = calculate_contact_probability_matrix(
+        sc_matrix = calculate_contact_probability_matrix(
             sc_matrix,
-            uniqueBarcodes,
             run_parameters["pixelSize"],
             threshold=run_parameters["proximity_threshold"],
-            norm=run_parameters["matrix_norm_mode"],
         )
 
     fileNameEnding = (

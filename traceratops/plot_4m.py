@@ -71,7 +71,7 @@ def compute_colocalization(trace_table, anchor_barcode, distance_cutoff):
         )
     barcode_interactions = {}
     trace_groups = trace_table.group_by("Trace_ID").groups
-    for trace in tqdm(trace_groups, desc="Processing traces"):
+    for trace in trace_groups:
         anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
         other_barcodes = np.unique(trace["Barcode #"])
         for barcode in other_barcodes:
@@ -120,7 +120,7 @@ def bootstrap_colocalization(
         anchor_barcodes = [anchor_barcodes]
     barcode_samples = {anchor: {} for anchor in anchor_barcodes}
     trace_ids = np.unique(trace_table["Trace_ID"])
-    for _ in tqdm(range(n_bootstrap), desc="Bootstrapping"):
+    for _ in range(n_bootstrap):
         sampled_traces = np.random.choice(trace_ids, size=len(trace_ids), replace=True)
         sampled_table = trace_table[np.isin(trace_table["Trace_ID"], sampled_traces)]
         # Process each anchor barcode separately
