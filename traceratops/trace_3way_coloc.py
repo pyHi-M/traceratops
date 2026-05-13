@@ -18,14 +18,12 @@ spatial relationships in microscopy data.
 """
 import argparse
 import itertools
+import os
 import select
 import sys
-import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-# Removed seaborn import
-from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 

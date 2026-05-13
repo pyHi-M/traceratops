@@ -255,7 +255,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if args.output_file and len(trace_files) > 1:
-        print("Error: --output_file can only be used when processing a single input file.")
+        print(
+            "Error: --output_file can only be used when processing a single input file."
+        )
         sys.exit(1)
 
     # Load the metadata

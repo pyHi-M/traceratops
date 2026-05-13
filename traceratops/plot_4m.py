@@ -21,7 +21,6 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
