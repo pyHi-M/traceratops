@@ -90,7 +90,7 @@ def parse_arguments():
     psr_opt.add_argument(
         "--n_barcodes",
         help="Minimum number of barcodes by trace to keep. Filtering performed last because the previous filters generate traces with fewer spots.",
-        default=None,
+        default=2,
         type=int,
     )
     psr_opt.add_argument(
@@ -305,8 +305,7 @@ def runtime(
                 intensities_kept, output_file=f"{output_file}_filtered_intensities"
             )
 
-        if n_barcodes is not None:
-            trace, comments = filter_barcode_number(n_barcodes, trace, comments)
+        trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
         outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
