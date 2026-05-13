@@ -150,7 +150,9 @@ def main():
     trace_files = get_trace_files(args)
 
     if args.output_file and len(trace_files) > 1:
-        print("Error: --output_file can only be used when processing a single input file.")
+        print(
+            "Error: --output_file can only be used when processing a single input file."
+        )
         sys.exit(1)
 
     for fofct_file in trace_files:
@@ -169,7 +171,9 @@ def main():
 
         # Define the output ECSV file path
         output_file = (
-            args.output_file if args.output_file else fofct_file.replace(".csv", ".ecsv")
+            args.output_file
+            if args.output_file
+            else fofct_file.replace(".csv", ".ecsv")
         )
 
         # Convert to ECSV format and save

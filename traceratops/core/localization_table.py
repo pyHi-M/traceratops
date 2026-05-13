@@ -178,7 +178,7 @@ class LocalizationTable:
 
         file_ext = os.path.splitext(file)[1].lower()
         if file_ext in (".ecsv", ".dat"):
-            print("$ Importing table from pyHiM format")
+            # print("$ Importing table from pyHiM format")
             barcode_map = read_table_from_ecsv(file)
             self.data = barcode_map
             self.original_format = "ecsv"
@@ -191,13 +191,13 @@ class LocalizationTable:
         else:
             raise ValueError("Unsupported file format. Use .ecsv, .dat, or .4dn")
 
-        print(f"$ Successfully loaded barcode localizations file: {file}")
+        # print(f"$ Successfully loaded barcode localizations file: {file}")
 
         unique_barcodes = np.unique(barcode_map["Barcode #"].data)
-        number_unique_barcodes = unique_barcodes.shape[0]
+        # number_unique_barcodes = unique_barcodes.shape[0]
 
-        print(f"$ Number of barcodes read from barcode_map: {number_unique_barcodes}")
-        print(f"$ Unique Barcodes detected: {unique_barcodes}")
+        # print(f"$ Number of barcodes read from barcode_map: {number_unique_barcodes}")
+        # print(f"$ Unique Barcodes detected: {unique_barcodes}")
 
         return barcode_map, unique_barcodes
 

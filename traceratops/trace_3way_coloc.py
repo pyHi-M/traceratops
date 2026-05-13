@@ -18,14 +18,12 @@ spatial relationships in microscopy data.
 """
 import argparse
 import itertools
+import os
 import select
 import sys
-import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-# Removed seaborn import
-from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
@@ -67,7 +65,7 @@ def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff
     trace_groups = trace_table.group_by("Trace_ID").groups
 
     # Process each trace separately
-    for trace in tqdm(trace_groups, desc="Processing traces"):
+    for trace in trace_groups:
         # Get positions of the anchor barcode in this trace
         anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
 
@@ -181,7 +179,7 @@ def bootstrap_threeway_colocalization(
     trace_ids = np.unique(trace_table["Trace_ID"])
 
     # Run bootstrap iterations
-    for _ in tqdm(range(n_bootstrap), desc="Bootstrapping"):
+    for _ in range(n_bootstrap):
         # Sample traces with replacement
         sampled_traces = np.random.choice(trace_ids, size=len(trace_ids), replace=True)
 

@@ -29,7 +29,9 @@ def get_trace_files(args):
         if select.select([sys.stdin], [], [], 0.0)[0]:
             trace_files = [line.strip() for line in sys.stdin if line.strip()]
         else:
-            print("Error: No filenames received from stdin. Provide input with --pipe or use --input.")
+            print(
+                "Error: No filenames received from stdin. Provide input with --pipe or use --input."
+            )
             sys.exit(1)
     else:
         trace_files = [args.input]

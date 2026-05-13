@@ -14,6 +14,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
+from scipy.stats import gaussian_kde
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
@@ -299,6 +300,100 @@ def barcode_detection_efficiency(
     print(f"$ Exporting barcode detection plot to: {output_prefix}.{format}")
 
 
+def compute_kde(x, y, grid_size=200):
+    xy = np.vstack([x, y])
+    kde = gaussian_kde(xy)
+
+    xi, yi = np.meshgrid(
+        np.linspace(x.min(), x.max(), grid_size),
+        np.linspace(y.min(), y.max(), grid_size),
+    )
+
+    zi = kde(np.vstack([xi.ravel(), yi.ravel()]))
+    return zi.reshape(xi.shape)
+
+
+def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
+    """
+    Plot KDE projections (XY, XZ, YZ) from trace data.
+
+    Parameters
+    ----------
+    trace_table : astropy.table.Table
+    output_filename : str
+    target_ratio : float
+        Controls mild Z stretching
+    """
+    with matplotlib.rc_context({"font.size": 10}):
+        x = np.array(trace_table["x"])
+        y = np.array(trace_table["y"])
+        z = np.array(trace_table["z"])
+
+        # === Z scaling (mild) ===
+        x_range = x.max() - x.min()
+        y_range = y.max() - y.min()
+        z_range = z.max() - z.min()
+
+        xy_range = 0.5 * (x_range + y_range)
+
+        z_scale = (xy_range * target_ratio) / z_range
+        z_scaled = z * z_scale
+
+        def _plot(ax, x, y, xlabel, ylabel, title, show_z_ticks=False):
+            zi = compute_kde(x, y)
+
+            im = ax.imshow(
+                zi,
+                origin="lower",
+                extent=[x.min(), x.max(), y.min(), y.max()],
+            )
+
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_title(title)
+            ax.set_aspect("equal")
+            ax.grid(alpha=0.3)
+
+            if show_z_ticks:
+                z_ticks = np.arange(np.floor(z.min()), np.ceil(z.max()) + 1, 1)
+                ax.set_yticks(z_ticks * z_scale)
+                ax.set_yticklabels([f"{int(t)}" for t in z_ticks])
+
+            return im
+
+        # === FIGURE ===
+        fig = plt.figure(figsize=(12, 8))
+        gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05], hspace=0.05, wspace=0.15)
+
+        ax_xy = fig.add_subplot(gs[:, 0])
+        ax_xz = fig.add_subplot(gs[0, 1])
+        ax_yz = fig.add_subplot(gs[1, 1])
+        cax = fig.add_subplot(gs[:, 2])
+
+        im = _plot(ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection (KDE)")
+
+        _plot(
+            ax_xz, x, z_scaled, "X (µm)", "Z (µm)", "XZ projection", show_z_ticks=True
+        )
+
+        _plot(
+            ax_yz, y, z_scaled, "Y (µm)", "Z (µm)", "YZ projection", show_z_ticks=True
+        )
+
+        cbar = fig.colorbar(im, cax=cax)
+        cbar.set_label("Probability density")
+
+        fig.suptitle("Spatial KDE projections", fontsize=30)
+
+        fig.subplots_adjust(
+            left=0.07, right=0.92, top=0.88, bottom=0.08, wspace=0.25, hspace=0.15
+        )
+        plt.savefig(output_filename)
+        plt.close(fig)
+
+        print(f"$ Saved KDE projection plot: {output_filename}")
+
+
 def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
     """
     Perform comprehensive analysis on a chromatin trace file.
@@ -357,6 +452,10 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
         kind="matrix",
         format=format,
     )
+
+    # === KDE spatial projections ===
+    kde_output = f"{base_filename}_kde_projections.{format}"
+    plot_kde_projections(trace_table, kde_output)
 
 
 def process_traces(p):

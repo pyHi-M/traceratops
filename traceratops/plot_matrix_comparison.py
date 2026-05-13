@@ -199,15 +199,13 @@ def calculates_ensemble_matrices(matrices, mode="median", max_distance=2):
     for matrix in matrices:
         matrix[matrix > max_distance] = np.nan
         if "proximity" in mode:
-            mean_sc_matrix, n_cells = calculate_contact_probability_matrix(
+            mean_sc_matrix = calculate_contact_probability_matrix(
                 matrix,
-                list(),
-                1.0,
-                norm="n_cells",
+                1,
             )
         else:
             cells_to_plot = range(matrix.shape[2])
-            mean_sc_matrix, _ = calculate_ensemble_pwd_matrix(
+            mean_sc_matrix = calculate_ensemble_pwd_matrix(
                 matrix, 1.0, cells_to_plot, mode=mode
             )
         mean_sc_matrices.append(mean_sc_matrix)

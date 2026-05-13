@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from astropy.table import Table, vstack
 from matplotlib.colors import ListedColormap
-from tqdm import tqdm
 
 from traceratops.core.localization_table import (
     build_color_dict,
@@ -527,7 +526,7 @@ class ChromatinTraceTable:
         # iterates over traces
         print("$ Calculating barcode stats...")
 
-        for trace in tqdm(trace_table_indexed.groups):
+        for trace in trace_table_indexed.groups:
             unique_barcodes = list(set(trace["Barcode #"].data))
             barcodes = list(trace["Barcode #"].data)
 
@@ -711,7 +710,7 @@ class ChromatinTraceTable:
 
             # iterates over traces
             spots_to_remove = []
-            for trace in tqdm(trace_table_indexed.groups):
+            for trace in trace_table_indexed.groups:
                 unique_barcodes = list(set(trace["Barcode #"].data))
                 number_unique_barcodes = len(unique_barcodes)
                 barcodes = list(trace["Barcode #"].data)
@@ -795,7 +794,7 @@ class ChromatinTraceTable:
             print("$ Using intensity to resolve duplicates...")
             localization_table.add_index("Buid")
 
-            for trace in tqdm(trace_table_indexed.groups):
+            for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
                 for group in barcode_groups:
                     if len(group) == 1:
@@ -868,7 +867,7 @@ class ChromatinTraceTable:
             # finds barcodes with the same UID and stores UIDs in list
             spots_to_remove = [
                 trace["Spot_ID"][0]
-                for trace in tqdm(trace_table_indexed.groups)
+                for trace in trace_table_indexed.groups
                 if len(trace) > 1
             ]
 
@@ -931,7 +930,7 @@ class ChromatinTraceTable:
 
             # builds the list with the rows to remove
             rows_to_remove = []
-            for idx, row in enumerate(tqdm(trace_table)):
+            for idx, row in enumerate(trace_table):
                 spot_id = row["Spot_ID"]
 
                 if spot_id in spots_to_remove:
@@ -981,7 +980,7 @@ class ChromatinTraceTable:
         barcodes_to_remove = []
         print("$ Analyzing traces...")
 
-        for trace in tqdm(trace_table_indexed.groups):
+        for trace in trace_table_indexed.groups:
             number_unique_barcodes = len(list(set(trace["Barcode #"].data)))
 
             if number_unique_barcodes < minimum_number_barcodes:
@@ -990,12 +989,12 @@ class ChromatinTraceTable:
         print(f"$ Number of traces to remove: {len(barcodes_to_remove)}")
 
         list_barcode_to_remove = []
-        for barcodes in tqdm(barcodes_to_remove):
+        for barcodes in barcodes_to_remove:
             list_barcode_to_remove.extend(iter(barcodes))
         rows_to_remove = []
 
         print("$ Finding which rows to remove...")
-        for idx, row in enumerate(tqdm(trace_table)):
+        for idx, row in enumerate(trace_table):
             spot_id = row["Spot_ID"]
             if spot_id in list_barcode_to_remove:
                 rows_to_remove.append(idx)

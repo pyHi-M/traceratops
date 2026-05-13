@@ -73,7 +73,7 @@ def appends_traces(loc_files):
         else:
             collected_tables = new_loc_table.append(collected_tables, new_table)
         number_loc_tables += 1
-        print(f" $ appended loc file with {len(new_table)} localizations")
+        # print(f" $ appended loc file with {len(new_table)} localizations")
     print(f" $ Merged loc file will contain {len(collected_tables)} localizations")
     return collected_tables, number_loc_tables
 
