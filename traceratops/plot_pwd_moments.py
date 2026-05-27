@@ -46,7 +46,7 @@ def _barcode_ticks(barcodes):
         idx = np.arange(n)
     else:
         idx = np.linspace(0, n - 1, 6, dtype=int)
-    return idx, [str(int(barcodes[i])) for i in idx]
+    return idx, [str(barcodes[i]) for i in idx]
 
 
 def plot_maps(mean_distance, variance, gaussianity, barcodes, out_png):
@@ -182,7 +182,7 @@ def get_mean_distance_map(trace_table, coord_order='xyz'):
 
     print(f"$ Number of bins in map : {sc_matrix.shape}")
 
-    return sc_matrix_mean_distance, sc_matrix_var_distance, sc_matrix_kurtosis
+    return sc_matrix_mean_distance, sc_matrix_var_distance, sc_matrix_kurtosis, barcodes
 
 def main():
     args = parse_arguments().parse_args()
@@ -191,9 +191,10 @@ def main():
     trace_table = ChromatinTraceTable()
     trace_table.load(args.input)
 
-    sc_matrix_mean_distance, sc_matrix_var_distance, sc_matrix_kurtosis = get_mean_distance_map(trace_table, coord_order=args.avg_dims)
+    sc_matrix_mean_distance, sc_matrix_var_distance, sc_matrix_kurtosis, barcodes = get_mean_distance_map(
+        trace_table, coord_order=args.avg_dims
+    )
     gaussianity = 3/sc_matrix_kurtosis
-    barcodes = np.array(sorted({int(b) for b in trace_table.data["Barcode #"]}))
 
     stem = os.path.splitext(os.path.basename(args.input))[0]
     np.save(os.path.join(args.output, f"{stem}_mean_distance.npy"), sc_matrix_mean_distance)
