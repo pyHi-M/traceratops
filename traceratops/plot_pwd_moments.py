@@ -69,7 +69,7 @@ def plot_maps(mean_distance, variance, gaussianity, barcodes, out_png):
         else:
             im = ax.imshow(mat, cmap="RdBu")
 
-        ax.set_title(title)
+        ax.set_title(title, fontsize=15)
         ax.set_xlabel("Barcode #")
         ax.set_ylabel("Barcode #")
         ax.set_xticks(ticks)
