@@ -74,6 +74,7 @@ trace_3way_coloc = "traceratops.trace_3way_coloc:main"
 plot_compare2matrices = "traceratops.plot_compare2matrices:main"
 collect_files = "traceratops.collect_files:main"
 trace_split_labels = "traceratops.trace_split_labels:main"
+plot_pwd_moments = "traceratops.plot_pwd_moments:main"
 
 [tool.setuptools.packages.find]
 include = ["traceratops*"]
