@@ -138,22 +138,22 @@ class ChromatinTraceTable:
         return self.data
 
     def remove_empty_comments(self):
-            try:
-                if len(self.data.meta["comments"]):
-                    self.data.meta["comments"] = [
-                        com for com in self.data.meta["comments"] if com
-                    ]
-            except KeyError:
-                return
-
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = [
+                    com for com in self.data.meta["comments"] if com
+                ]
+        except KeyError:
+            return
 
     def remove_duplicate_comments(self):
-            try:
-                if len(self.data.meta["comments"]):
-                    self.data.meta["comments"] = list(dict.fromkeys(self.data.meta["comments"]))
-            except KeyError:
-                return
-
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = list(
+                    dict.fromkeys(self.data.meta["comments"])
+                )
+        except KeyError:
+            return
 
     def save(self, file_name, comments=""):
         """

@@ -6,6 +6,7 @@ Replot 3-way co-localization matrices from .npy files.
 
 It visualizes the frequency of co-localization between barcodes with reference to an anchor barcode, highlighting the anchor's position with perpendicular lines on the heatmap.
 """
+
 import argparse
 import csv
 import os

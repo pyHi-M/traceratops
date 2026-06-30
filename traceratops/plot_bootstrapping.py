@@ -8,7 +8,6 @@ INPUTS:
 - uniquebarcode list
 """
 
-
 import argparse
 import os
 import sys

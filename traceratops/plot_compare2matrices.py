@@ -6,7 +6,6 @@ Plots either the ratio or the difference between two HiM matrices.
 It also plots both matrices together, with one in the upper triangle, and the other in the lower triangle.
 """
 
-
 import argparse
 import os
 import sys
