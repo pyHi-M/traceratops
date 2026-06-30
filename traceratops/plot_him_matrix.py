@@ -6,7 +6,6 @@ This script calculates and plots matrices (PWD and proximity) from:
     - a file with the unique barcodes used
 """
 
-
 import argparse
 import itertools
 import os
