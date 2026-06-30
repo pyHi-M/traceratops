@@ -1086,7 +1086,7 @@ def get_rg_from_pwd(pwd_matrix_0, min_number_pwd=4, threshold=6):
         raise SystemExit("get_rg_from_pwd: Expected square matrix as input.")
 
     # make sure the diagonal is NaN
-    np.fill_diagonal(pwd_matrix, np.NaN)
+    np.fill_diagonal(pwd_matrix, np.nan)
 
     # filters out PWD
     pwd_matrix[pwd_matrix > threshold] = np.nan
@@ -1097,7 +1097,7 @@ def get_rg_from_pwd(pwd_matrix_0, min_number_pwd=4, threshold=6):
     )  # default is to compute the sum of the flattened array
 
     if num_not_nan < min_number_pwd:
-        return np.NaN
+        return np.nan
 
     # calculate Rg
     sqr = np.square(pwd_matrix)
@@ -1126,7 +1126,7 @@ def get_detection_eff_barcodes(sc_matrix_collated):
 
     # make sure the diagonal is NaN
     for i in range(sc_matrix_collated.shape[0]):
-        sc_matrix_collated[i, i, :] = np.NaN
+        sc_matrix_collated[i, i, :] = np.nan
 
     # calculate barcode efficiency
     n_cells = sc_matrix_collated.shape[2]
@@ -1152,7 +1152,7 @@ def get_barcodes_per_cell(sc_matrix_collated):
 
     # make sure the diagonal is NaN
     for i in range(sc_matrix_collated.shape[0]):
-        sc_matrix_collated[i, i, :] = np.NaN
+        sc_matrix_collated[i, i, :] = np.nan
 
     num_barcodes = np.sum(~np.isnan(sc_matrix_collated), axis=0)
     num_barcodes[num_barcodes > 1] = 1
