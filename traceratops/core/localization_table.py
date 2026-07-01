@@ -202,10 +202,13 @@ class LocalizationTable:
         return barcode_map, unique_barcodes
 
     def remove_empty_comments(self):
-        if len(self.data.meta["comments"]):
-            self.data.meta["comments"] = [
-                com for com in self.data.meta["comments"] if com
-            ]
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = [
+                    com for com in self.data.meta["comments"] if com
+                ]
+        except KeyError:
+            self.data.meta["comments"] = []
 
     def remove_duplicate_comments(self):
         if len(self.data.meta["comments"]):
