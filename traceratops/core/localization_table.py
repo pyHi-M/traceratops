@@ -291,24 +291,26 @@ class LocalizationTable:
         # initializes figure
         fig, axes = plt.subplots(1, 2)
         ax = axes.ravel()
-        fig.set_size_inches((10, 5))
+        fig.set_size_inches((30, 15))
 
         # initializes variables
-        roundness = barcode_map["roundness"]
+        skew = barcode_map["skew"]
         mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
         snr = barcode_map["snr"]
+        object_class = barcode_map["object_class"]
+        spot_pixel_percentage = barcode_map["spot_pixel_percentage"]
 
         # plots data
-        ax[0].scatter(mean_intensity, zcentroid, c=mean_intensity, cmap="Reds", alpha=0.5)
+        ax[0].scatter(skew, spot_pixel_percentage, c=mean_intensity, cmap="jet", alpha=0.5)
         ax[0].set_title("color: mean intensity")
-        ax[0].set_ylabel("zcentroid")
-        ax[0].set_xlabel("mean intensity")
+        ax[0].set_ylabel("spot_pixel_percentage")
+        ax[0].set_xlabel("skew")
 
-        p_2 = ax[1].scatter(roundness, snr, c=mean_intensity, cmap="Reds", alpha=0.5)
+        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="jet", alpha=0.5)
         ax[1].set_title("color: mean intensity")
-        ax[1].set_xlabel("roundness")
-        ax[1].set_ylabel("snr")
+        ax[1].set_xlabel("snr")
+        ax[1].set_ylabel("z_centroid")
         fig.colorbar(p_2, ax=ax[1], fraction=0.046, pad=0.04)
 
         # saves figure
