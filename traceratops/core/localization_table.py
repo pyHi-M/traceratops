@@ -40,14 +40,14 @@ class LocalizationTable:
             "Z",
             "X",
             "Y",
-            "sharpness",
-            "roundness1",
-            "roundness2",
-            "npix",
-            "sky",
-            "peak",
+            "snr",
+            "spot_pixel_percentage",
+            "skew",
+            "patch_size",
+            "object_class",
+            "mean_intensity",
             "flux",
-            "mag",
+            "roundness",   
         ]
 
     def _read_metadata_from_4dn(self, file):
@@ -270,7 +270,7 @@ class LocalizationTable:
 
     def plot_distribution_fluxes(self, barcode_map, filename_list):
         """
-        This function plots the distribution of fluxes, sharpness, roundness, magnitude and peak intensity from a Table
+        This function plots the distribution of fluxes,  intensity from a Table
 
         Parameters
         ----------
@@ -291,21 +291,21 @@ class LocalizationTable:
         fig.set_size_inches((10, 5))
 
         # initializes variables
-        roundness = barcode_map["roundness1"]
-        peak = barcode_map["peak"]
+        roundness = barcode_map["roundness"]
+        mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
-        flux = barcode_map["flux"]
+        snr = barcode_map["snr"]
 
         # plots data
-        ax[0].scatter(peak, zcentroid, c=peak, cmap="Reds", alpha=0.5)
-        ax[0].set_title("color: peak intensity")
+        ax[0].scatter(mean_intensity, zcentroid, c=mean_intensity, cmap="Reds", alpha=0.5)
+        ax[0].set_title("color: mean intensity")
         ax[0].set_ylabel("zcentroid")
-        ax[0].set_xlabel("peak intensity")
+        ax[0].set_xlabel("mean intensity")
 
-        p_2 = ax[1].scatter(roundness, flux, c=peak, cmap="Reds", alpha=0.5)
-        ax[1].set_title("color: peak intensity")
+        p_2 = ax[1].scatter(roundness, snr, c=mean_intensity, cmap="Reds", alpha=0.5)
+        ax[1].set_title("color: mean intensity")
         ax[1].set_xlabel("roundness")
-        ax[1].set_ylabel("flux")
+        ax[1].set_ylabel("snr")
         fig.colorbar(p_2, ax=ax[1], fraction=0.046, pad=0.04)
 
         # saves figure
@@ -510,7 +510,49 @@ def read_table_from_ecsv(path):
 
     return table
 
+def create_output_table():
+    output = Table(
+        names=(
+            "Buid",
+            "ROI #",
+            "CellID #",
+            "Barcode #",
+            "id",
+            "zcentroid",
+            "xcentroid",
+            "ycentroid",
+            "snr",
+            "spot_pixel_percentage",
+            "skew",
+            "patch_size",
+            "object_class",
+            "mean_intensity",
+            "flux",
+            "roundness",
+        ),
+        dtype=(
+            "S2",
+            "int",
+            "int",
+            "int",
+            "int",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "int",
+            "int",
+            "f4",
+            "f4",
+            "f4",
+        ),
+    )
+    return output
 
+
+"""
 def create_output_table():
     output = Table(
         names=(
@@ -551,3 +593,4 @@ def create_output_table():
         ),
     )
     return output
+"""

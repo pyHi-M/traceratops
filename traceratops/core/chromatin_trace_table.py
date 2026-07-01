@@ -496,7 +496,7 @@ class ChromatinTraceTable:
         for idx, row in enumerate(trace.data):
             spot_id = row["Spot_ID"]
             try:
-                intensity = localizations.loc[spot_id]["peak"]
+                intensity = localizations.loc[spot_id]["mean_intensity"]
                 if intensity < intensity_min:
                     rows_to_remove.append(idx)
                 else:
@@ -774,7 +774,7 @@ class ChromatinTraceTable:
     def remove_duplicates_loc(self, localization_table=None):
         """
         Removes duplicated barcodes within each trace.
-        If a localization_table is provided, keeps only the spot with the highest intensity ("peak").
+        If a localization_table is provided, keeps only the spot with the highest intensity ("mean_intensity").
         Otherwise, removes all instances of duplicated barcodes.
 
         Parameters
@@ -812,7 +812,7 @@ class ChromatinTraceTable:
                     for row in group:
                         spot_id = row["Spot_ID"]
                         try:
-                            peak = localization_table.loc[spot_id]["peak"]
+                            peak = localization_table.loc[spot_id]["mean_intensity"]
                         except KeyError:
                             peak = -1
                         peaks.append(peak)
