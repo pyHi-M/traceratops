@@ -273,7 +273,7 @@ class LocalizationTable:
 
     def plot_distribution_fluxes(self, barcode_map, filename_list):
         """
-        This function plots the distribution of fluxes,  intensity from a Table
+        This function plots the distribution of spot properties
 
         Parameters
         ----------
@@ -289,29 +289,38 @@ class LocalizationTable:
         """
 
         # initializes figure
-        fig, axes = plt.subplots(1, 2)
+        fig, axes = plt.subplots(2, 2)
         ax = axes.ravel()
         fig.set_size_inches((30, 15))
 
         # initializes variables
         skew = barcode_map["skew"]
+        barcode_id = barcode_map["Barcode #"]
         mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
         snr = barcode_map["snr"]
         object_class = barcode_map["object_class"]
-        spot_pixel_percentage = barcode_map["spot_pixel_percentage"]
+        roundness = barcode_map["roundness"]
 
         # plots data
-        ax[0].scatter(skew, spot_pixel_percentage, c=mean_intensity, cmap="jet", alpha=0.5)
-        ax[0].set_title("color: mean intensity")
-        ax[0].set_ylabel("spot_pixel_percentage")
-        ax[0].set_xlabel("skew")
+        p_1= ax[0].scatter(barcode_id, snr, c=mean_intensity, cmap="jet", alpha=0.5)
+        ax[0].set_ylabel("snr")
+        ax[0].set_xlabel("barcode_id")
+        fig.colorbar(p_1, ax=ax[0], fraction=0.046, pad=0.04)
 
         p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="jet", alpha=0.5)
-        ax[1].set_title("color: mean intensity")
         ax[1].set_xlabel("snr")
         ax[1].set_ylabel("z_centroid")
         fig.colorbar(p_2, ax=ax[1], fraction=0.046, pad=0.04)
+       
+        p_2 = ax[2].scatter(roundness, skew, c=mean_intensity, cmap="jet", alpha=0.5)
+        ax[2].set_ylabel("skew")
+        ax[2].set_xlabel("roundness")
+        fig.colorbar(p_2, ax=ax[2], fraction=0.046, pad=0.04)
+    
+        ax[3].hist(snr, bins = 50, alpha=0.5)
+        ax[3].set_ylabel("counts")
+        ax[3].set_xlabel("snr")
 
         # saves figure
         fig.savefig("".join(filename_list))
