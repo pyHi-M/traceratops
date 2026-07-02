@@ -489,6 +489,7 @@ class ChromatinTraceTable:
         Filters localizations in the trace file based on intensity from the localization table.
         """
         localizations.add_index("Buid")  # Add an index for fast lookup
+        intensity_column = self._get_localization_intensity_column(localizations)
 
         rows_to_remove = []
         number_spots = len(trace.data)
@@ -496,7 +497,7 @@ class ChromatinTraceTable:
         for idx, row in enumerate(trace.data):
             spot_id = row["Spot_ID"]
             try:
-                intensity = localizations.loc[spot_id]["peak"]
+                intensity = localizations.loc[spot_id][intensity_column]
                 if intensity < intensity_min:
                     rows_to_remove.append(idx)
                 else:
@@ -511,6 +512,20 @@ class ChromatinTraceTable:
         print(f"> Number of rows in filtered trace table: {len(trace.data)}")
 
         return intensities_kept
+
+    @staticmethod
+    def _get_localization_intensity_column(localization_table):
+        """Return the supported localization intensity column for filtering.
+
+        Newer localization tables use ``mean_intensity`` while legacy pyHiM-style
+        tables use ``peak`` for the same intensity-based decisions.
+        """
+        for column_name in ("mean_intensity", "peak"):
+            if column_name in localization_table.colnames:
+                return column_name
+        raise KeyError(
+            "Localization table must contain a 'mean_intensity' or 'peak' column."
+        )
 
     def barcode_statistics(self, trace_table):
         """
@@ -774,13 +789,14 @@ class ChromatinTraceTable:
     def remove_duplicates_loc(self, localization_table=None):
         """
         Removes duplicated barcodes within each trace.
-        If a localization_table is provided, keeps only the spot with the highest intensity ("peak").
+        If a localization_table is provided, keeps only the spot with the highest intensity.
         Otherwise, removes all instances of duplicated barcodes.
 
         Parameters
         ----------
         localization_table : astropy Table, optional
-            Localization table with 'Buid' and 'peak' columns. Used to select spot with highest intensity.
+            Localization table with 'Buid' and an intensity column ('mean_intensity' or 'peak').
+            Used to select spot with highest intensity.
 
         Returns
         -------
@@ -801,6 +817,9 @@ class ChromatinTraceTable:
         if localization_table is not None:
             print("$ Using intensity to resolve duplicates...")
             localization_table.add_index("Buid")
+            intensity_column = self._get_localization_intensity_column(
+                localization_table
+            )
 
             for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
@@ -812,7 +831,7 @@ class ChromatinTraceTable:
                     for row in group:
                         spot_id = row["Spot_ID"]
                         try:
-                            peak = localization_table.loc[spot_id]["peak"]
+                            peak = localization_table.loc[spot_id][intensity_column]
                         except KeyError:
                             peak = -1
                         peaks.append(peak)

@@ -40,14 +40,14 @@ class LocalizationTable:
             "Z",
             "X",
             "Y",
-            "sharpness",
-            "roundness1",
-            "roundness2",
-            "npix",
-            "sky",
-            "peak",
+            "snr",
+            "spot_pixel_percentage",
+            "skew",
+            "patch_size",
+            "object_class",
+            "mean_intensity",
             "flux",
-            "mag",
+            "roundness",   
         ]
 
     def _read_metadata_from_4dn(self, file):
@@ -202,10 +202,13 @@ class LocalizationTable:
         return barcode_map, unique_barcodes
 
     def remove_empty_comments(self):
-        if len(self.data.meta["comments"]):
-            self.data.meta["comments"] = [
-                com for com in self.data.meta["comments"] if com
-            ]
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = [
+                    com for com in self.data.meta["comments"] if com
+                ]
+        except KeyError:
+            self.data.meta["comments"] = []
 
     def remove_duplicate_comments(self):
         if len(self.data.meta["comments"]):
@@ -270,7 +273,7 @@ class LocalizationTable:
 
     def plot_distribution_fluxes(self, barcode_map, filename_list):
         """
-        This function plots the distribution of fluxes, sharpness, roundness, magnitude and peak intensity from a Table
+        This function plots the distribution of spot properties
 
         Parameters
         ----------
@@ -284,29 +287,115 @@ class LocalizationTable:
         None.
 
         """
+        from matplotlib.colors import BoundaryNorm
 
         # initializes figure
-        fig, axes = plt.subplots(1, 2)
+        fig, axes = plt.subplots(2, 2)
         ax = axes.ravel()
-        fig.set_size_inches((10, 5))
+        fig.set_size_inches((30, 15))
 
         # initializes variables
-        roundness = barcode_map["roundness1"]
-        peak = barcode_map["peak"]
+        skew = barcode_map["skew"]
+        barcode_id = barcode_map["Barcode #"]
+        mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
-        flux = barcode_map["flux"]
+        snr = barcode_map["snr"]
+        object_class = barcode_map["object_class"]
+        roundness = barcode_map["roundness"]
 
         # plots data
-        ax[0].scatter(peak, zcentroid, c=peak, cmap="Reds", alpha=0.5)
-        ax[0].set_title("color: peak intensity")
-        ax[0].set_ylabel("zcentroid")
-        ax[0].set_xlabel("peak intensity")
+        # panel 1
 
-        p_2 = ax[1].scatter(roundness, flux, c=peak, cmap="Reds", alpha=0.5)
-        ax[1].set_title("color: peak intensity")
-        ax[1].set_xlabel("roundness")
-        ax[1].set_ylabel("flux")
-        fig.colorbar(p_2, ax=ax[1], fraction=0.046, pad=0.04)
+        # Sort barcode identities
+        unique_barcodes = np.sort(np.unique(barcode_id))
+
+        # Collect SNR values for each barcode
+        snr_by_barcode = [
+            snr[barcode_id == bc]
+            for bc in unique_barcodes
+        ]
+
+        # Draw violin plot
+        parts = ax[0].violinplot(
+            snr_by_barcode,
+            positions=unique_barcodes,
+            widths=0.8,
+            showmeans=False,
+            showmedians=True,
+            showextrema=True,
+        )
+
+        ax[0].set_xlabel("barcode_id")
+        ax[0].set_ylabel("snr")
+        ax[0].set_xticks(unique_barcodes)
+
+        # panel 2
+        for body in parts["bodies"]:
+            body.set_facecolor("steelblue")
+            body.set_edgecolor("black")
+            body.set_alpha(0.7)
+
+        parts["cmedians"].set_color("red")
+        parts["cbars"].set_color("black")
+        parts["cmins"].set_color("black")
+        parts["cmaxes"].set_color("black")
+
+        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55 )
+        ax[1].set_xlabel("snr")
+        ax[1].set_ylabel("z_centroid")
+
+        cbar2 = fig.colorbar(
+            p_2,
+            ax=ax[1],
+            fraction=0.046,
+            pad=0.04,
+        )
+
+        cbar2.set_label("object_class")
+        
+        # panel 3
+        unique_barcodes, counts = np.unique(barcode_id, return_counts=True)
+
+        ax[2].bar(unique_barcodes, counts, width=0.8)
+        ax[2].set_xlabel("barcode_id")
+        ax[2].set_ylabel("Number of detections")
+        ax[2].set_xticks(unique_barcodes)
+
+        # panel 4
+        unique_barcodes = np.sort(np.unique(barcode_id))
+
+        cmap = plt.get_cmap("tab20b", len(unique_barcodes))
+        norm = BoundaryNorm(
+            np.arange(len(unique_barcodes) + 1) - 0.5,
+            cmap.N
+        )
+
+        # Map barcode IDs to consecutive integers
+        barcode_to_idx = {bc: i for i, bc in enumerate(unique_barcodes)}
+        color_idx = np.array([barcode_to_idx[bc] for bc in barcode_id])
+
+        p_3 = ax[3].scatter(
+            roundness,
+            skew,
+            c=color_idx,
+            cmap=cmap,
+            norm=norm,
+            alpha=0.5,
+        )
+
+        ax[3].set_ylabel("skew")
+        ax[3].set_xlabel("roundness")
+
+        cbar = fig.colorbar(
+            p_3,
+            ax=ax[3],
+            ticks=np.arange(len(unique_barcodes)),
+            fraction=0.046,
+            pad=0.04,
+        )
+
+        cbar.set_label("Barcode")
+        cbar.set_ticklabels(unique_barcodes)
 
         # saves figure
         fig.savefig("".join(filename_list))
@@ -510,7 +599,49 @@ def read_table_from_ecsv(path):
 
     return table
 
+def create_output_table():
+    output = Table(
+        names=(
+            "Buid",
+            "ROI #",
+            "CellID #",
+            "Barcode #",
+            "id",
+            "zcentroid",
+            "xcentroid",
+            "ycentroid",
+            "snr",
+            "spot_pixel_percentage",
+            "skew",
+            "patch_size",
+            "object_class",
+            "mean_intensity",
+            "flux",
+            "roundness",
+        ),
+        dtype=(
+            "S2",
+            "int",
+            "int",
+            "int",
+            "int",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "f4",
+            "int",
+            "int",
+            "f4",
+            "f4",
+            "f4",
+        ),
+    )
+    return output
 
+
+"""
 def create_output_table():
     output = Table(
         names=(
@@ -551,3 +682,4 @@ def create_output_table():
         ),
     )
     return output
+"""
