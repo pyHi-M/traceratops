@@ -273,8 +273,12 @@ class LocalizationTable:
 
     def plot_distribution_fluxes(self, barcode_map, filename_list):
         """
-        This function plots the distribution of spot properties
-
+        This function will plot:
+        - the number of localizations per barcode
+        - the snr distribution per barcode
+        - scatterplot of the snr versus z
+        - scatterplot of roundness versus skew
+        
         Parameters
         ----------
         barcode_map : TYPE
