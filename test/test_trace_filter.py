@@ -53,20 +53,21 @@ def _test_trace_filter_common(
 
 # ==== FILE LISTS ====
 
+# Keep parametrized inputs explicit so generated files from interrupted or failed
+# test runs do not become test cases on the next invocation. Several tests write
+# outputs back into INPUT_DIR before cleaning them up; if a run is interrupted,
+# those stale ``.ecsv``/``.png`` files must not pollute collection.
 INPUT_FILES = sorted(os.listdir(INPUT_DIR))
 
 trace_input_files = [
-    f
-    for f in INPUT_FILES
-    if f.endswith(".ecsv") and "_filtered" not in f and "trace" in f
+    "one_trace_four_spots.ecsv",
+    "trace_3D_barcode_KDtree_ROI-5.ecsv",
+    "two_traces_seven_spots.ecsv",
 ]
-forpipe_files = [f for f in INPUT_FILES if f.endswith(".txt") and "forpipe" in f]
-one_trace_files = [f for f in INPUT_FILES if "one_trace_four_spots.ecsv" in f]
-duplicate_spot_files = [
-    f
-    for f in INPUT_FILES
-    if f in {"duplicate_spot.ecsv", "duplicate_spot_id.ecsv"}
-]
+forpipe_files = ["forpipe1file.txt", "forpipe2files.txt"]
+one_trace_files = ["one_trace_four_spots.ecsv"]
+duplicate_spot_files = ["duplicate_spot.ecsv", "duplicate_spot_id.ecsv"]
+
 
 # ==== TESTS ====
 
