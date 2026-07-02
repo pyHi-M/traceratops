@@ -20,9 +20,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-L",
-        "--localization",
+        "--localization_file",
         required=True,
-        help="Localizations file path.",
+        help="Localization file path.",
     )
     parser.add_argument(
         "-o",
@@ -44,7 +44,7 @@ def parse_arguments():
 
 def create_dict_args(args):
     p = {}
-    p["localization"] = args.localization
+    p["localization_file"] = args.localization_file
     p["output_file"] = args.output_file
     p["format"] = args.format
 
@@ -57,21 +57,18 @@ def create_dict_args(args):
 
 def get_output_file(output_file, output_format):
     if output_file is None:
-        return None
+        output_file = "localization_distribution_fluxes"
 
     output_root, _ = os.path.splitext(output_file)
     return f"{output_root}.{output_format}"
 
 
 def run(p):
-    localizations = LocalizationTable()
-    barcode_map, _ = localizations.load(p["localization"])
+    localization_table = LocalizationTable()
+    barcode_map, _ = localization_table.load(p["localization_file"])
     output_file = get_output_file(p["output_file"], p["format"])
 
-    if output_file is None:
-        localizations.plot_distribution_fluxes(barcode_map)
-    else:
-        localizations.plot_distribution_fluxes(barcode_map, [output_file])
+    localization_table.plot_distribution_fluxes(barcode_map, [output_file])
 
     print("Finished execution")
 
