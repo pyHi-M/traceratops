@@ -1,41 +1,83 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This script will load a localizations table and analyze it.
+Load a localization table and plot localization quality-control distributions.
 
-It will specifically produce a plot with:
+The script produces a figure with:
 - the number of localizations per barcode
 - the snr distribution per barcode
 - scatterplot of the snr versus z
 - scatterplot of roundness versus skew
-
 """
 
 import argparse
+import os
 
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-
-from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.localization_table import LocalizationTable
-
-font = {"weight": "normal", "size": 12}
-matplotlib.rc("font", **font)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-L", "--localization", help="Localizations file path")
+    parser.add_argument(
+        "-L",
+        "--localization_file",
+        required=True,
+        help="Localization file path.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_file",
+        help=(
+            "Output plot file name. Defaults to the name used by "
+            "LocalizationTable.plot_distribution_fluxes."
+        ),
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["png", "svg"],
+        default="png",
+        help="Output plot format. Default = png.",
+    )
     return parser
+
+
+def create_dict_args(args):
+    p = {}
+    p["localization_file"] = args.localization_file
+    p["output_file"] = args.output_file
+    p["format"] = args.format
+
+    print("Input parameters\n" + "-" * 15)
+    for item in p.keys():
+        print("{}-->{}".format(item, p[item]))
+
+    return p
+
+
+def get_output_file(output_file, output_format):
+    if output_file is None:
+        output_file = "localization_distribution_fluxes"
+
+    output_root, _ = os.path.splitext(output_file)
+    return f"{output_root}.{output_format}"
+
+
+def run(p):
+    localization_table = LocalizationTable()
+    barcode_map, _ = localization_table.load(p["localization_file"])
+    output_file = get_output_file(p["output_file"], p["format"])
+
+    localization_table.plot_distribution_fluxes(barcode_map, [output_file])
+
+    print("Finished execution")
 
 
 def main():
     parser = parse_arguments()
     args = parser.parse_args()
-    # [loops over lists of datafolders]
-    process_intensities(args.localization, args.trace)
-    print("Finished execution")
+    p = create_dict_args(args)
+    run(p)
 
 
 if __name__ == "__main__":
