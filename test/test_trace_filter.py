@@ -53,7 +53,7 @@ def _test_trace_filter_common(
 
 # ==== FILE LISTS ====
 
-INPUT_FILES = os.listdir(INPUT_DIR)
+INPUT_FILES = sorted(os.listdir(INPUT_DIR))
 
 trace_input_files = [
     f
@@ -62,7 +62,9 @@ trace_input_files = [
 ]
 forpipe_files = [f for f in INPUT_FILES if f.endswith(".txt") and "forpipe" in f]
 one_trace_files = [f for f in INPUT_FILES if "one_trace_four_spots.ecsv" in f]
-duplicate_spot_files = [f for f in INPUT_FILES if "duplicate_spot" in f]
+duplicate_spot_files = [
+    f for f in INPUT_FILES if f in {"duplicate_spot.ecsv", "duplicate_spot_id.ecsv"}
+]
 
 
 # ==== TESTS ====
