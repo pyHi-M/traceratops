@@ -47,7 +47,7 @@ class LocalizationTable:
             "object_class",
             "mean_intensity",
             "flux",
-            "roundness",   
+            "roundness",
         ]
 
     def _read_metadata_from_4dn(self, file):
@@ -271,14 +271,16 @@ class LocalizationTable:
 
         return vstack([table1, table2])
 
-    def plot_distribution_fluxes(self, barcode_map, filename_list):
+    def plot_distribution_fluxes(
+        self, barcode_map, filename_list=("localization_distribution_fluxes.png",)
+    ):
         """
         This function will plot:
         - the number of localizations per barcode
         - the snr distribution per barcode
         - scatterplot of the snr versus z
         - scatterplot of roundness versus skew
-        
+
         Parameters
         ----------
         barcode_map : TYPE
@@ -301,7 +303,6 @@ class LocalizationTable:
         # initializes variables
         skew = barcode_map["skew"]
         barcode_id = barcode_map["Barcode #"]
-        mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
         snr = barcode_map["snr"]
         object_class = barcode_map["object_class"]
@@ -314,10 +315,7 @@ class LocalizationTable:
         unique_barcodes = np.sort(np.unique(barcode_id))
 
         # Collect SNR values for each barcode
-        snr_by_barcode = [
-            snr[barcode_id == bc]
-            for bc in unique_barcodes
-        ]
+        snr_by_barcode = [snr[barcode_id == bc] for bc in unique_barcodes]
 
         # Draw violin plot
         parts = ax[0].violinplot(
@@ -344,7 +342,7 @@ class LocalizationTable:
         parts["cmins"].set_color("black")
         parts["cmaxes"].set_color("black")
 
-        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55 )
+        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55)
         ax[1].set_xlabel("snr")
         ax[1].set_ylabel("z_centroid")
 
@@ -356,7 +354,7 @@ class LocalizationTable:
         )
 
         cbar2.set_label("object_class")
-        
+
         # panel 3
         unique_barcodes, counts = np.unique(barcode_id, return_counts=True)
 
@@ -369,10 +367,7 @@ class LocalizationTable:
         unique_barcodes = np.sort(np.unique(barcode_id))
 
         cmap = plt.get_cmap("tab20b", len(unique_barcodes))
-        norm = BoundaryNorm(
-            np.arange(len(unique_barcodes) + 1) - 0.5,
-            cmap.N
-        )
+        norm = BoundaryNorm(np.arange(len(unique_barcodes) + 1) - 0.5, cmap.N)
 
         # Map barcode IDs to consecutive integers
         barcode_to_idx = {bc: i for i, bc in enumerate(unique_barcodes)}
@@ -602,6 +597,7 @@ def read_table_from_ecsv(path):
     table = Table.read(path, format="ascii.ecsv")
 
     return table
+
 
 def create_output_table():
     output = Table(
