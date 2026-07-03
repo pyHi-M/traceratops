@@ -126,13 +126,13 @@ class ChromatinTraceTable:
             print("$ Importing table from pyHiM format")
             self.data = read_table_from_ecsv(file)
             self.original_format = "ecsv"
-        elif file_ext == ".4dn":
+        elif file_ext == ".4dn" or file_ext == ".csv":
             print("$ Importing table from fof-ct format")
             self._read_metadata_from_4dn(file)
             self.data = self._convert_4dn_to_astropy(file)
             self.original_format = "4dn"
         else:
-            raise ValueError("Unsupported file format. Use .ecsv, .dat, or .4dn")
+            raise ValueError("Unsupported file format. Use .ecsv for pyHiM format, .4dn or .csv for FOF-CT format")
 
         print(f"Successfully loaded trace table: {file}")
         return self.data
@@ -228,12 +228,16 @@ class ChromatinTraceTable:
             csv_data["ROI #"] = 0  # Default value if missing
 
         # Assign Barcode # by ordering and mapping unique genomic positions
-        unique_barcodes = (
-            csv_data[["Chrom", "Chrom_Start", "Chrom_End"]]
-            .drop_duplicates()
-            .sort_values(by=["Chrom", "Chrom_Start", "Chrom_End"])
-            .reset_index(drop=True)
-        )
+        try:
+            unique_barcodes = (
+                csv_data[["Chrom", "Chrom_Start", "Chrom_End"]]
+                .drop_duplicates()
+                .sort_values(by=["Chrom", "Chrom_Start", "Chrom_End"])
+                .reset_index(drop=True)
+            )
+        except KeyError:
+            raise SystemExit(f"! ERROR\nInput file <{fofct_file}> not in FOF-CT format.")
+
         unique_barcodes["Barcode #"] = range(1, len(unique_barcodes) + 1)
         barcode_mapping = {
             tuple(row[:3]): row[3]
@@ -249,7 +253,8 @@ class ChromatinTraceTable:
         csv_data["label"] = "None"  # Placeholder for label
 
         # Save BED file with Barcode # mapping
-        bed_file = fofct_file.replace(".4dn", ".bed")
+
+        bed_file = fofct_file.split(".")[0] + '_genomic_coordinates.bed'
         unique_barcodes.to_csv(bed_file, sep="\t", header=False, index=False)
         print(f"Saved BED file: {bed_file}")
 
