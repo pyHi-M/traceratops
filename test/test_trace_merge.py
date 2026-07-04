@@ -45,3 +45,31 @@ def test_merge_conflict():
         gen_file, expected_file, shallow=False
     ), f"Difference detected between {gen_file} and {expected_file}"
     os.remove(gen_file)
+
+
+def test_merge_4dn_numeric_spot_id_with_ecsv_spot_id(tmp_path):
+    from astropy.table import Table, vstack
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    fofct_file = tmp_path / "numeric_spot_ids.4dn"
+    fofct_file.write_text(
+        "##FOF-CT_version=v0.1\n"
+        "##Table_namespace=4dn_FOF-CT_core\n"
+        "##genome_assembly=GRCm38\n"
+        "##XYZ_unit=nm\n"
+        "##columns=(Spot_ID, Trace_ID, X, Y, Z, Chrom, Chrom_Start, Chrom_End)\n"
+        "1000000,500365,1275.7,1817.9,5362.4,chr13,55945001,55955000\n"
+    )
+
+    trace = ChromatinTraceTable()
+    fofct_table = trace.load(str(fofct_file))
+    ecsv_table = Table(
+        rows=[("existing", "trace-a", 1.0, 2.0, 3.0, "chr13", 1, 2, 0, -1, 1, "None")],
+        names=fofct_table.colnames,
+    )
+
+    merged = vstack([ecsv_table, fofct_table])
+
+    assert str(fofct_table["Spot_ID"][0]) == "1000000"
+    assert str(fofct_table["Trace_ID"][0]) == "500365"
+    assert len(merged) == 2

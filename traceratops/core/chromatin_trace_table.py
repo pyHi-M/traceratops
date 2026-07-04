@@ -210,6 +210,13 @@ class ChromatinTraceTable:
         column_names = self.columns  # self._read_column_names_from_4dn(fofct_file)
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
 
+        # pyHiM ECSV trace tables store identifiers as strings. 4DN tables
+        # commonly encode them as bare numbers, so normalize identifier columns
+        # before converting to Astropy to keep mixed-format merges type-safe.
+        for column in ("Spot_ID", "Trace_ID"):
+            if column in csv_data.columns:
+                csv_data[column] = csv_data[column].astype(str)
+
         # Rename XYZ columns for Astropy compatibility
         csv_data.rename(columns={"X": "x", "Y": "y", "Z": "z"}, inplace=True)
 
