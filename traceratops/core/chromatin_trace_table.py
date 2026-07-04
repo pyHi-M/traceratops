@@ -43,6 +43,45 @@ def save_table_to_ecsv(data, path):
     )
 
 
+def format_pyhim_spot_id(index):
+    """Return a pyHiM-style 7-digit Spot_ID for a zero-based index."""
+    return f"{index + 1:07d}"
+
+
+def format_pyhim_trace_id(index):
+    """Return a deterministic pyHiM-style 8-letter Trace_ID."""
+    alphabet = "abcdefghijklmnopqrstuvwxyz"
+    base = len(alphabet)
+    chars = [alphabet[0]] * 8
+    value = index
+
+    for pos in range(7, -1, -1):
+        chars[pos] = alphabet[value % base]
+        value //= base
+
+    if value:
+        raise ValueError("Trace index exceeds pyHiM Trace_ID namespace")
+
+    return "".join(chars)
+
+
+def relabel_pyhim_identifiers(csv_data):
+    """Relabel 4DN identifiers to pyHiM Astropy Spot_ID/Trace_ID nomenclature."""
+    if "Spot_ID" in csv_data.columns:
+        csv_data["Spot_ID"] = [
+            format_pyhim_spot_id(index) for index in range(len(csv_data))
+        ]
+
+    if "Trace_ID" in csv_data.columns:
+        trace_id_map = {
+            trace_id: format_pyhim_trace_id(index)
+            for index, trace_id in enumerate(pd.unique(csv_data["Trace_ID"]))
+        }
+        csv_data["Trace_ID"] = csv_data["Trace_ID"].map(trace_id_map)
+
+    return csv_data
+
+
 def random_label_cmap(n_labels=256, seed=42):
     """
     Generates a random colormap similar to stardist (so you don't have to import this library just to do it).
@@ -212,12 +251,10 @@ class ChromatinTraceTable:
         column_names = self.columns  # self._read_column_names_from_4dn(fofct_file)
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
 
-        # pyHiM ECSV trace tables store identifiers as strings. 4DN tables
-        # commonly encode them as bare numbers, so normalize identifier columns
-        # before converting to Astropy to keep mixed-format merges type-safe.
-        for column in ("Spot_ID", "Trace_ID"):
-            if column in csv_data.columns:
-                csv_data[column] = csv_data[column].astype(str)
+        # 4DN tables can use numeric IDs that clash with pyHiM tooling after
+        # conversion. Relabel them using pyHiM Astropy ECSV nomenclature
+        # (7-digit Spot_ID, 8-letter Trace_ID) before creating the Astropy table.
+        csv_data = relabel_pyhim_identifiers(csv_data)
 
         # Rename XYZ columns for Astropy compatibility
         csv_data.rename(columns={"X": "x", "Y": "y", "Z": "z"}, inplace=True)

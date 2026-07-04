@@ -70,6 +70,28 @@ def test_merge_4dn_numeric_spot_id_with_ecsv_spot_id(tmp_path):
 
     merged = vstack([ecsv_table, fofct_table])
 
-    assert str(fofct_table["Spot_ID"][0]) == "1000000"
-    assert str(fofct_table["Trace_ID"][0]) == "500365"
+    assert str(fofct_table["Spot_ID"][0]) == "0000001"
+    assert str(fofct_table["Trace_ID"][0]) == "aaaaaaaa"
     assert len(merged) == 2
+
+
+def test_4dn_conversion_relabels_ids_to_pyhim_nomenclature(tmp_path):
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    fofct_file = tmp_path / "numeric_trace_ids.4dn"
+    fofct_file.write_text(
+        "##FOF-CT_version=v0.1\n"
+        "##Table_namespace=4dn_FOF-CT_core\n"
+        "##genome_assembly=GRCm38\n"
+        "##XYZ_unit=nm\n"
+        "##columns=(Spot_ID, Trace_ID, X, Y, Z, Chrom, Chrom_Start, Chrom_End)\n"
+        "1000000,500365,1275.7,1817.9,5362.4,chr13,55945001,55955000\n"
+        "1000001,500365,1276.7,1818.9,5363.4,chr13,55955001,55965000\n"
+        "1000002,500366,1277.7,1819.9,5364.4,chr13,55965001,55975000\n"
+    )
+
+    trace = ChromatinTraceTable()
+    fofct_table = trace.load(str(fofct_file))
+
+    assert list(fofct_table["Spot_ID"]) == ["0000001", "0000002", "0000003"]
+    assert list(fofct_table["Trace_ID"]) == ["aaaaaaaa", "aaaaaaaa", "aaaaaaab"]
