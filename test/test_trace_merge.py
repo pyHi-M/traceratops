@@ -1,6 +1,7 @@
 import filecmp
 import os
 import subprocess
+import uuid
 
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 INPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_merge", "IN")
@@ -70,13 +71,27 @@ def test_merge_4dn_numeric_spot_id_with_ecsv_spot_id(tmp_path):
 
     merged = vstack([ecsv_table, fofct_table])
 
-    assert str(fofct_table["Spot_ID"][0]) == "0000001"
-    assert str(fofct_table["Trace_ID"][0]) == "aaaaaaaa"
+    assert uuid.UUID(str(fofct_table["Spot_ID"][0]))
+    assert uuid.UUID(str(fofct_table["Trace_ID"][0]))
     assert len(merged) == 2
 
 
-def test_4dn_conversion_relabels_ids_to_pyhim_nomenclature(tmp_path):
+def test_4dn_conversion_relabels_ids_to_pyhim_nomenclature(tmp_path, monkeypatch):
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    generated_ids = iter(
+        [
+            uuid.UUID("00000000-0000-0000-0000-000000000001"),
+            uuid.UUID("00000000-0000-0000-0000-000000000002"),
+            uuid.UUID("00000000-0000-0000-0000-000000000003"),
+            uuid.UUID("00000000-0000-0000-0000-000000000004"),
+            uuid.UUID("00000000-0000-0000-0000-000000000005"),
+        ]
+    )
+    monkeypatch.setattr(
+        "traceratops.core.chromatin_trace_table.uuid.uuid4",
+        lambda: next(generated_ids),
+    )
 
     fofct_file = tmp_path / "numeric_trace_ids.4dn"
     fofct_file.write_text(
@@ -93,5 +108,13 @@ def test_4dn_conversion_relabels_ids_to_pyhim_nomenclature(tmp_path):
     trace = ChromatinTraceTable()
     fofct_table = trace.load(str(fofct_file))
 
-    assert list(fofct_table["Spot_ID"]) == ["0000001", "0000002", "0000003"]
-    assert list(fofct_table["Trace_ID"]) == ["aaaaaaaa", "aaaaaaaa", "aaaaaaab"]
+    assert list(fofct_table["Spot_ID"]) == [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000003",
+    ]
+    assert list(fofct_table["Trace_ID"]) == [
+        "00000000-0000-0000-0000-000000000004",
+        "00000000-0000-0000-0000-000000000004",
+        "00000000-0000-0000-0000-000000000005",
+    ]
