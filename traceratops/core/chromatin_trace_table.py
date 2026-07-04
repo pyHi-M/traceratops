@@ -5,6 +5,7 @@ trace table management class
 
 import os
 import sys
+import uuid
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -41,6 +42,28 @@ def save_table_to_ecsv(data, path):
         format="ascii.ecsv",
         overwrite=True,
     )
+
+
+def generate_pyhim_identifier():
+    """Return a pyHiM-style UUID identifier."""
+    return str(uuid.uuid4())
+
+
+def relabel_pyhim_identifiers(csv_data):
+    """Relabel 4DN identifiers to pyHiM Astropy UUID nomenclature."""
+    if "Spot_ID" in csv_data.columns:
+        csv_data["Spot_ID"] = [
+            generate_pyhim_identifier() for _ in range(len(csv_data))
+        ]
+
+    if "Trace_ID" in csv_data.columns:
+        trace_id_map = {
+            trace_id: generate_pyhim_identifier()
+            for trace_id in pd.unique(csv_data["Trace_ID"])
+        }
+        csv_data["Trace_ID"] = csv_data["Trace_ID"].map(trace_id_map)
+
+    return csv_data
 
 
 def random_label_cmap(n_labels=256, seed=42):
@@ -132,7 +155,9 @@ class ChromatinTraceTable:
             self.data = self._convert_4dn_to_astropy(file)
             self.original_format = "4dn"
         else:
-            raise ValueError("Unsupported file format. Use .ecsv for pyHiM format, .4dn or .csv for FOF-CT format")
+            raise ValueError(
+                "Unsupported file format. Use .ecsv for pyHiM format, .4dn or .csv for FOF-CT format"
+            )
 
         print(f"Successfully loaded trace table: {file}")
         return self.data
@@ -210,12 +235,10 @@ class ChromatinTraceTable:
         column_names = self.columns  # self._read_column_names_from_4dn(fofct_file)
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
 
-        # pyHiM ECSV trace tables store identifiers as strings. 4DN tables
-        # commonly encode them as bare numbers, so normalize identifier columns
-        # before converting to Astropy to keep mixed-format merges type-safe.
-        for column in ("Spot_ID", "Trace_ID"):
-            if column in csv_data.columns:
-                csv_data[column] = csv_data[column].astype(str)
+        # 4DN tables can use numeric IDs that clash with pyHiM tooling after
+        # conversion. Relabel them using pyHiM UUID nomenclature before
+        # creating the Astropy table.
+        csv_data = relabel_pyhim_identifiers(csv_data)
 
         # Rename XYZ columns for Astropy compatibility
         csv_data.rename(columns={"X": "x", "Y": "y", "Z": "z"}, inplace=True)
@@ -243,7 +266,9 @@ class ChromatinTraceTable:
                 .reset_index(drop=True)
             )
         except KeyError:
-            raise SystemExit(f"! ERROR\nInput file <{fofct_file}> not in FOF-CT format.")
+            raise SystemExit(
+                f"! ERROR\nInput file <{fofct_file}> not in FOF-CT format."
+            )
 
         unique_barcodes["Barcode #"] = range(1, len(unique_barcodes) + 1)
         barcode_mapping = {
@@ -261,7 +286,7 @@ class ChromatinTraceTable:
 
         # Save BED file with Barcode # mapping
 
-        bed_file = fofct_file.split(".")[0] + '_genomic_coordinates.bed'
+        bed_file = fofct_file.split(".")[0] + "_genomic_coordinates.bed"
         unique_barcodes.to_csv(bed_file, sep="\t", header=False, index=False)
         print(f"Saved BED file: {bed_file}")
 
@@ -777,22 +802,25 @@ class ChromatinTraceTable:
             print(f"$ Number of rows to remove: {len(rows_to_remove)}")
 
             if len(trace_table_new) > 0:
-                trace_table_indexed = trace_table_new.group_by("Trace_ID")
+                number_traces_left = len(trace_table_new.group_by("Trace_ID").groups)
+            else:
+                number_traces_left = 0
 
             print(
-                f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {len(trace_table_indexed.groups)}"
+                f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {number_traces_left}"
             )
 
-            # calculates the statistics for the table before processing
-            collective_barcode_stats_new = self.barcode_statistics(trace_table_new)
+            if len(trace_table_new) > 0:
+                # calculates the statistics for the table after processing
+                collective_barcode_stats_new = self.barcode_statistics(trace_table_new)
 
-            # plots statistics of barcodes and saves in file
-            self.plots_barcode_statistics(
-                collective_barcode_stats_new,
-                file_name=f"{trace_file.split('.')[0]}_filtered",
-                kind="matrix",
-                norm=False,
-            )
+                # plots statistics of barcodes and saves in file
+                self.plots_barcode_statistics(
+                    collective_barcode_stats_new,
+                    file_name=f"{trace_file.split('.')[0]}_filtered",
+                    kind="matrix",
+                    norm=False,
+                )
 
         else:
             print("! Error: you are trying to filter an empty trace table!")
@@ -900,23 +928,22 @@ class ChromatinTraceTable:
         trace_table_new = trace_table.copy()
         print("\n$ Removing duplicated barcodes within traces...")
         if len(trace_table) > 0:
-            # indexes trace file
-            trace_table_indexed = trace_table.group_by("Spot_ID")
-
-            # finds barcodes with the same UID and stores UIDs in list
-            spots_to_remove = [
-                trace["Spot_ID"][0]
+            # Spot_ID values are not guaranteed to be globally unique after
+            # merging trace files. Treat a duplicated UID as duplicated only
+            # within the same trace, otherwise clean_spots can remove every
+            # spot from merged tables whose Spot_ID counters restart at 1.
+            trace_table_indexed = trace_table.group_by(["Trace_ID", "Spot_ID"])
+            duplicated_trace_spot_ids = {
+                (trace["Trace_ID"][0], trace["Spot_ID"][0])
                 for trace in trace_table_indexed.groups
                 if len(trace) > 1
-            ]
+            }
 
-            # finds row of the first offending barcode
-            # this only removes one of the duplicated barcodes --> assumes at most there are two copies
-            rows_to_remove = []
-            for idx, row in enumerate(trace_table):
-                spot_id = row["Spot_ID"]
-                if spot_id in spots_to_remove:
-                    rows_to_remove.append(idx)
+            rows_to_remove = [
+                idx
+                for idx, row in enumerate(trace_table)
+                if (row["Trace_ID"], row["Spot_ID"]) in duplicated_trace_spot_ids
+            ]
 
             # removes from table
             trace_table_new.remove_rows(rows_to_remove)
@@ -1006,6 +1033,10 @@ class ChromatinTraceTable:
         """
 
         trace_table = self.data
+
+        if len(trace_table) == 0:
+            print("! Error: you are trying to filter an empty trace table!")
+            return
 
         # indexes trace file
         trace_table_indexed = trace_table.group_by("Trace_ID")
