@@ -99,6 +99,12 @@ class LocalizationTable:
         column_names = self.columns
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
 
+        # pyHiM Astropy localization tables store Spot_ID as a string. 4DN
+        # files can encode Spot_ID as a bare number, so normalize it before
+        # converting to Astropy to keep mixed-format merges type-safe.
+        if "Spot_ID" in csv_data.columns:
+            csv_data["Spot_ID"] = csv_data["Spot_ID"].astype(str)
+
         # Rename columns for Astropy compatibility
         csv_data.rename(
             columns={
