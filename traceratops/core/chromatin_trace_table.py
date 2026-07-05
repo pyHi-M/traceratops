@@ -631,9 +631,16 @@ class ChromatinTraceTable:
         sorted_barcodes = sorted([int(x) for x in collective_barcode_stats.keys()])
         data = [collective_barcode_stats[str(key)] for key in sorted_barcodes]
 
-        fig, (ax1) = plt.subplots(nrows=1, ncols=1, figsize=(15, 15))
-
         label, density = ("frequency", True) if norm else ("counts", False)
+
+        if "violin" in kind:
+            figure_size = (15, 15)
+        else:
+            figure_size = self._barcode_matrix_figure_size(len(sorted_barcodes))
+
+        fig, ax1 = plt.subplots(
+            nrows=1, ncols=1, figsize=figure_size, constrained_layout=True
+        )
         ax1.set_title("Relative barcode frequencies", fontsize=30)
 
         if "violin" in kind:
@@ -645,19 +652,32 @@ class ChromatinTraceTable:
                 matrix[idx, :], _ = np.histogram(
                     barcode_data, bins=bins, density=density
                 )
-            bin_number = list(bins)
-            pos = ax1.imshow(np.transpose(matrix), cmap="Reds")
-            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes, fontsize=15)
-            ax1.set_yticks(np.arange(0, len(bins)), bin_number, fontsize=15)
-            ax1.set_ylabel("number of barcodes", fontsize=25)
-            ax1.set_xlabel("barcode IDs", fontsize=25)
+            bin_number = list(bins[:-1])
+            pos = ax1.imshow(np.transpose(matrix), cmap="Reds", aspect="auto")
+            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes)
+            ax1.tick_params(axis="x", labelsize=8)
+            plt.setp(
+                ax1.get_xticklabels(),
+                rotation=45,
+                ha="right",
+                rotation_mode="anchor",
+            )
+            ax1.set_yticks(np.arange(len(bin_number)), bin_number, fontsize=12)
+            ax1.set_ylabel("number of barcodes", fontsize=18)
+            ax1.set_xlabel("barcode IDs", fontsize=18)
             fig.colorbar(
                 pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4, label=label
             )
         print(
             f"$ Exporting relative barcode frequencies figure to: {file_name}.{format}"
         )
-        fig.savefig(f"{file_name}.{format}")
+        fig.savefig(f"{file_name}.{format}", bbox_inches="tight")
+
+    @staticmethod
+    def _barcode_matrix_figure_size(number_barcodes):
+        """Return a wide figure size that follows the barcode matrix aspect ratio."""
+        width = min(max(number_barcodes * 0.18, 8), 24)
+        return (width, 4.5)
 
     # TODO Rename this here and in `plots_barcode_statistics`
     def _extracted_from_plots_barcode_statistics_38(self, ax1, data, sorted_barcodes):
