@@ -644,7 +644,7 @@ class ChromatinTraceTable:
         ax1.set_title("Relative barcode frequencies", fontsize=30)
 
         if "violin" in kind:
-            self._extracted_from_plots_barcode_statistics_38(ax1, data, sorted_barcodes)
+            self._extracted_from_plots_barcode_statistics(ax1, data, sorted_barcodes)
         else:
             bins = range(1, 10)
             matrix = np.zeros((len(sorted_barcodes), len(bins) - 1))
@@ -680,7 +680,7 @@ class ChromatinTraceTable:
         return (width, 4.5)
 
     # TODO Rename this here and in `plots_barcode_statistics`
-    def _extracted_from_plots_barcode_statistics_38(self, ax1, data, sorted_barcodes):
+    def _extracted_from_plots_barcode_statistics(self, ax1, data, sorted_barcodes):
         ax1.set_ylabel("number of barcodes")
         ax1.violinplot(data)
 

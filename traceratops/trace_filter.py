@@ -265,6 +265,7 @@ def runtime(
         # reads new trace
         trace.load(trace_file)
 
+        print("\n$ Filtering duplicated barcodes")
         trace = filter_duplicate(
             remove_duplicate_spots,
             trace,
@@ -273,7 +274,8 @@ def runtime(
             localizations_data,
         )
 
-        # filters trace by coordinate
+        # fiters trace by coordinate
+        print("\n$ Filtering barcodes based on coordinates")
         for coord in ["x", "y", "z"]:
             coor_min = coord_limits[coord + "_min"]
             coor_max = coord_limits[coord + "_max"]
@@ -289,13 +291,14 @@ def runtime(
         # removes barcodes from a list provided by user
         if remove_barcode is not None:
             bc_list = remove_barcode.split(",")
-            print(f"\n$ Removing barcodes: {bc_list}")
+            print(f"\n$ Removing user provided barcodes: {bc_list}")
             for bc in bc_list:
                 trace.remove_barcode(bc)
 
         trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
 
         # removes localizations with low intensity
+        print("\n$ Filtering barcodes based on intensity")
         if intensity_min and localizations_file:
             intensities_kept = trace.filter_by_intensity(
                 trace, localizations_data, intensity_min
@@ -305,6 +308,7 @@ def runtime(
                 intensities_kept, output_file=f"{output_file}_filtered_intensities"
             )
 
+        print("\n$ Filtering barcode number")
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
