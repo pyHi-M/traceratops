@@ -502,7 +502,7 @@ def process_traces(p):
                 )
 
             print(f"> Analyzing traces for {trace_file}")
-            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["format"])
+            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["output_format"])
 
     else:
         print(
