@@ -679,7 +679,6 @@ class ChromatinTraceTable:
         width = min(max(number_barcodes * 0.18, 8), 24)
         return (width, 4.5)
 
-    # TODO Rename this here and in `plots_barcode_statistics`
     def _extracted_from_plots_barcode_statistics(self, ax1, data, sorted_barcodes):
         ax1.set_ylabel("number of barcodes")
         ax1.violinplot(data)
