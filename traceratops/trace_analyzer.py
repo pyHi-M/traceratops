@@ -36,7 +36,7 @@ def parse_arguments():
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
     parser.add_argument(
-        "--format",
+        "--output_format",
         default="png",
         choices=["png", "svg"],
         help="Output image format (png or svg)",
