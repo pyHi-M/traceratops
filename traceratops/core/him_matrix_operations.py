@@ -311,27 +311,46 @@ def plot_matrix(
         if inverse_matrix:
             mean_sc_matrix = np.reciprocal(mean_sc_matrix)
 
-        # plots figure
-        plt.figure(figsize=(15, 15))
-        pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
-        plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
-        plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
-        plt.title(
+        # plots figure using the same axes-based heatmap style as plot_threeway_matrix
+        fig, ax = plt.subplots(figsize=(15, 15))
+        pos = ax.imshow(
+            mean_sc_matrix,
+            interpolation="nearest",
+            cmap=c_m,
+            vmin=c_min,
+            vmax=clim,
+        )  # colormaps RdBu seismic
+
+        ax.set_xlabel("barcode #", fontsize=float(font_size) * 1.2)
+        ax.set_ylabel("barcode #", fontsize=float(font_size) * 1.2)
+        ax.set_title(
             f"{figtitle} | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)}",
             fontsize=float(font_size) * 1.3,
         )
 
-        plt.xticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
+        tick_positions = np.arange(mean_sc_matrix.shape[0])
+        tick_font_size = max(float(font_size) * 0.45, 6)
+        ax.set_xticks(tick_positions)
+        ax.set_yticks(tick_positions)
+        ax.set_xticklabels(unique_barcodes, fontsize=tick_font_size)
+        ax.set_yticklabels(unique_barcodes, fontsize=tick_font_size)
+
+        # Rotate and anchor x tick labels to keep longer barcode names from overlapping.
+        plt.setp(
+            ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor"
         )
-        plt.yticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
-        )
-        cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+
+        # Add grid lines between matrix cells for the cleaner three-way matrix style.
+        ax.set_xticks(np.arange(-0.5, mean_sc_matrix.shape[0], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, mean_sc_matrix.shape[0], 1), minor=True)
+        ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
+        ax.tick_params(which="minor", bottom=False, left=False)
+
+        cbar = fig.colorbar(pos, ax=ax, fraction=0.046, pad=0.04)
         cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
         cbar.minorticks_on()
         cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
-        plt.clim(c_min, clim)
+        plt.tight_layout()
 
         if len(output_filename.split(".")) > 1:
             if output_filename.split(".")[1] == "png":
