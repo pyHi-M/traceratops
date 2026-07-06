@@ -37,9 +37,10 @@ def parse_arguments():
         "--label_map_file", help="Text file with barcode numbers per row"
     )
     parser.add_argument(
-        "--plot_format",
-        help="Available options: svg, pdf, png",
+        "--output_format",
+        choices=["png", "svg", "pdf"],
         default="png",
+        help="Output image format. Default = png.",
     )
     return parser
 
@@ -204,7 +205,7 @@ def main():
             vmax=args.vmax,
             cmap=args.cmap,
             label_map=label_map,
-            file_format=args.plot_format,
+            file_format=args.output_format,
         )
 
 
