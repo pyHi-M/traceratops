@@ -97,9 +97,9 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
 
     trace_lengths = list()
     trace_unique_barcodes = list()
-    trace_repeated_barcodes = list()
+    #trace_repeated_barcodes = list()
     number_unique_barcodes = list()
-    number_repeated_barcodes = list()
+    #number_repeated_barcodes = list()
 
     for sub_trace_table in trace_by_ID.groups:
         trace_lengths.append(len(sub_trace_table))
@@ -108,30 +108,23 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
         trace_unique_barcodes.append(unique_barcodes)
         number_unique_barcodes.append(len(unique_barcodes))
 
-        repeated_barcodes = [
-            item
-            for item, count in collections.Counter(sub_trace_table["Barcode #"]).items()
-            if count > 1
-        ]
-        trace_repeated_barcodes.append(repeated_barcodes)
-        number_repeated_barcodes.append(len(repeated_barcodes))
-
-    distributions = [trace_lengths, number_unique_barcodes, number_repeated_barcodes]
+    distributions = [trace_lengths, number_unique_barcodes]
     axis_x_labels = [
         "$N_{barcodes}$",
         "$N_{unique-barcodes}$",
-        "$N_{repeated-barcodes}$",
-    ]
+        ]
+        
     number_plots = len(distributions)
 
     fig = plt.figure(constrained_layout=True)
-    im_size = 8
+    im_size = 12
     fig.set_size_inches((im_size * number_plots, im_size))
     gs = fig.add_gridspec(1, number_plots)
     axes = [fig.add_subplot(gs[0, i]) for i in range(number_plots)]
+    bins=np.arange(1,np.max(number_unique_barcodes))
 
     for axis, distribution, xlabel in zip(axes, distributions, axis_x_labels):
-        axis.hist(distribution, alpha=0.3)
+        axis.hist(distribution, bins=bins, alpha=0.3)
         axis.set_xlabel(xlabel, fontsize=30)
         axis.set_ylabel("counts", fontsize=30)
         axis.set_title(
