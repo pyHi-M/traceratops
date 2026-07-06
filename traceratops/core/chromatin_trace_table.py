@@ -641,7 +641,7 @@ class ChromatinTraceTable:
         fig, ax1 = plt.subplots(
             nrows=1, ncols=1, figsize=figure_size, constrained_layout=True
         )
-        ax1.set_title("Relative barcode frequencies", fontsize=30)
+        ax1.set_title("Relative barcode frequencies", fontsize=20)
 
         if "violin" in kind:
             self._extracted_from_plots_barcode_statistics(ax1, data, sorted_barcodes)
