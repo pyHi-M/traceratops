@@ -290,6 +290,10 @@ def plot_correlation_matrix(
     # Create labels for the plot
     labels = [os.path.basename(unique_identifiers[f]) for f in files]
 
+    title_fontsize = 16
+    label_fontsize = 12
+    tick_fontsize = 10
+
     # Create the figure and axis
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -302,20 +306,21 @@ def plot_correlation_matrix(
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Pearson Correlation", fontsize=12)
+    cbar.set_label("Pearson Correlation", fontsize=label_fontsize)
+    cbar.ax.tick_params(labelsize=tick_fontsize)
 
     # Set tick labels
     ax.set_xticks(range(len(files)))
     ax.set_yticks(range(len(files)))
-    ax.set_xticklabels(labels, rotation=90, fontsize=10)
-    ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xticklabels(labels, rotation=90, fontsize=tick_fontsize)
+    ax.set_yticklabels(labels, fontsize=tick_fontsize)
 
     # Add axis labels
-    ax.set_xlabel("Files", fontsize=14)
-    ax.set_ylabel("Files", fontsize=14)
+    ax.set_xlabel("Files", fontsize=label_fontsize)
+    ax.set_ylabel("Files", fontsize=label_fontsize)
 
     # Add title
-    ax.set_title("Trace Table Similarity Matrix", fontsize=16)
+    ax.set_title("Trace Table Similarity Matrix", fontsize=title_fontsize)
 
     # Adjust layout and save
     plt.tight_layout()
