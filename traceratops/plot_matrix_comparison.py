@@ -32,6 +32,12 @@ def parse_arguments():
         "--output", help="Name of output plot. Default: scatter_plot.png"
     )
     parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
+    parser.add_argument(
         "--mode",
         help="Mode used to calculate the mean distance. Can be either 'median', 'KDE' or 'proximity'. Default: median",
     )
@@ -58,12 +64,9 @@ def create_dict_args(args):
         p["input2"] = args.input2
     else:
         p["input2"] = None
-    if args.output:
-        p["output"] = args.output
-        if len(p["output"].split(".")) < 2:
-            p["output"] = p["output"] + ".png"
-    else:
-        p["output"] = "output.png"
+    output_root = args.output if args.output else "output"
+    output_root = output_root.rsplit(".", 1)[0]
+    p["output"] = f"{output_root}.{args.output_format}"
     if args.mode:
         p["mode"] = args.mode
     else:

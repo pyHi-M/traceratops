@@ -30,6 +30,12 @@ def parse_arguments():
     parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
 
     return parser
 
@@ -52,6 +58,7 @@ def create_dict_args(args):
         p["label"] = args.label
     else:
         p["label"] = "labeled"
+    p["output_format"] = args.output_format
     if args.pipe:
         p["pipe"] = True
         if select.select(
@@ -188,7 +195,9 @@ def plot_mask_assignment(
     print(f"$ Saved mask assignment plot: {output_file}")
 
 
-def process_traces(trace_files=[], mask_file="", label="labeled", pixel_size=0.1):
+def process_traces(
+    trace_files=[], mask_file="", label="labeled", pixel_size=0.1, output_format="png"
+):
     print(
         "\n{} trace files to process= {}".format(
             len(trace_files), "\n".join(map(str, trace_files))
@@ -208,7 +217,7 @@ def process_traces(trace_files=[], mask_file="", label="labeled", pixel_size=0.1
             trace.save(outputfile, comments=label)
             print(f"$ Saved output trace file at: {outputfile}")
 
-            plot_file = f"{base_name}_{label}_mask_plot.png"
+            plot_file = f"{base_name}_{label}_mask_plot.{output_format}"
             plot_mask_assignment(
                 trace,
                 mask_file=mask_file,
@@ -229,6 +238,7 @@ def main():
         mask_file=p["mask_file"],
         label=p["label"],
         pixel_size=p["pixel_size"],
+        output_format=p["output_format"],
     )
     print("=" * 9 + "Finished execution" + "=" * 9)
 

@@ -60,9 +60,10 @@ Outputs:
         "-O", "--output", help="Folder for outputs", default="plots"
     )
     parser_advanced.add_argument(
-        "--plot_format",
-        help="Available options: svg, pdf, png",
+        "--output_format",
+        choices=["png", "svg", "pdf"],
         default="png",
+        help="Output image format. Default = png.",
     )
     parser_advanced.add_argument(
         "--shuffle",
@@ -282,7 +283,7 @@ def main():
             u_barcodes,
             input_filename=args.matrix,
             output_folder=args.output,
-            file_format=args.plot_format,
+            file_format=args.output_format,
             n_cells=n_cells,
             font_size=args.fontsize,
             remove_nan=rm_nan,
@@ -293,7 +294,7 @@ def main():
         u_barcodes,
         input_filename=args.matrix,
         output_folder=args.output,
-        file_format=args.plot_format,
+        file_format=args.output_format,
         mode=args.mode,
         n_cells=n_cells,
         font_size=args.fontsize,

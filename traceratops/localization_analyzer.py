@@ -33,9 +33,11 @@ def parse_arguments():
         ),
     )
     parser.add_argument(
+        "--output_format",
         "-f",
         "--format",
-        choices=["png", "svg"],
+        dest="output_format",
+        choices=["png", "svg", "pdf"],
         default="png",
         help="Output plot format. Default = png.",
     )
@@ -46,7 +48,7 @@ def create_dict_args(args):
     p = {}
     p["localization_file"] = args.localization_file
     p["output_file"] = args.output_file
-    p["format"] = args.format
+    p["format"] = args.output_format
 
     print("Input parameters\n" + "-" * 15)
     for item in p.keys():
