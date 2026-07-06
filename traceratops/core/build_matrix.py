@@ -339,7 +339,7 @@ class BuildMatrix:
         np.save(f"{output_filename}_Nmatrix.npy", self.n_matrix)
         print(f"$ saved: {output_filename}_Nmatrix.npy")
 
-    def launch_analysis(self, file, distance_threshold=np.inf):
+    def launch_analysis(self, file, distance_threshold=np.inf,outputFolder=None):
         """
         run analysis for a chromatin trace table.
 
@@ -352,6 +352,8 @@ class BuildMatrix:
         # creates and loads trace table
         self.trace_table = ChromatinTraceTable()
         self.trace_table.load(file)
+        if outputFolder is None:
+            outputFolder = file
 
         # runs calculation of PWD matrix
         self.build_distance_matrix(
@@ -362,10 +364,10 @@ class BuildMatrix:
         self.calculate_n_matrix()
 
         # runs plotting operations
-        self.plots_all_matrices(file)
+        self.plots_all_matrices(outputFolder)
 
         # saves matrix
-        self.save_matrices(file)
+        self.save_matrices(outputFolder)
 
     def run(self, data_path, matrix_params):
         self.label = "barcode"
