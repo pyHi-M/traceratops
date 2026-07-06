@@ -45,7 +45,10 @@ def parse_arguments():
         "--cMax_std", help="Colormap max scale for std map. Default: automatic"
     )
     parser.add_argument(
-        "--plottingFileExtension", help="By default: png. Other options: svg, pdf, png"
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument(
         "--shuffle",
@@ -112,10 +115,7 @@ def create_dict_args(args):
     else:
         run_parameters["cMin_std"] = -1
 
-    if args.plottingFileExtension:
-        run_parameters["plottingFileExtension"] = "." + args.plottingFileExtension
-    else:
-        run_parameters["plottingFileExtension"] = ".png"
+    run_parameters["plottingFileExtension"] = "." + args.output_format
 
     if args.shuffle:
         run_parameters["shuffle"] = args.shuffle

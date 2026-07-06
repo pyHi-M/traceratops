@@ -38,8 +38,8 @@ def parse_arguments():
     parser.add_argument(
         "--output_format",
         default="png",
-        choices=["png", "svg"],
-        help="Output image format (png or svg)",
+        choices=["png", "svg", "pdf"],
+        help="Output image format. Default = png.",
     )
     return parser
 
@@ -49,7 +49,7 @@ def create_dict_args(args):
     p["input"] = args.input
     p["rootFolder"] = args.rootFolder
     p["plotXYZ"] = args.plotXYZ
-    p["output_format"] = args.output_format
+    p["format"] = args.output_format
 
     p["trace_files"] = []
     if args.pipe:
@@ -413,7 +413,7 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
     plotXYZ : bool, optional
         Flag to control whether XYZ traces should be plotted. Default is False.
     format : str, optional
-        Output file format for figures ('png' or 'svg'). Default is 'png'.
+        Output file format for figures ('png', 'svg', or 'pdf'). Default is 'png'.
 
     Returns
     -------
@@ -471,7 +471,7 @@ def process_traces(p):
         Dictionary containing processing parameters:
         - trace_files: List of trace files to process
         - plotXYZ: Flag to control whether XYZ traces should be plotted
-        - format: Output image format (png or svg)
+        - format: Output image format (png, svg, or pdf)
 
     Returns
     -------
@@ -502,7 +502,7 @@ def process_traces(p):
                 )
 
             print(f"> Analyzing traces for {trace_file}")
-            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["output_format"])
+            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["format"])
 
     else:
         print(

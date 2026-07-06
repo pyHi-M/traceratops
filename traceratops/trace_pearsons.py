@@ -56,6 +56,12 @@ def parse_arguments():
     parser.add_argument(
         "--vmax", type=float, default=10, help="Maximum value for colormap scaling"
     )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
     parser.add_argument("--verbose", action="store_true", help="Increase verbosity")
     return parser
 
@@ -327,9 +333,9 @@ def plot_correlation_matrix(
     plt.savefig(output_filename, dpi=300)
     print(f"$ Saved correlation matrix as {output_filename}")
 
-    np.save(output_filename[:-4] + ".npy", matrix)
+    np.save(os.path.splitext(output_filename)[0] + ".npy", matrix)
     print(
-        f"$ Saved correlation matrix data in NPY format: {output_filename[:-4]+'.npy'}"
+        f"$ Saved correlation matrix data in NPY format: {os.path.splitext(output_filename)[0] + '.npy'}"
     )
 
     plt.close()
@@ -367,7 +373,9 @@ def main():
     plot_correlation_matrix(
         files,
         corr_matrix,
-        output_filename=os.path.join(args.output, "trace_correlation_matrix.png"),
+        output_filename=os.path.join(
+            args.output, f"trace_correlation_matrix.{args.output_format}"
+        ),
         vmin=args.vmin,
         vmax=args.vmax,
     )
