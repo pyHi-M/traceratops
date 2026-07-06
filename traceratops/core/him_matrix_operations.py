@@ -743,18 +743,36 @@ def adjust_colorbar(cbar, pos, c_min, clim):
 def plot_single_matrix(
     matrix, cmap, matrix_title, fontsize, barcode_names, cm_title, c_min, clim, fig_path
 ):
-    plt.figure(figsize=(15, 15))
-    pos = plt.imshow(matrix, cmap=cmap)
-    plt.title(matrix_title, fontsize=float(fontsize) * 1.3)
-    plt.xlabel("barcode #", fontsize=float(fontsize) * 1.2)
-    plt.ylabel("barcode #", fontsize=float(fontsize) * 1.2)
-    plt.xticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
-    plt.yticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
-    cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+    fig, ax = plt.subplots(figsize=(15, 15))
+    pos = ax.imshow(matrix, interpolation="nearest", cmap=cmap)
+
+    ax.set_title(matrix_title, fontsize=float(fontsize) * 1.3)
+    ax.set_xlabel("barcode #", fontsize=float(fontsize) * 1.2)
+    ax.set_ylabel("barcode #", fontsize=float(fontsize) * 1.2)
+
+    tick_positions = np.arange(len(barcode_names))
+    tick_font_size = max(float(fontsize) * 0.45, 6)
+    ax.set_xticks(tick_positions)
+    ax.set_yticks(tick_positions)
+    ax.set_xticklabels(barcode_names, fontsize=tick_font_size)
+    ax.set_yticklabels(barcode_names, fontsize=tick_font_size)
+
+    # Match the matrix heatmap style used by plot_matrix and plot_threeway_matrix.
+    plt.setp(
+        ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor"
+    )
+
+    ax.set_xticks(np.arange(-0.5, matrix.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, matrix.shape[0], 1), minor=True)
+    ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    cbar = fig.colorbar(pos, ax=ax, fraction=0.046, pad=0.04)
     cbar.ax.tick_params(labelsize=float(fontsize) * 0.8)
     cbar.minorticks_on()
     cbar.set_label(cm_title, fontsize=float(fontsize) * 1.0)
     adjust_colorbar(cbar, pos, c_min, clim)
+    plt.tight_layout()
     plt.savefig(fig_path)
 
 
