@@ -49,7 +49,7 @@ def create_dict_args(args):
     p["input"] = args.input
     p["rootFolder"] = args.rootFolder
     p["plotXYZ"] = args.plotXYZ
-    p["format"] = args.format
+    p["output_format"] = args.output_format
 
     p["trace_files"] = []
     if args.pipe:
@@ -502,7 +502,7 @@ def process_traces(p):
                 )
 
             print(f"> Analyzing traces for {trace_file}")
-            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["format"])
+            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["output_format"])
 
     else:
         print(
