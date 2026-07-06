@@ -633,6 +633,10 @@ class ChromatinTraceTable:
 
         label, density = ("frequency", True) if norm else ("counts", False)
 
+        title_fontsize = 16
+        label_fontsize = 12
+        tick_fontsize = 10
+
         if "violin" in kind:
             figure_size = (15, 15)
         else:
@@ -641,7 +645,7 @@ class ChromatinTraceTable:
         fig, ax1 = plt.subplots(
             nrows=1, ncols=1, figsize=figure_size, constrained_layout=True
         )
-        ax1.set_title("Relative barcode frequencies", fontsize=20)
+        ax1.set_title("Relative barcode frequencies", fontsize=title_fontsize)
 
         if "violin" in kind:
             self._extracted_from_plots_barcode_statistics(ax1, data, sorted_barcodes)
@@ -665,9 +669,12 @@ class ChromatinTraceTable:
             ax1.set_yticks(np.arange(len(bin_number)), bin_number, fontsize=12)
             ax1.set_ylabel("number of barcodes", fontsize=18)
             ax1.set_xlabel("barcode IDs", fontsize=18)
-            fig.colorbar(
-                pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4, label=label
-            )
+
+            # Add colorbar
+            cbar = fig.colorbar(pos, ax=ax1,location="bottom",anchor=(0.5, 1), shrink=0.4)
+            cbar.set_label(label, fontsize=label_fontsize)
+            cbar.ax.tick_params(labelsize=tick_fontsize)
+
         print(
             f"$ Exporting relative barcode frequencies figure to: {file_name}.{format}"
         )
