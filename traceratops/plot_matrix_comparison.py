@@ -209,9 +209,14 @@ def calculates_ensemble_matrices(matrices, mode="median", max_distance=2):
             )
         else:
             cells_to_plot = range(matrix.shape[2])
-            mean_sc_matrix = calculate_ensemble_pwd_matrix(
+            mean_sc_matrix, keep_plotting = calculate_ensemble_pwd_matrix(
                 matrix, 1.0, cells_to_plot, mode=mode
             )
+            if not keep_plotting:
+                raise ValueError(
+                    f"Unable to calculate ensemble matrix for mode '{mode}' "
+                    f"from input matrix with shape {matrix.shape}."
+                )
         mean_sc_matrices.append(mean_sc_matrix)
     return mean_sc_matrices
 
