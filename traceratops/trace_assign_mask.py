@@ -4,6 +4,7 @@
 Load a trace file and a number of numpy masks and assign them labels
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -228,6 +229,7 @@ def process_traces(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     p = create_dict_args(args)

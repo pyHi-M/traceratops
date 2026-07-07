@@ -17,6 +17,7 @@ This is particularly useful for analyzing higher-order chromatin organization an
 spatial relationships in microscopy data.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -436,6 +437,7 @@ def get_trace_files(args):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     _, trace_files = get_trace_files(args)

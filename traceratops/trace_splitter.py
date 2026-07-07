@@ -4,6 +4,7 @@
 Split chromatin traces using K-means clustering when their radius of gyration exceeds a threshold.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -141,6 +142,7 @@ def split_large_traces(trace_table, std_threshold, num_clusters):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """Main function to handle input, processing, and output."""
     parser = parse_arguments()
     args = parser.parse_args()

@@ -16,6 +16,7 @@ This is particularly useful for analyzing chromatin organization, DNA-DNA intera
 and spatial proximity relationships in microscopy data.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -221,6 +222,7 @@ def plot_frequencies(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
 

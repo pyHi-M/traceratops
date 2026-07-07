@@ -16,6 +16,7 @@ outputs
 ChromatinTraceTable() object and output .ecsv formatted file with assembled trace tables.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import contextlib
 import io
@@ -112,6 +113,7 @@ def create_out_folder(folder_path):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()

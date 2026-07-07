@@ -10,6 +10,7 @@ trace datasets, helping to identify patterns and relationships in chromatin orga
 across multiple samples or conditions.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -342,6 +343,7 @@ def plot_correlation_matrix(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """
     Main function that executes the trace comparison workflow.
     """

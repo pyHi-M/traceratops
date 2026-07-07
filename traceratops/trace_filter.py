@@ -48,6 +48,7 @@ The script can process single files or multiple files via pipe input.
 **Usage**
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
@@ -328,6 +329,7 @@ def runtime(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     print("=" * 10 + "Started execution" + "=" * 10)
     # [parsing arguments]
     parser = parse_arguments()

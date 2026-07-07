@@ -4,6 +4,7 @@
 Analyze chromatin trace files.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import collections
 import select
@@ -504,6 +505,7 @@ def process_traces(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """
     Main function to execute the trace analyzer script.
 

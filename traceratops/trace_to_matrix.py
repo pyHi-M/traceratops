@@ -4,6 +4,7 @@
 uses the core routines of pyHiM to convert a trace file to a matrix in a standalone script
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -108,6 +109,7 @@ def runtime(trace_files=[], colormaps=dict(), distance_threshold=np.inf, outputF
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()

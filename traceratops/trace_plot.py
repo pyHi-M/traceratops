@@ -12,6 +12,7 @@ future:
     - output PDBs for all the traces in a trace file
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -168,6 +169,7 @@ def runtime(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
 
     # [parsing arguments]
     parser = parse_arguments()
