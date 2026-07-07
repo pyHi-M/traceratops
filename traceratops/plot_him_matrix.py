@@ -62,8 +62,10 @@ Outputs:
     )
     parser_advanced.add_argument(
         "--output_format",
+        "--plot_format",
         choices=["png", "svg", "pdf"],
         default="png",
+        dest="output_format",
         help="Output image format. Default = png.",
     )
     parser_advanced.add_argument(

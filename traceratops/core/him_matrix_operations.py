@@ -844,7 +844,7 @@ def plot_nan_matrix(
         file_format,
         c_min,
         c_max,
-        mode="nan",
+        mode="nan%",
         remove_nan=remove_nan,
     )
     plot_single_matrix(
