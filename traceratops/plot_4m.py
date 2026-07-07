@@ -16,6 +16,7 @@ This is particularly useful for analyzing chromatin organization, DNA-DNA intera
 and spatial proximity relationships in microscopy data.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -53,6 +54,12 @@ def parse_arguments():
     )
     parser.add_argument(
         "--output", default="colocalization_plot.png", help="Output file for the plot."
+    )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
@@ -166,7 +173,13 @@ def bootstrap_colocalization(
 
 
 def plot_frequencies(
-    mean_frequencies, sem_frequencies, anchor_barcodes, output_file, x_min=0, x_max=0
+    mean_frequencies,
+    sem_frequencies,
+    anchor_barcodes,
+    output_file,
+    x_min=0,
+    x_max=0,
+    output_format="png",
 ):
     """Plots colocalization frequencies for multiple anchors separately."""
     # Make sure anchor_barcodes is a list for consistent processing
@@ -201,12 +214,15 @@ def plot_frequencies(
         _x_max = x_max if x_max is not None else max(barcodes) + 1
         plt.xlim(_x_min, _x_max)
         plt.grid(True)
-        output_filename = f"{output_file.split('.')[0]}_anchor_{anchor}.png"
+        output_filename = (
+            f"{output_file.rsplit('.', 1)[0]}_anchor_{anchor}.{output_format}"
+        )
         plt.savefig(output_filename)
         plt.close()  # Close the figure to avoid memory issues with many anchors
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
 
@@ -245,6 +261,7 @@ def main():
                 args.output,
                 x_min=args.x_min,
                 x_max=args.x_max,
+                output_format=args.output_format,
             )
 
     else:

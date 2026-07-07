@@ -219,3 +219,66 @@ def test_intensity():
     ]
 
     _test_trace_filter_common(input_file, args, suffix="_intensity", clean_png=True)
+
+
+def test_localization_intensity_column_prefers_mean_intensity():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(
+        rows=[(10.0, 20.0)],
+        names=("mean_intensity", "peak"),
+    )
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "mean_intensity"
+    )
+
+
+def test_localization_intensity_column_accepts_legacy_peak():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(rows=[(20.0,)], names=("peak",))
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "peak"
+    )
+
+
+def test_clean_spots_preserves_reused_spot_ids_across_traces():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("1", "trace-a", 1, 0.0, 0.0, 0.0),
+            ("1", "trace-b", 2, 1.0, 1.0, 1.0),
+            ("2", "trace-b", 3, 2.0, 2.0, 2.0),
+            ("2", "trace-b", 4, 3.0, 3.0, 3.0),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z"),
+    )
+
+    trace.remove_duplicates()
+
+    assert len(trace.data) == 2
+    assert list(trace.data["Trace_ID"]) == ["trace-a", "trace-b"]
+    assert list(trace.data["Spot_ID"]) == ["1", "1"]
+
+
+def test_filter_traces_by_n_handles_empty_trace_table():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        names=("Spot_ID", "Trace_ID", "Barcode #"), dtype=(str, str, int)
+    )
+
+    trace.filter_traces_by_n(minimum_number_barcodes=4)
+
+    assert len(trace.data) == 0

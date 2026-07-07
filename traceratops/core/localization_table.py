@@ -47,7 +47,7 @@ class LocalizationTable:
             "object_class",
             "mean_intensity",
             "flux",
-            "roundness",   
+            "roundness",
         ]
 
     def _read_metadata_from_4dn(self, file):
@@ -98,6 +98,12 @@ class LocalizationTable:
         """
         column_names = self.columns
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
+
+        # pyHiM Astropy localization tables store Spot_ID as a string. 4DN
+        # files can encode Spot_ID as a bare number, so normalize it before
+        # converting to Astropy to keep mixed-format merges type-safe.
+        if "Spot_ID" in csv_data.columns:
+            csv_data["Spot_ID"] = csv_data["Spot_ID"].astype(str)
 
         # Rename columns for Astropy compatibility
         csv_data.rename(
@@ -271,9 +277,15 @@ class LocalizationTable:
 
         return vstack([table1, table2])
 
-    def plot_distribution_fluxes(self, barcode_map, filename_list):
+    def plot_distribution_fluxes(
+        self, barcode_map, filename_list=("localization_distribution_fluxes.png",)
+    ):
         """
-        This function plots the distribution of spot properties
+        This function will plot:
+        - the number of localizations per barcode
+        - the snr distribution per barcode
+        - scatterplot of the snr versus z
+        - scatterplot of roundness versus skew
 
         Parameters
         ----------
@@ -289,15 +301,30 @@ class LocalizationTable:
         """
         from matplotlib.colors import BoundaryNorm
 
-        # initializes figure
-        fig, axes = plt.subplots(2, 2)
+        if self._uses_legacy_distribution_flux_columns(barcode_map):
+            print(
+                "WARNING: plot_distribution_fluxes received a legacy pyHiM "
+                "localization table. Please update pyHiM to write the current "
+                "localization table format; this legacy table formatting will "
+                "be deprecated in future releases. Skipping distribution flux "
+                "plotting."
+            )
+            return
+
+        # initializes figure and font settings explicitly so plots look the same
+        # whether this method is called from pyHiM, notebooks, or the CLI.
+        figure_size = (30, 15)
+        axes_label_size = 24
+        tick_label_size = 20
+        colorbar_label_size = 24
+        save_dpi = 100
+
+        fig, axes = plt.subplots(2, 2, figsize=figure_size)
         ax = axes.ravel()
-        fig.set_size_inches((30, 15))
 
         # initializes variables
         skew = barcode_map["skew"]
         barcode_id = barcode_map["Barcode #"]
-        mean_intensity = barcode_map["mean_intensity"]
         zcentroid = barcode_map["zcentroid"]
         snr = barcode_map["snr"]
         object_class = barcode_map["object_class"]
@@ -310,10 +337,7 @@ class LocalizationTable:
         unique_barcodes = np.sort(np.unique(barcode_id))
 
         # Collect SNR values for each barcode
-        snr_by_barcode = [
-            snr[barcode_id == bc]
-            for bc in unique_barcodes
-        ]
+        snr_by_barcode = [snr[barcode_id == bc] for bc in unique_barcodes]
 
         # Draw violin plot
         parts = ax[0].violinplot(
@@ -325,8 +349,8 @@ class LocalizationTable:
             showextrema=True,
         )
 
-        ax[0].set_xlabel("barcode_id")
-        ax[0].set_ylabel("snr")
+        ax[0].set_xlabel("barcode_id", fontsize=axes_label_size)
+        ax[0].set_ylabel("snr", fontsize=axes_label_size)
         ax[0].set_xticks(unique_barcodes)
 
         # panel 2
@@ -340,9 +364,9 @@ class LocalizationTable:
         parts["cmins"].set_color("black")
         parts["cmaxes"].set_color("black")
 
-        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55 )
-        ax[1].set_xlabel("snr")
-        ax[1].set_ylabel("z_centroid")
+        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55)
+        ax[1].set_xlabel("snr", fontsize=axes_label_size)
+        ax[1].set_ylabel("z_centroid", fontsize=axes_label_size)
 
         cbar2 = fig.colorbar(
             p_2,
@@ -351,24 +375,22 @@ class LocalizationTable:
             pad=0.04,
         )
 
-        cbar2.set_label("object_class")
-        
+        cbar2.set_label("object_class", fontsize=colorbar_label_size)
+        cbar2.ax.tick_params(labelsize=tick_label_size)
+
         # panel 3
         unique_barcodes, counts = np.unique(barcode_id, return_counts=True)
 
         ax[2].bar(unique_barcodes, counts, width=0.8)
-        ax[2].set_xlabel("barcode_id")
-        ax[2].set_ylabel("Number of detections")
+        ax[2].set_xlabel("barcode_id", fontsize=axes_label_size)
+        ax[2].set_ylabel("Number of detections", fontsize=axes_label_size)
         ax[2].set_xticks(unique_barcodes)
 
         # panel 4
         unique_barcodes = np.sort(np.unique(barcode_id))
 
         cmap = plt.get_cmap("tab20b", len(unique_barcodes))
-        norm = BoundaryNorm(
-            np.arange(len(unique_barcodes) + 1) - 0.5,
-            cmap.N
-        )
+        norm = BoundaryNorm(np.arange(len(unique_barcodes) + 1) - 0.5, cmap.N)
 
         # Map barcode IDs to consecutive integers
         barcode_to_idx = {bc: i for i, bc in enumerate(unique_barcodes)}
@@ -383,8 +405,8 @@ class LocalizationTable:
             alpha=0.5,
         )
 
-        ax[3].set_ylabel("skew")
-        ax[3].set_xlabel("roundness")
+        ax[3].set_ylabel("skew", fontsize=axes_label_size)
+        ax[3].set_xlabel("roundness", fontsize=axes_label_size)
 
         cbar = fig.colorbar(
             p_3,
@@ -394,13 +416,40 @@ class LocalizationTable:
             pad=0.04,
         )
 
-        cbar.set_label("Barcode")
+        cbar.set_label("Barcode", fontsize=colorbar_label_size)
         cbar.set_ticklabels(unique_barcodes)
+        cbar.ax.tick_params(labelsize=tick_label_size)
+
+        for axis in ax:
+            axis.tick_params(axis="both", labelsize=tick_label_size)
 
         # saves figure
-        fig.savefig("".join(filename_list))
+        fig.savefig("".join(filename_list), dpi=save_dpi)
 
         plt.close(fig)
+
+    @staticmethod
+    def _uses_legacy_distribution_flux_columns(barcode_map):
+        """Return True when ``barcode_map`` has the legacy pyHiM plot schema."""
+        required_columns = {
+            "Barcode #",
+            "zcentroid",
+            "snr",
+            "skew",
+            "object_class",
+            "roundness",
+        }
+        legacy_columns = {"peak", "sharpness", "roundness1", "roundness2"}
+        current_plot_only_columns = {"object_class", "roundness", "skew", "snr"}
+
+        column_names = set(barcode_map.colnames)
+        missing_required_columns = required_columns - column_names
+
+        return (
+            bool(missing_required_columns)
+            and bool(legacy_columns & column_names)
+            and not current_plot_only_columns <= column_names
+        )
 
     def plot_intensity_distribution(
         self, intensities, output_file="intensity_distribution.png"
@@ -598,6 +647,7 @@ def read_table_from_ecsv(path):
     table = Table.read(path, format="ascii.ecsv")
 
     return table
+
 
 def create_output_table():
     output = Table(

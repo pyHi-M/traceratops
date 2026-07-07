@@ -7,6 +7,7 @@ in the trace table based on the 'Barcode #' column. If the BED file provides a f
 the barcode in the trace table is updated to the new value.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -183,6 +184,7 @@ def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     p = create_dict_args(args)

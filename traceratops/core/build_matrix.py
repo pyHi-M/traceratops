@@ -20,6 +20,7 @@ This class:
 
 import glob
 import os
+from pathlib import Path
 
 import numpy as np
 from astropy.table import unique
@@ -206,14 +207,27 @@ class BuildMatrix:
 
         self.n_matrix = n_matrix
 
-    def plots_all_matrices(self, file):
+    def get_output_prefix(self, file, outputFolder=None):
+        """
+        Build the output filename prefix for a trace file.
+
+        Outputs are written next to the input trace by default, or inside
+        outputFolder when it is provided. In both cases, the input trace
+        filename stem is preserved in the generated filenames.
+        """
+        trace_path = Path(file)
+        output_dir = Path(outputFolder) if outputFolder is not None else trace_path.parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return str(output_dir / f"{trace_path.stem}_Matrix")
+
+    def plots_all_matrices(self, output_filename):
         """
         Plots all matrices after analysis
 
         Parameters
         ----------
-        file : str
-            trace file name used for get output filenames.
+        output_filename : str
+            Output filename prefix used for generated plots.
 
         Returns
         -------
@@ -221,14 +235,6 @@ class BuildMatrix:
 
         """
         number_rois = 1  # by default we plot one ROI at a time.
-
-        filepath_split = file.split(".")[0].split(os.sep)
-        try:
-            filepath_split.remove("data")
-        except ValueError:
-            pass
-        filepath_without_data_folder = (os.sep).join(filepath_split)
-        output_filename = filepath_without_data_folder + "_Matrix"
 
         clim_scale = 1.0  # factor to multiply the clim by. If 1, the clim will be the mean of the PWD distribution of the whole map
         pixel_size = 1  # this is 1 as coordinates are in microns.
@@ -320,9 +326,7 @@ class BuildMatrix:
             optimize_kernel_width=False,
         )
 
-    def save_matrices(self, file):
-        output_filename = file.split(".")[0] + "_Matrix"
-
+    def save_matrices(self, output_filename):
         # saves output
         np.save(f"{output_filename}_PWDscMatrix.npy", self.sc_matrix)
         print(f"$ saved: {output_filename}_PWDscMatrix.npy")
@@ -339,7 +343,7 @@ class BuildMatrix:
         np.save(f"{output_filename}_Nmatrix.npy", self.n_matrix)
         print(f"$ saved: {output_filename}_Nmatrix.npy")
 
-    def launch_analysis(self, file, distance_threshold=np.inf):
+    def launch_analysis(self, file, distance_threshold=np.inf, outputFolder=None):
         """
         run analysis for a chromatin trace table.
 
@@ -352,6 +356,7 @@ class BuildMatrix:
         # creates and loads trace table
         self.trace_table = ChromatinTraceTable()
         self.trace_table.load(file)
+        output_filename = self.get_output_prefix(file, outputFolder)
 
         # runs calculation of PWD matrix
         self.build_distance_matrix(
@@ -362,10 +367,10 @@ class BuildMatrix:
         self.calculate_n_matrix()
 
         # runs plotting operations
-        self.plots_all_matrices(file)
+        self.plots_all_matrices(output_filename)
 
         # saves matrix
-        self.save_matrices(file)
+        self.save_matrices(output_filename)
 
     def run(self, data_path, matrix_params):
         self.label = "barcode"

@@ -48,6 +48,7 @@ The script can process single files or multiple files via pipe input.
 **Usage**
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
@@ -84,6 +85,12 @@ def parse_arguments():
         "--pipe",
         help="inputs Trace file list from stdin (for batch processing)",
         action="store_true",
+    )
+    psr_basic.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
 
     psr_opt = parser.add_argument_group("Filtering options")
@@ -229,6 +236,7 @@ def runtime(
     label_to_remove="",
     localizations_file=None,
     intensity_min=0,
+    output_format="png",
 ):
     if len(trace_files) <= 0:
         print("No trace file found to process!")
@@ -251,10 +259,14 @@ def runtime(
     if localizations_file and intensity_min:
 
         # Plot intensity distribution to help user choose a threshold
-        intensities = [row["peak"] for row in localizations_data]
+        intensity_column = ChromatinTraceTable._get_localization_intensity_column(
+            localizations_data
+        )
+        intensities = [row[intensity_column] for row in localizations_data]
         output_file = localizations_file.split(".")[0]
         localization_table.plot_intensity_distribution(
-            intensities, output_file=output_file + "_localization_intensities.png"
+            intensities,
+            output_file=f"{output_file}_localization_intensities.{output_format}",
         )
 
     # iterates over traces
@@ -265,6 +277,7 @@ def runtime(
         # reads new trace
         trace.load(trace_file)
 
+        print("\n$ Filtering duplicated barcodes")
         trace = filter_duplicate(
             remove_duplicate_spots,
             trace,
@@ -273,7 +286,8 @@ def runtime(
             localizations_data,
         )
 
-        # filters trace by coordinate
+        # fiters trace by coordinate
+        print("\n$ Filtering barcodes based on coordinates")
         for coord in ["x", "y", "z"]:
             coor_min = coord_limits[coord + "_min"]
             coor_max = coord_limits[coord + "_max"]
@@ -289,22 +303,25 @@ def runtime(
         # removes barcodes from a list provided by user
         if remove_barcode is not None:
             bc_list = remove_barcode.split(",")
-            print(f"\n$ Removing barcodes: {bc_list}")
+            print(f"\n$ Removing user provided barcodes: {bc_list}")
             for bc in bc_list:
                 trace.remove_barcode(bc)
 
         trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
 
         # removes localizations with low intensity
+        print("\n$ Filtering barcodes based on intensity")
         if intensity_min and localizations_file:
             intensities_kept = trace.filter_by_intensity(
                 trace, localizations_data, intensity_min
             )
             output_file = trace_file.split(".")[0]
             localization_table.plot_intensity_distribution(
-                intensities_kept, output_file=f"{output_file}_filtered_intensities"
+                intensities_kept,
+                output_file=f"{output_file}_filtered_intensities.{output_format}",
             )
 
+        print("\n$ Filtering barcode number")
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
@@ -315,6 +332,7 @@ def runtime(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     print("=" * 10 + "Started execution" + "=" * 10)
     # [parsing arguments]
     parser = parse_arguments()
@@ -336,6 +354,7 @@ def main():
         label_to_remove=args.remove_label,
         localizations_file=args.localization_file,
         intensity_min=args.intensity_min,
+        output_format=args.output_format,
     )
 
     print(f"Processed <{n_traces_processed}> trace file(s)\n")

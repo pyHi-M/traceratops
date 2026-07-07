@@ -17,6 +17,7 @@ This is particularly useful for analyzing higher-order chromatin organization an
 spatial relationships in microscopy data.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -320,7 +321,7 @@ def plot_threeway_matrix(
 
     np.save(f"{output_filename}.npy", mean_matrix)
 
-    plt.savefig(f"{output_filename}.png", dpi=300)
+    plt.savefig(f"{output_filename}.{output_format}", dpi=300)
     print(f"Saved three-way co-localization heatmap to: {output_filename}")
     plt.close()
 
@@ -365,7 +366,9 @@ def plot_threeway_matrix(
 
     # Adjust layout and save
     plt.tight_layout()
-    sem_output_filename = f"{output_file.split('.')[0]}_anchor_{anchor_barcode}_sem.png"
+    sem_output_filename = (
+        f"{output_file.rsplit('.', 1)[0]}_anchor_{anchor_barcode}_sem.{output_format}"
+    )
     plt.savefig(sem_output_filename, dpi=300)
     print(f"Saved SEM heatmap to: {sem_output_filename}")
     plt.close()
@@ -409,6 +412,12 @@ def parse_arguments():
         "--output", default="threeway_coloc_plot.png", help="Output file for the plot."
     )
     parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
+    parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
 
@@ -428,6 +437,7 @@ def get_trace_files(args):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     _, trace_files = get_trace_files(args)
@@ -457,7 +467,7 @@ def main():
 
                 # Create the plots
                 trace_file_basename = os.path.basename(trace_file)
-                output_filename = f"{args.output.split('.')[0]}_{trace_file_basename.split('.')[0]}.png"
+                output_filename = f"{args.output.rsplit('.', 1)[0]}_{trace_file_basename.rsplit('.', 1)[0]}"
                 plot_threeway_matrix(
                     pair_means,
                     pair_sems,
@@ -466,6 +476,7 @@ def main():
                     distance_cutoff=args.cutoff,
                     vmin=args.vmin,
                     vmax=args.vmax,
+                    output_format=args.output_format,
                 )
 
     else:

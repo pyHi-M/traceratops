@@ -6,6 +6,7 @@ Plots either the ratio or the difference between two HiM matrices.
 It also plots both matrices together, with one in the upper triangle, and the other in the lower triangle.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -46,7 +47,10 @@ def parse_arguments():
         action="store_true",
     )
     parser.add_argument(
-        "--plottingFileExtension", help="By default: svg. Other options: pdf, png"
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument(
         "--normalize",
@@ -131,10 +135,7 @@ def create_dict_args(args):
         run_parameters["ratio"] = args.ratio
     else:
         run_parameters["ratio"] = False
-    if args.plottingFileExtension:
-        run_parameters["plottingFileExtension"] = "." + args.plottingFileExtension
-    else:
-        run_parameters["plottingFileExtension"] = ".svg"
+    run_parameters["plottingFileExtension"] = "." + args.output_format
     if args.normalize:
         run_parameters["normalize"] = args.normalize
     else:
@@ -215,6 +216,7 @@ def gets_ensemble_matrix(run_parameters, scPWDMatrix_filename=""):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     run_parameters = create_dict_args(args)

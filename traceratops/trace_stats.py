@@ -6,6 +6,7 @@ This script reads a chromatin trace file and computes basic statistics:
    - Number of unique chromatin traces
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -59,6 +60,7 @@ def compute_trace_statistics(trace_file):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     trace_files = get_trace_files(args)

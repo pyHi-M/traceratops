@@ -10,6 +10,7 @@ trace datasets, helping to identify patterns and relationships in chromatin orga
 across multiple samples or conditions.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -55,6 +56,12 @@ def parse_arguments():
     )
     parser.add_argument(
         "--vmax", type=float, default=10, help="Maximum value for colormap scaling"
+    )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument("--verbose", action="store_true", help="Increase verbosity")
     return parser
@@ -290,6 +297,10 @@ def plot_correlation_matrix(
     # Create labels for the plot
     labels = [os.path.basename(unique_identifiers[f]) for f in files]
 
+    title_fontsize = 16
+    label_fontsize = 12
+    tick_fontsize = 10
+
     # Create the figure and axis
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -302,35 +313,37 @@ def plot_correlation_matrix(
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Pearson Correlation", fontsize=12)
+    cbar.set_label("Pearson Correlation", fontsize=label_fontsize)
+    cbar.ax.tick_params(labelsize=tick_fontsize)
 
     # Set tick labels
     ax.set_xticks(range(len(files)))
     ax.set_yticks(range(len(files)))
-    ax.set_xticklabels(labels, rotation=90, fontsize=10)
-    ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xticklabels(labels, rotation=90, fontsize=tick_fontsize)
+    ax.set_yticklabels(labels, fontsize=tick_fontsize)
 
     # Add axis labels
-    ax.set_xlabel("Files", fontsize=14)
-    ax.set_ylabel("Files", fontsize=14)
+    ax.set_xlabel("Files", fontsize=label_fontsize)
+    ax.set_ylabel("Files", fontsize=label_fontsize)
 
     # Add title
-    ax.set_title("Trace Table Similarity Matrix", fontsize=16)
+    ax.set_title("Trace Table Similarity Matrix", fontsize=title_fontsize)
 
     # Adjust layout and save
     plt.tight_layout()
     plt.savefig(output_filename, dpi=300)
     print(f"$ Saved correlation matrix as {output_filename}")
 
-    np.save(output_filename[:-4] + ".npy", matrix)
+    np.save(os.path.splitext(output_filename)[0] + ".npy", matrix)
     print(
-        f"$ Saved correlation matrix data in NPY format: {output_filename[:-4]+'.npy'}"
+        f"$ Saved correlation matrix data in NPY format: {os.path.splitext(output_filename)[0] + '.npy'}"
     )
 
     plt.close()
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """
     Main function that executes the trace comparison workflow.
     """
@@ -362,7 +375,9 @@ def main():
     plot_correlation_matrix(
         files,
         corr_matrix,
-        output_filename=os.path.join(args.output, "trace_correlation_matrix.png"),
+        output_filename=os.path.join(
+            args.output, f"trace_correlation_matrix.{args.output_format}"
+        ),
         vmin=args.vmin,
         vmax=args.vmax,
     )

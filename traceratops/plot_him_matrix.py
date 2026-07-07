@@ -6,6 +6,7 @@ This script calculates and plots matrices (PWD and proximity) from:
     - a file with the unique barcodes used
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -60,9 +61,10 @@ Outputs:
         "-O", "--output", help="Folder for outputs", default="plots"
     )
     parser_advanced.add_argument(
-        "--plot_format",
-        help="Available options: svg, pdf, png",
+        "--output_format",
+        choices=["png", "svg", "pdf"],
         default="png",
+        help="Output image format. Default = png.",
     )
     parser_advanced.add_argument(
         "--shuffle",
@@ -250,6 +252,7 @@ def apply_triangular_mask(matrix, mode="upper"):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     check_required_arg(args, parser)
@@ -282,7 +285,7 @@ def main():
             u_barcodes,
             input_filename=args.matrix,
             output_folder=args.output,
-            file_format=args.plot_format,
+            file_format=args.output_format,
             n_cells=n_cells,
             font_size=args.fontsize,
             remove_nan=rm_nan,
@@ -293,7 +296,7 @@ def main():
         u_barcodes,
         input_filename=args.matrix,
         output_folder=args.output,
-        file_format=args.plot_format,
+        file_format=args.output_format,
         mode=args.mode,
         n_cells=n_cells,
         font_size=args.fontsize,
