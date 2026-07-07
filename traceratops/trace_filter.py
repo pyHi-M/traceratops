@@ -259,7 +259,10 @@ def runtime(
     if localizations_file and intensity_min:
 
         # Plot intensity distribution to help user choose a threshold
-        intensities = [row["peak"] for row in localizations_data]
+        intensity_column = ChromatinTraceTable._get_localization_intensity_column(
+            localizations_data
+        )
+        intensities = [row[intensity_column] for row in localizations_data]
         output_file = localizations_file.split(".")[0]
         localization_table.plot_intensity_distribution(
             intensities,

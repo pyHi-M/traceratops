@@ -301,6 +301,16 @@ class LocalizationTable:
         """
         from matplotlib.colors import BoundaryNorm
 
+        if self._uses_legacy_distribution_flux_columns(barcode_map):
+            print(
+                "WARNING: plot_distribution_fluxes received a legacy pyHiM "
+                "localization table. Please update pyHiM to write the current "
+                "localization table format; this legacy table formatting will "
+                "be deprecated in future releases. Skipping distribution flux "
+                "plotting."
+            )
+            return
+
         # initializes figure and font settings explicitly so plots look the same
         # whether this method is called from pyHiM, notebooks, or the CLI.
         figure_size = (30, 15)
@@ -417,6 +427,29 @@ class LocalizationTable:
         fig.savefig("".join(filename_list), dpi=save_dpi)
 
         plt.close(fig)
+
+    @staticmethod
+    def _uses_legacy_distribution_flux_columns(barcode_map):
+        """Return True when ``barcode_map`` has the legacy pyHiM plot schema."""
+        required_columns = {
+            "Barcode #",
+            "zcentroid",
+            "snr",
+            "skew",
+            "object_class",
+            "roundness",
+        }
+        legacy_columns = {"peak", "sharpness", "roundness1", "roundness2"}
+        current_plot_only_columns = {"object_class", "roundness", "skew", "snr"}
+
+        column_names = set(barcode_map.colnames)
+        missing_required_columns = required_columns - column_names
+
+        return (
+            bool(missing_required_columns)
+            and bool(legacy_columns & column_names)
+            and not current_plot_only_columns <= column_names
+        )
 
     def plot_intensity_distribution(
         self, intensities, output_file="intensity_distribution.png"
