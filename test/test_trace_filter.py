@@ -221,6 +221,33 @@ def test_intensity():
     _test_trace_filter_common(input_file, args, suffix="_intensity", clean_png=True)
 
 
+def test_localization_intensity_column_prefers_mean_intensity():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(
+        rows=[(10.0, 20.0)],
+        names=("mean_intensity", "peak"),
+    )
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "mean_intensity"
+    )
+
+
+def test_localization_intensity_column_accepts_legacy_peak():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(rows=[(20.0,)], names=("peak",))
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "peak"
+    )
+
+
 def test_clean_spots_preserves_reused_spot_ids_across_traces():
     from astropy.table import Table
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
