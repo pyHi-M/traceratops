@@ -710,6 +710,19 @@ def adjust_colorbar(cbar, pos, c_min, clim):
     - c_min: The minimum value to set on the colorbar.
     - clim: The maximum value to set on the colorbar.
     """
+    # Matrices can legitimately contain only zeros (for example with a
+    # proximity threshold of 0 or lower). In that case ``adjust_cmin_cmax``
+    # keeps the historical output filename component as ``nan-0.00``, but
+    # Matplotlib cannot apply non-finite or equal color limits reliably across
+    # versions. Use finite plotting limits while leaving the saved filename
+    # unchanged.
+    if not np.isfinite(c_min):
+        c_min = 0.0
+    if not np.isfinite(clim):
+        clim = 1.0
+    if clim <= c_min:
+        clim = c_min + 1.0
+
     # Set color limits for the colormap
     pos.set_clim(c_min, clim)
 
