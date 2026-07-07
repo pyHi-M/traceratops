@@ -107,4 +107,6 @@ html_theme = "sphinx_rtd_theme"
 html_context = {"default_mode": "light"}
 html_static_path = ["_static"]
 
+html_logo = "_static/logo_traceratops.png"
+
 myst_heading_anchors = 2
