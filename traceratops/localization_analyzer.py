@@ -10,6 +10,7 @@ The script produces a figure with:
 - scatterplot of roundness versus skew
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 
@@ -76,6 +77,7 @@ def run(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     p = create_dict_args(args)

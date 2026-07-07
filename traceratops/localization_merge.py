@@ -10,6 +10,7 @@ and merges them into a single output file. It preserves all data from the origin
 while combining them into one comprehensive table.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -107,6 +108,7 @@ def run(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     p = create_dict_args(args)

@@ -12,6 +12,7 @@ Required inputs:
 The script will produce an ECSV file that restores the missing columns (`Barcode #`, `Mask_id`, and `label`).
 """
 
+from traceratops.script_banner import print_script_banner
 import select
 import sys
 from argparse import ArgumentParser
@@ -144,6 +145,7 @@ def convert_csv_to_ecsv(csv_data, output_file):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
 

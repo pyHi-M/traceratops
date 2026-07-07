@@ -4,6 +4,7 @@
 Advanced script based on trace_filter.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -785,6 +786,7 @@ class FilterTraces:
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()

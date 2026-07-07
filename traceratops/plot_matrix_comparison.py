@@ -8,6 +8,7 @@ Compare PWD matrices from two experiments
 - same but single cell [TODO]
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
@@ -252,6 +253,7 @@ def main_script(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()

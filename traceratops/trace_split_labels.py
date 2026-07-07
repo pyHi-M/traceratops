@@ -13,6 +13,7 @@ Example:
         Trace_filtered_not:Pdx1.ecsv
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
@@ -108,6 +109,7 @@ def process(trace_files, label):
 
 # === ENTRYPOINT ===
 def main():
+    print_script_banner(__file__, __doc__)
 
     print("=" * 10 + " Started execution " + "=" * 10)
 

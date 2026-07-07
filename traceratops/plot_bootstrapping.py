@@ -8,6 +8,7 @@ INPUTS:
 - uniquebarcode list
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -200,6 +201,7 @@ def plot_results(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     print(">>> Producing HiM matrix")
 
     parser = parse_arguments()

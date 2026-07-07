@@ -29,6 +29,7 @@ Matches ``ROI-14.ecsv`` but rejects ``ROI-021.ecsv`` (different length).
 
 from __future__ import annotations
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import shutil
 import sys
@@ -359,6 +360,7 @@ def parse_arguments() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """Entry point.  Returns 0 on success, 1 on business-logic failure."""
+    print_script_banner(__file__, __doc__)
     args = parse_arguments().parse_args(argv)
 
     if not args.root.is_dir():

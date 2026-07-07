@@ -6,6 +6,7 @@ Plots either the ratio or the difference between two HiM matrices.
 It also plots both matrices together, with one in the upper triangle, and the other in the lower triangle.
 """
 
+from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -215,6 +216,7 @@ def gets_ensemble_matrix(run_parameters, scPWDMatrix_filename=""):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     run_parameters = create_dict_args(args)
