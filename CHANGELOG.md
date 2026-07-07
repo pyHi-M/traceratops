@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `collect_files` script to gather localization files from nested acquisition folders
+- `trace_split_labels` script to split traces by assigned mask labels
+- `localization_analyzer` script for localization quality-control analysis
+- Support for assigning barcode genomic coordinates from BED files in `trace_genomic_coordinates`
+- Pipe/stdin input support across trace-processing scripts, including `trace_stats`
+- New tutorials for trace merging, quality control, filtering, label splitting, matrix visualization, multi-way colocalization, dataset comparison, and pipe usage
+- Test coverage for localization tables, trace filtering, trace merging, matrix plotting, matrix conversion, and file collection
+
+### Fixed
+- NumPy 2 compatibility for NaN handling in matrix and plotting workflows
+- Localization table formatting and comment-field handling when reading, merging, and updating localization tables
+- Missing comments in chromatin trace tables
+- `trace_filter --clean_spots` test discovery and behavior coverage
+- FOF-CT import/export compatibility and standardized input option naming
+- Multi-worker output collisions by including the trace file name in generated output paths
+
+### Changed
+- Refactored localization table handling and homogenized command-line arguments across scripts
+- Renamed `trace_impute_genomic_coordinates` to `trace_genomic_coordinates`
+- Default spot-table output format is now `ecsv`
+- `plot_3way_coloc` can write plots in user-selected output formats
+- Updated documentation structure, script pages, pipe examples, release guidance, and project logo
+
+### Removed
+- `trace_correct_coordinates`: superseded by `trace_genomic_coordinates`
+- `localization_cp_files`: superseded by `collect_files`
+- `analyze_localizations`: replaced by `localization_analyzer`
+- `plot_single_cell`: unused & deprecated script
+- `plot_n_him_matrices`: unused & deprecated script
+
 ## [0.5.0] - 2025-04-17
 
 ### Added
