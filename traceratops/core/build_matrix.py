@@ -24,8 +24,9 @@ from pathlib import Path
 
 import numpy as np
 from astropy.table import unique
+from joblib import Parallel, delayed
 from sklearn.metrics import pairwise_distances
-from tqdm.contrib import tzip
+from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.him_matrix_operations import (
@@ -96,7 +97,84 @@ class BuildMatrix:
         r_mum = np.column_stack((x, y, z))
         return pairwise_distances(r_mum)
 
-    def build_distance_matrix(self, mode="min", distance_threshold=np.inf):
+    @staticmethod
+    def _build_trace_distance_slice(
+        trace, unique_barcode_to_index, number_unique_barcodes, mode, distance_threshold
+    ):
+        """Build one single-trace distance matrix slice.
+
+        The default ``min`` mode is vectorized because it is the runtime-critical
+        path used by ``trace_to_matrix``. The ``last`` and legacy iterative
+        ``mean`` modes keep their original row-major update order so duplicate
+        barcode observations produce byte-for-byte equivalent results.
+        """
+        barcodes_to_process = np.asarray(trace["Barcode #"].data)
+        coordinates = np.column_stack(
+            (
+                np.asarray(trace["x"].data),
+                np.asarray(trace["y"].data),
+                np.asarray(trace["z"].data),
+            )
+        )
+        pwd_matrix = pairwise_distances(coordinates)
+        barcode_indices = np.fromiter(
+            (unique_barcode_to_index[barcode] for barcode in barcodes_to_process),
+            dtype=np.intp,
+            count=len(barcodes_to_process),
+        )
+
+        matrix_slice = np.full(
+            (number_unique_barcodes, number_unique_barcodes), np.nan, dtype=float
+        )
+
+        if mode == "min":
+            different_barcodes = (
+                barcodes_to_process[:, None] != barcodes_to_process[None, :]
+            )
+            valid_distances = different_barcodes & (pwd_matrix < distance_threshold)
+            if np.any(valid_distances):
+                row_positions, column_positions = np.nonzero(valid_distances)
+                rows = barcode_indices[row_positions]
+                columns = barcode_indices[column_positions]
+                distances = pwd_matrix[row_positions, column_positions]
+                flat_matrix = np.full(matrix_slice.size, np.inf, dtype=float)
+                np.minimum.at(
+                    flat_matrix,
+                    np.ravel_multi_index((rows, columns), matrix_slice.shape),
+                    distances,
+                )
+                matrix_slice = flat_matrix.reshape(matrix_slice.shape)
+                matrix_slice[np.isinf(matrix_slice)] = np.nan
+            return matrix_slice
+
+        for barcode1, ibarcode1 in zip(
+            barcodes_to_process, range(len(barcodes_to_process))
+        ):
+            index_barcode_1 = barcode_indices[ibarcode1]
+            for barcode2, ibarcode2 in zip(
+                barcodes_to_process, range(len(barcodes_to_process))
+            ):
+                if barcode1 != barcode2:
+                    index_barcode_2 = barcode_indices[ibarcode2]
+                    newdistance = pwd_matrix[ibarcode1, ibarcode2]
+                    if newdistance < distance_threshold:
+                        if mode == "last":
+                            matrix_slice[index_barcode_1][index_barcode_2] = newdistance
+                        elif mode == "mean":
+                            matrix_slice[index_barcode_1][index_barcode_2] = np.nanmean(
+                                [
+                                    newdistance,
+                                    matrix_slice[index_barcode_1][index_barcode_2],
+                                ]
+                            )
+                        else:
+                            raise ValueError(
+                                f"Unsupported distance matrix mode: {mode}"
+                            )
+
+        return matrix_slice
+
+    def build_distance_matrix(self, mode="min", distance_threshold=np.inf, n_jobs=1):
         """
         Builds pairwise distance matrix from a coordinates table
 
@@ -106,6 +184,9 @@ class BuildMatrix:
             The default is "mean": calculates the mean distance if there are several combinations possible.
             "min": calculates the minimum distance if there are several combinations possible.
             "last": keeps the last distance calculated
+        n_jobs : int, optional
+            Number of parallel workers used across independent traces. ``1`` keeps
+            the serial execution path; ``-1`` uses all available workers.
 
         Returns
         -------
@@ -127,73 +208,39 @@ class BuildMatrix:
             "INFO",
         )
 
-        # Initializes sc_matrix
-        sc_matrix = np.zeros(
-            (number_unique_barcodes, number_unique_barcodes, number_matrices)
-        )
-        sc_matrix[:] = np.nan
+        unique_barcode_to_index = {
+            barcode: index for index, barcode in enumerate(unique_barcodes)
+        }
 
         # loops over traces
         print("> Processing traces...", "INFO")
         data_traces = self.trace_table.data.group_by("Trace_ID")
-        for trace, itrace in tzip(data_traces.groups, range(number_matrices)):
-            barcodes_to_process = trace["Barcode #"].data
+        trace_groups = list(data_traces.groups)
 
-            # gets lists of x, y and z coordinates for barcodes assigned to a cell mask
-            x, y, z = (
-                np.array(trace["x"].data),
-                np.array(trace["y"].data),
-                np.array(trace["z"].data),
+        if n_jobs == 1:
+            slices = [
+                self._build_trace_distance_slice(
+                    trace,
+                    unique_barcode_to_index,
+                    number_unique_barcodes,
+                    mode,
+                    distance_threshold,
+                )
+                for trace in tqdm(trace_groups, total=number_matrices)
+            ]
+        else:
+            slices = Parallel(n_jobs=n_jobs)(
+                delayed(self._build_trace_distance_slice)(
+                    trace,
+                    unique_barcode_to_index,
+                    number_unique_barcodes,
+                    mode,
+                    distance_threshold,
+                )
+                for trace in tqdm(trace_groups, total=number_matrices)
             )
-            pwd_matrix = self.calculate_pwd_single_mask(x, y, z)
 
-            # loops over barcodes detected in cell mask: barcode1
-            for barcode1, ibarcode1 in zip(
-                barcodes_to_process, range(len(barcodes_to_process))
-            ):
-                index_barcode_1 = np.nonzero(unique_barcodes == barcode1)[0][0]
-
-                # loops over barcodes detected in cell mask: barcode2
-                for barcode2, ibarcode2 in zip(
-                    barcodes_to_process, range(len(barcodes_to_process))
-                ):
-                    if barcode1 != barcode2:
-                        index_barcode_2 = np.nonzero(unique_barcodes == barcode2)[0][0]
-
-                        # attributes distance from the PWDmatrix field in the sc_pwd_item table
-                        newdistance = pwd_matrix[ibarcode1, ibarcode2]
-
-                        # checks distance
-                        if newdistance < distance_threshold:
-                            # inserts newdistance into sc_matrix using desired method
-                            if mode == "last":
-                                sc_matrix[index_barcode_1][index_barcode_2][
-                                    itrace
-                                ] = newdistance
-                            elif mode == "mean":
-                                sc_matrix[index_barcode_1][index_barcode_2][itrace] = (
-                                    np.nanmean(
-                                        [
-                                            newdistance,
-                                            sc_matrix[index_barcode_1][index_barcode_2][
-                                                itrace
-                                            ],
-                                        ]
-                                    )
-                                )
-                            elif mode == "min":
-                                sc_matrix[index_barcode_1][index_barcode_2][itrace] = (
-                                    np.nanmin(
-                                        [
-                                            newdistance,
-                                            sc_matrix[index_barcode_1][index_barcode_2][
-                                                itrace
-                                            ],
-                                        ]
-                                    )
-                                )
-
-        self.sc_matrix = sc_matrix
+        self.sc_matrix = np.stack(slices, axis=2)
         self.unique_barcodes = unique_barcodes
 
     def calculate_n_matrix(self):
@@ -216,7 +263,9 @@ class BuildMatrix:
         filename stem is preserved in the generated filenames.
         """
         trace_path = Path(file)
-        output_dir = Path(outputFolder) if outputFolder is not None else trace_path.parent
+        output_dir = (
+            Path(outputFolder) if outputFolder is not None else trace_path.parent
+        )
         output_dir.mkdir(parents=True, exist_ok=True)
         return str(output_dir / f"{trace_path.stem}_Matrix")
 
@@ -343,7 +392,9 @@ class BuildMatrix:
         np.save(f"{output_filename}_Nmatrix.npy", self.n_matrix)
         print(f"$ saved: {output_filename}_Nmatrix.npy")
 
-    def launch_analysis(self, file, distance_threshold=np.inf, outputFolder=None):
+    def launch_analysis(
+        self, file, distance_threshold=np.inf, outputFolder=None, n_jobs=1
+    ):
         """
         run analysis for a chromatin trace table.
 
@@ -360,7 +411,7 @@ class BuildMatrix:
 
         # runs calculation of PWD matrix
         self.build_distance_matrix(
-            "min", distance_threshold=distance_threshold
+            "min", distance_threshold=distance_threshold, n_jobs=n_jobs
         )  # mean min last
 
         # calculates N-matrix: number of PWD distances for each barcode combination
