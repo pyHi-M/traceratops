@@ -70,6 +70,7 @@ replot_3way = "traceratops.plot_3way_coloc:main" # Deprecated name
 plot_3way_coloc = "traceratops.plot_3way_coloc:main"
 plot_bootstrapping = "traceratops.plot_bootstrapping:main"
 plot_4m = "traceratops.plot_4m:main"
+plot_physical_vs_genomic_distance = "traceratops.plot_physical_vs_genomic_distance:main"
 plot_3way = "traceratops.trace_3way_coloc:main" # Deprecated name
 trace_3way_coloc = "traceratops.trace_3way_coloc:main"
 plot_compare2matrices = "traceratops.plot_compare2matrices:main"
