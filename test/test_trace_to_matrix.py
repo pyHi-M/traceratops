@@ -57,11 +57,15 @@ def test_build_distance_matrix_parallel_matches_serial_for_duplicate_barcodes():
     np.testing.assert_equal(matrix_builder.sc_matrix, serial_matrix)
 
 
-def test_trace_to_matrix_n_jobs_argument_defaults_and_parses():
+def test_trace_to_matrix_optional_arguments_default_and_parse():
     parser = parse_arguments()
 
     default_args = create_dict_args(parser.parse_args([]))
-    parallel_args = create_dict_args(parser.parse_args(["--n_jobs", "-1"]))
+    parallel_args = create_dict_args(
+        parser.parse_args(["--n_jobs", "-1", "--plot_histograms"])
+    )
 
     assert default_args["n_jobs"] == 1
+    assert default_args["plot_histograms"] is False
     assert parallel_args["n_jobs"] == -1
+    assert parallel_args["plot_histograms"] is True

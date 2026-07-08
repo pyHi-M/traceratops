@@ -286,7 +286,7 @@ class BuildMatrix:
         print(f"$ Elapsed time for {section_name}: {elapsed_time:.2f} s")
         return result
 
-    def plots_all_matrices(self, output_filename):
+    def plots_all_matrices(self, output_filename, plot_histograms=False):
         """
         Plots all matrices after analysis
 
@@ -397,18 +397,23 @@ class BuildMatrix:
             ),
         )
 
-        self._time_section(
-            "plot PWD histograms - KDE",
-            lambda: plot_distance_histograms(
-                self.sc_matrix,
-                pixel_size,
-                output_filename,
-                self.log_name_md,
-                mode="KDE",
-                kernel_width=0.25,
-                optimize_kernel_width=False,
-            ),
-        )
+        if plot_histograms:
+            self._time_section(
+                "plot PWD histograms - KDE",
+                lambda: plot_distance_histograms(
+                    self.sc_matrix,
+                    pixel_size,
+                    output_filename,
+                    self.log_name_md,
+                    mode="KDE",
+                    kernel_width=0.25,
+                    optimize_kernel_width=False,
+                ),
+            )
+        else:
+            print(
+                "> Skipping PWD histograms - KDE. Use --plot_histograms to enable this slow optional step."
+            )
 
     def save_matrices(self, output_filename):
         # saves output
@@ -428,7 +433,12 @@ class BuildMatrix:
         print(f"$ saved: {output_filename}_Nmatrix.npy")
 
     def launch_analysis(
-        self, file, distance_threshold=np.inf, outputFolder=None, n_jobs=1
+        self,
+        file,
+        distance_threshold=np.inf,
+        outputFolder=None,
+        n_jobs=1,
+        plot_histograms=False,
     ):
         """
         run analysis for a chromatin trace table.
@@ -463,7 +473,9 @@ class BuildMatrix:
         # runs plotting operations
         self._time_section(
             "plot all matrices and histograms",
-            lambda: self.plots_all_matrices(output_filename),
+            lambda: self.plots_all_matrices(
+                output_filename, plot_histograms=plot_histograms
+            ),
         )
 
         # saves matrix
