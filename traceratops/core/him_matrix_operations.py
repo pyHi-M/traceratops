@@ -255,10 +255,8 @@ def list_sc_to_keep(p, mask):
         a = [i for i in range(len(mask)) if mask[i] == 0]
         cells_to_plot = a
 
-    print(
-        f'>> label: {p["label"]}\t action:{p["action"]}\
-            \t Ncells2plot:{max(cells_to_plot)}\t Ncells in sc_matrix:{len(mask)}'
-    )
+    print(f'>> label: {p["label"]}\t action:{p["action"]}\
+            \t Ncells2plot:{max(cells_to_plot)}\t Ncells in sc_matrix:{len(mask)}')
 
     return cells_to_plot
 
@@ -336,9 +334,7 @@ def plot_matrix(
         ax.set_yticklabels(unique_barcodes, fontsize=tick_font_size)
 
         # Rotate and anchor x tick labels to keep longer barcode names from overlapping.
-        plt.setp(
-            ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor"
-        )
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
         # Add grid lines between matrix cells for the cleaner three-way matrix style.
         ax.set_xticks(np.arange(-0.5, mean_sc_matrix.shape[0], 1), minor=True)
@@ -623,6 +619,11 @@ def is_notebook():
         return False  # Probably standard Python interpreter
 
 
+def is_nan_symmetric_matrix(sc_matrix):
+    """Return True when a 3D single-cell matrix is symmetric, treating NaNs as equal."""
+    return np.allclose(sc_matrix, np.swapaxes(sc_matrix, 0, 1), equal_nan=True)
+
+
 def plot_distance_histograms(
     sc_matrix_collated,
     pixel_size,
@@ -651,26 +652,39 @@ def plot_distance_histograms(
         figsize=(size_x, size_y), ncols=n_plots_x, nrows=n_plots_y, sharex=True
     )
 
-    for i in trange(n_plots_x):
+    symmetric_matrix = is_nan_symmetric_matrix(sc_matrix_collated)
+    kde_cache = {}
+
+    progress_description = (
+        "Plotting PWD KDE histograms"
+        if mode == "KDE"
+        else "Plotting PWD distance histograms"
+    )
+    for i in trange(n_plots_x, desc=progress_description):
         for j in range(n_plots_y):
             if i != j:
                 if mode == "hist":
                     axs[i, j].hist(pixel_size * sc_matrix_collated[i, j, :], bins=bins)
                 else:
+                    cache_key = tuple(sorted((i, j))) if symmetric_matrix else (i, j)
+                    if cache_key not in kde_cache:
+                        kde_cache[cache_key] = (
+                            distribution_maximum_kernel_density_estimation(
+                                sc_matrix_collated,
+                                i,
+                                j,
+                                pixel_size,
+                                optimize_kernel_width=optimize_kernel_width,
+                                kernel_width=kernel_width,
+                                max_distance=max_distance,
+                            )
+                        )
                     (
                         max_kde,
                         distance_distribution,
                         kde,
                         x_d,
-                    ) = distribution_maximum_kernel_density_estimation(
-                        sc_matrix_collated,
-                        i,
-                        j,
-                        pixel_size,
-                        optimize_kernel_width=optimize_kernel_width,
-                        kernel_width=kernel_width,
-                        max_distance=max_distance,
-                    )
+                    ) = kde_cache[cache_key]
                     axs[i, j].fill_between(x_d, kde, alpha=0.5)
                     axs[i, j].plot(
                         distance_distribution,
@@ -771,9 +785,7 @@ def plot_single_matrix(
     ax.set_yticklabels(barcode_names, fontsize=tick_font_size)
 
     # Match the matrix heatmap style used by plot_matrix and plot_threeway_matrix.
-    plt.setp(
-        ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor"
-    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     ax.set_xticks(np.arange(-0.5, matrix.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, matrix.shape[0], 1), minor=True)
@@ -1312,8 +1324,17 @@ def calculate_ensemble_pwd_matrix(sc_matrix, pixel_size, cells_to_plot, mode="me
 
             keep_plotting = False
         else:
-            for bin1 in trange(n_barcodes):
-                for bin2 in range(n_barcodes):
+            sc_matrix_to_plot = sc_matrix[:, :, cells_to_plot]
+            symmetric_matrix = is_nan_symmetric_matrix(sc_matrix_to_plot)
+            for bin1 in trange(
+                n_barcodes, desc="Calculating ensemble PWD matrix (KDE)"
+            ):
+                bin2_values = (
+                    range(bin1 + 1, n_barcodes)
+                    if symmetric_matrix
+                    else range(n_barcodes)
+                )
+                for bin2 in bin2_values:
                     if bin1 != bin2:
                         # print(f"cells_to_plot:{cells_to_plot}, ncells:{sc_matrix.shape}")
                         (
@@ -1322,12 +1343,14 @@ def calculate_ensemble_pwd_matrix(sc_matrix, pixel_size, cells_to_plot, mode="me
                             _,
                             _,
                         ) = distribution_maximum_kernel_density_estimation(
-                            sc_matrix[:, :, cells_to_plot],
+                            sc_matrix_to_plot,
                             bin1,
                             bin2,
                             pixel_size,
                             optimize_kernel_width=False,
                         )
                         mean_sc_matrix[bin1, bin2] = maximum_kernel_distribution
+                        if symmetric_matrix:
+                            mean_sc_matrix[bin2, bin1] = maximum_kernel_distribution
 
     return mean_sc_matrix, keep_plotting

@@ -26,6 +26,17 @@ def parse_arguments():
     parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
+    parser.add_argument(
+        "--n_jobs",
+        type=int,
+        default=1,
+        help="Number of parallel workers for per-trace matrix calculation. Use -1 for all available CPUs. Default: 1",
+    )
+    parser.add_argument(
+        "--plot_histograms",
+        action="store_true",
+        help="Calculate and save PWD KDE histograms. Disabled by default because this is often the slowest step.",
+    )
 
     return parser
 
@@ -65,6 +76,9 @@ def create_dict_args(args):
         p["pipe"] = False
         p["trace_files"] = [p["input"]]
 
+    p["n_jobs"] = args.n_jobs
+    p["plot_histograms"] = args.plot_histograms
+
     p["colormaps"] = {
         "Nmatrix": "Blues",
         "PWD_KDE": "terrain",
@@ -75,7 +89,14 @@ def create_dict_args(args):
     return p
 
 
-def runtime(trace_files=[], colormaps=dict(), distance_threshold=np.inf, outputFolder = None):
+def runtime(
+    trace_files=[],
+    colormaps=dict(),
+    distance_threshold=np.inf,
+    outputFolder=None,
+    n_jobs=1,
+    plot_histograms=False,
+):
     if len(trace_files) < 1:
         print(
             "! Error: no trace file provided. Please either use pipe or the --input option to provide a filename."
@@ -102,7 +123,11 @@ def runtime(trace_files=[], colormaps=dict(), distance_threshold=np.inf, outputF
             }
             new_matrix = BuildMatrix(param, acq_params_dict, colormaps=colormaps)
             new_matrix.launch_analysis(
-                trace_file, distance_threshold=distance_threshold, outputFolder=outputFolder,
+                trace_file,
+                distance_threshold=distance_threshold,
+                outputFolder=outputFolder,
+                n_jobs=n_jobs,
+                plot_histograms=plot_histograms,
             )
 
     return len(trace_files)
@@ -120,7 +145,9 @@ def main():
         trace_files=p["trace_files"],
         colormaps=p["colormaps"],
         distance_threshold=p["distance_threshold"],
-        outputFolder=p['rootFolder']
+        outputFolder=p["rootFolder"],
+        n_jobs=p["n_jobs"],
+        plot_histograms=p["plot_histograms"],
     )
 
     print(f"Processed <{n_traces_processed}> trace(s)")
