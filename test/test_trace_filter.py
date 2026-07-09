@@ -248,6 +248,45 @@ def test_localization_intensity_column_accepts_legacy_peak():
     )
 
 
+def test_filter_by_localization_metrics_combines_thresholds():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("spot-1", "trace-a", 1),
+            ("spot-2", "trace-a", 2),
+            ("spot-3", "trace-a", 3),
+            ("spot-4", "trace-a", 4),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #"),
+    )
+    localizations = Table(
+        rows=[
+            ("spot-1", 10.0, 5.0, 1, 0.9),
+            ("spot-2", 9.0, 4.0, 1, 0.8),
+            ("spot-3", 11.0, 6.0, 0, 0.7),
+            ("spot-4", 12.0, 7.0, 1, 0.6),
+        ],
+        names=("Buid", "mean_intensity", "snr", "object_class", "roundness"),
+    )
+
+    intensities_kept = trace.filter_by_localization_metrics(
+        trace,
+        localizations,
+        {
+            "intensity": 10.0,
+            "snr": 5.0,
+            "object_class": 1,
+            "roundness": 0.6,
+        },
+    )
+
+    assert list(trace.data["Spot_ID"]) == ["spot-1", "spot-4"]
+    assert intensities_kept == [10.0, 12.0]
+
+
 def test_clean_spots_preserves_reused_spot_ids_across_traces():
     from astropy.table import Table
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable

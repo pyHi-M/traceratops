@@ -555,26 +555,82 @@ class ChromatinTraceTable:
         """
         Filters localizations in the trace file based on intensity from the localization table.
         """
+        return self.filter_by_localization_metrics(
+            trace, localizations, {"intensity": intensity_min}
+        )
+
+    def filter_by_localization_metrics(self, trace, localizations, minimum_thresholds):
+        """Filter trace rows by one or more localization-table quality thresholds.
+
+        Parameters
+        ----------
+        trace : ChromatinTraceTable
+            Trace table to filter in place.
+        localizations : astropy.table.Table
+            Localization table indexed by ``Buid``.
+        minimum_thresholds : dict
+            Mapping of localization-table metric names to minimum values to keep.
+            The special ``intensity`` key keeps backward-compatible behavior by
+            resolving to ``mean_intensity`` in new tables or ``peak`` in legacy
+            tables.
+        """
+        thresholds = {
+            metric: minimum
+            for metric, minimum in minimum_thresholds.items()
+            if minimum is not None
+        }
+        if not thresholds:
+            return []
+
         localizations.add_index("Buid")  # Add an index for fast lookup
-        intensity_column = self._get_localization_intensity_column(localizations)
+        resolved_thresholds = {}
+        for metric, minimum in thresholds.items():
+            column_name = (
+                self._get_localization_intensity_column(localizations)
+                if metric == "intensity"
+                else metric
+            )
+            if column_name not in localizations.colnames:
+                raise KeyError(
+                    f"Localization table must contain a '{column_name}' column "
+                    f"to filter by '{metric}'."
+                )
+            resolved_thresholds[column_name] = minimum
 
         rows_to_remove = []
         number_spots = len(trace.data)
         intensities_kept = list()
+        intensity_column = (
+            self._get_localization_intensity_column(localizations)
+            if "intensity" in thresholds
+            else None
+        )
+
         for idx, row in enumerate(trace.data):
             spot_id = row["Spot_ID"]
             try:
-                intensity = localizations.loc[spot_id][intensity_column]
-                if intensity < intensity_min:
-                    rows_to_remove.append(idx)
-                else:
-                    intensities_kept.append(intensity)
+                localization = localizations.loc[spot_id]
             except KeyError:
                 continue  # If Spot_ID is not found, keep the entry
 
+            remove_row = False
+            for column_name, minimum in resolved_thresholds.items():
+                if localization[column_name] < minimum:
+                    remove_row = True
+                    break
+
+            if remove_row:
+                rows_to_remove.append(idx)
+            elif intensity_column is not None:
+                intensities_kept.append(localization[intensity_column])
+
         trace.data.remove_rows(rows_to_remove)
+        threshold_summary = ", ".join(
+            f"{column_name}>={minimum}"
+            for column_name, minimum in resolved_thresholds.items()
+        )
         print(
-            f"> Removed {len(rows_to_remove)}/{number_spots} localizations below intensity threshold ({intensity_min})."
+            f"> Removed {len(rows_to_remove)}/{number_spots} localizations below localization quality thresholds ({threshold_summary})."
         )
         print(f"> Number of rows in filtered trace table: {len(trace.data)}")
 
