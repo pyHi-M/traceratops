@@ -42,6 +42,15 @@ def parse_arguments():
         choices=["png", "svg", "pdf"],
         help="Output image format. Default = png.",
     )
+    parser.add_argument(
+        "--neighbor_distance_range",
+        default="1",
+        help=(
+            "Hexbin axis range for previous-vs-next neighbor distance plots. "
+            "Use 'auto' for automatic scaling or provide a positive maximum "
+            "distance in µm. Default = 1, which plots 0 to 1 µm."
+        ),
+    )
     return parser
 
 
@@ -51,6 +60,7 @@ def create_dict_args(args):
     p["rootFolder"] = args.rootFolder
     p["plotXYZ"] = args.plotXYZ
     p["format"] = args.output_format
+    p["neighbor_distance_range"] = args.neighbor_distance_range
 
     p["trace_files"] = []
     if args.pipe:
@@ -98,9 +108,9 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
 
     trace_lengths = list()
     trace_unique_barcodes = list()
-    #trace_repeated_barcodes = list()
+    # trace_repeated_barcodes = list()
     number_unique_barcodes = list()
-    #number_repeated_barcodes = list()
+    # number_repeated_barcodes = list()
 
     for sub_trace_table in trace_by_ID.groups:
         trace_lengths.append(len(sub_trace_table))
@@ -113,8 +123,8 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     axis_x_labels = [
         "$N_{barcodes}$",
         "$N_{unique-barcodes}$",
-        ]
-        
+    ]
+
     number_plots = len(distributions)
 
     fig = plt.figure(constrained_layout=True)
@@ -122,7 +132,7 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     fig.set_size_inches((im_size * number_plots, im_size))
     gs = fig.add_gridspec(1, number_plots)
     axes = [fig.add_subplot(gs[0, i]) for i in range(number_plots)]
-    bins=np.arange(1,np.max(number_unique_barcodes))
+    bins = np.arange(1, np.max(number_unique_barcodes))
 
     for axis, distribution, xlabel in zip(axes, distributions, axis_x_labels):
         axis.hist(distribution, bins=bins, alpha=0.3)
@@ -138,12 +148,96 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     plt.savefig(output_filename)
 
 
-def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
+def _get_genomic_barcode_order(trace_table):
+    """Return barcode order after sorting unique barcodes by genomic coordinates."""
+    genomic_columns = ["Chrom", "Chrom_Start", "Chrom_End"]
+    missing_columns = [
+        col for col in genomic_columns if col not in trace_table.colnames
+    ]
+    if missing_columns:
+        raise ValueError(
+            "Trace table is missing genomic coordinate columns required for "
+            f"neighbor ordering: {', '.join(missing_columns)}"
+        )
+
+    barcode_coordinates = {}
+    for row in trace_table:
+        barcode = row["Barcode #"]
+        genomic_coordinate = (row["Chrom"], row["Chrom_Start"], row["Chrom_End"])
+        if (
+            barcode in barcode_coordinates
+            and barcode_coordinates[barcode] != genomic_coordinate
+        ):
+            raise ValueError(
+                f"Barcode {barcode} has multiple genomic coordinates: "
+                f"{barcode_coordinates[barcode]} and {genomic_coordinate}"
+            )
+        barcode_coordinates[barcode] = genomic_coordinate
+
+    return [
+        barcode
+        for barcode, _ in sorted(
+            barcode_coordinates.items(),
+            key=lambda item: (item[1][0], item[1][1], item[1][2]),
+        )
+    ]
+
+
+def _resolve_neighbor_distance_limits(distance_range, distance_values):
+    """Return shared hexbin axis limits for neighbor-distance density plots."""
+    if isinstance(distance_range, str) and distance_range.lower() == "auto":
+        if len(distance_values) == 0:
+            return (0, 1)
+        max_distance = float(np.nanmax(distance_values))
+        return (0, max_distance if max_distance > 0 else 1)
+
+    try:
+        max_distance = float(distance_range)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "neighbor_distance_range must be 'auto' or a positive number in µm"
+        ) from exc
+
+    if max_distance <= 0:
+        raise ValueError("neighbor_distance_range must be greater than 0 µm")
+
+    return (0, max_distance)
+
+
+def _plot_neighbor_hexbin(ax, previous_distances, next_distances, title, axis_limits):
+    """Plot density of previous-versus-next neighbor distances as a hexbin map."""
+    ax.set_xlabel(r"$d(i+1,i)$, µm", fontsize=14, labelpad=4)
+    ax.set_ylabel(r"$d(i,i-1)$, µm", fontsize=14, labelpad=4)
+    ax.set_title(title, fontsize=12, pad=6)
+    ax.set_xlim(axis_limits)
+    ax.set_ylim(axis_limits)
+    ax.set_aspect("equal", adjustable="box")
+    ax.tick_params(axis="both", labelsize=12)
+
+    if len(previous_distances) == 0 or len(next_distances) == 0:
+        ax.text(0.5, 0.5, "No consecutive triplets", ha="center", va="center")
+        return None
+
+    return ax.hexbin(
+        next_distances,
+        previous_distances,
+        gridsize=45,
+        mincnt=1,
+        cmap="cubehelix_r",
+        extent=(*axis_limits, *axis_limits),
+    )
+
+
+def plot_neighbor_distances(
+    trace, output_filename="neighbor_distances.png", neighbor_distance_range="1"
+):
     """
     Calculate and visualize distances between consecutive neighboring barcodes.
 
-    This function computes the mean and standard deviation of X, Y, and Z distances
-    between strictly consecutive neighboring barcodes and generates histograms for each dimension.
+    This function computes X, Y, and Z distances between barcodes that are
+    consecutive both numerically and in genomic-coordinate order. It also plots
+    hexbin density maps comparing each barcode's distance to its next and
+    previous genomic neighbors.
 
     Parameters
     ----------
@@ -151,6 +245,9 @@ def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
         Trace table, instance of the ChromatinTraceTable Class.
     output_filename : str
         The filename for the output figure file.
+    neighbor_distance_range : str or float
+        Hexbin axis range. Use "auto" to scale from the data, or provide a
+        positive maximum distance in µm for fixed axes from 0 to that value.
 
     Returns
     -------
@@ -160,53 +257,147 @@ def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
     """
     trace_table = trace.data
     trace_by_ID = trace_table.group_by("Trace_ID")
+    genomic_barcode_order = _get_genomic_barcode_order(trace_table)
+    genomic_barcode_rank = {
+        barcode: rank for rank, barcode in enumerate(genomic_barcode_order)
+    }
 
     dx_all, dy_all, dz_all = [], [], []
+    xy_previous_all, xy_next_all = [], []
+    xyz_previous_all, xyz_next_all = [], []
 
     for sub_trace_table in trace_by_ID.groups:
-        # Sort by Barcode #
-        sorted_trace = sub_trace_table[np.argsort(sub_trace_table["Barcode #"])]
+        # Sort barcodes according to ascending genomic coordinates.
+        sorted_trace = sub_trace_table[
+            np.argsort(
+                [
+                    genomic_barcode_rank[barcode]
+                    for barcode in sub_trace_table["Barcode #"]
+                ]
+            )
+        ]
 
-        # Get barcodes and coordinates
         barcodes = sorted_trace["Barcode #"].data
         x_coords = sorted_trace["x"].data
         y_coords = sorted_trace["y"].data
         z_coords = sorted_trace["z"].data
+        neighbor_distances = {}
 
-        # Iterate and calculate distances only for strictly consecutive barcodes
         for i in range(len(barcodes) - 1):
-            if barcodes[i + 1] == barcodes[i] + 1:  # Ensure strict consecutiveness
-                dx_all.append(x_coords[i + 1] - x_coords[i])
-                dy_all.append(y_coords[i + 1] - y_coords[i])
-                dz_all.append(z_coords[i + 1] - z_coords[i])
+            is_numeric_neighbor = barcodes[i + 1] == barcodes[i] + 1
+            is_genomic_neighbor = (
+                genomic_barcode_rank[barcodes[i + 1]]
+                == genomic_barcode_rank[barcodes[i]] + 1
+            )
+            if is_numeric_neighbor and is_genomic_neighbor:
+                dx = x_coords[i + 1] - x_coords[i]
+                dy = y_coords[i + 1] - y_coords[i]
+                dz = z_coords[i + 1] - z_coords[i]
+                dx_all.append(dx)
+                dy_all.append(dy)
+                dz_all.append(dz)
+                neighbor_distances[barcodes[i]] = (
+                    np.hypot(dx, dy),
+                    np.sqrt(dx**2 + dy**2 + dz**2),
+                )
+
+        for i in range(1, len(barcodes) - 1):
+            previous_barcode = barcodes[i - 1]
+            current_barcode = barcodes[i]
+            if (
+                previous_barcode in neighbor_distances
+                and current_barcode in neighbor_distances
+            ):
+                previous_xy, previous_xyz = neighbor_distances[previous_barcode]
+                next_xy, next_xyz = neighbor_distances[current_barcode]
+                xy_previous_all.append(abs(previous_xy))
+                xy_next_all.append(abs(next_xy))
+                xyz_previous_all.append(abs(previous_xyz))
+                xyz_next_all.append(abs(next_xyz))
 
     # Compute mean and standard deviation
     mean_dx, std_dx = (np.mean(dx_all), np.std(dx_all)) if dx_all else (0, 0)
     mean_dy, std_dy = (np.mean(dy_all), np.std(dy_all)) if dy_all else (0, 0)
     mean_dz, std_dz = (np.mean(dz_all), np.std(dz_all)) if dz_all else (0, 0)
 
-    # Create figure with three histograms
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle("Distances between consecutive neighboring barcodes", fontsize=25)
+    all_neighbor_distances = np.array(
+        xy_previous_all + xy_next_all + xyz_previous_all + xyz_next_all
+    )
+    axis_limits = _resolve_neighbor_distance_limits(
+        neighbor_distance_range, all_neighbor_distances
+    )
+
+    fig = plt.figure(figsize=(18, 13))
+    gs = fig.add_gridspec(
+        2,
+        8,
+        height_ratios=[2.2, 1],
+        hspace=0.55,
+        wspace=0.85,
+        left=0.07,
+        right=0.96,
+        top=0.88,
+        bottom=0.08,
+    )
+    hexbin_axes = [fig.add_subplot(gs[0, :3]), fig.add_subplot(gs[0, 4:7])]
+    colorbar_axes = [fig.add_subplot(gs[0, 3]), fig.add_subplot(gs[0, 7])]
+    hist_axes = [
+        fig.add_subplot(gs[1, 0:2]),
+        fig.add_subplot(gs[1, 3:5]),
+        fig.add_subplot(gs[1, 6:8]),
+    ]
+    fig.suptitle(
+        "Distances between consecutive genomic neighboring barcodes",
+        fontsize=22,
+        y=0.97,
+    )
 
     data = [dx_all, dy_all, dz_all]
-    labels = [r"$\Delta x$, um", r"$\Delta y$, um", r"$\Delta z$, um"]
+    labels = [r"$\Delta x$, µm", r"$\Delta y$, µm", r"$\Delta z$, µm"]
     colors = ["blue", "green", "red"]
     means = [mean_dx, mean_dy, mean_dz]
     stds = [std_dx, std_dy, std_dz]
 
-    for i, (ax, dist, label, mean_val, std_val, color) in enumerate(
-        zip(axes, data, labels, means, stds, colors)
+    for ax, dist, label, mean_val, std_val, color in zip(
+        hist_axes, data, labels, means, stds, colors
     ):
         ax.hist(dist, bins=30, alpha=0.7, color=color, edgecolor="black")
-        ax.set_xlabel(label)
-        ax.set_ylabel("Counts")
-        ax.set_title(
-            f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=10
-        )  # Smaller title
+        ax.set_xlabel(label, fontsize=14)
+        ax.set_ylabel("Counts", fontsize=14)
+        ax.set_title(f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=10, pad=6)
+        ax.tick_params(axis="both", labelsize=12)
 
-    plt.tight_layout()
+    xy_hexbin = _plot_neighbor_hexbin(
+        hexbin_axes[0],
+        xy_previous_all,
+        xy_next_all,
+        "XY neighbor-distance density",
+        axis_limits,
+    )
+    xyz_hexbin = _plot_neighbor_hexbin(
+        hexbin_axes[1],
+        xyz_previous_all,
+        xyz_next_all,
+        "XYZ neighbor-distance density",
+        axis_limits,
+    )
+    hexbin_axes[1].set_ylabel("")
+
+    if xy_hexbin is not None:
+        colorbar = fig.colorbar(xy_hexbin, cax=colorbar_axes[0])
+        colorbar.ax.set_title("Counts", fontsize=12, pad=6)
+        colorbar.ax.tick_params(labelsize=12)
+    else:
+        colorbar_axes[0].axis("off")
+    if xyz_hexbin is not None:
+        colorbar = fig.colorbar(xyz_hexbin, cax=colorbar_axes[1])
+        colorbar.ax.set_title("Counts", fontsize=12, pad=6)
+        colorbar.ax.tick_params(labelsize=12)
+    else:
+        colorbar_axes[1].axis("off")
+
     plt.savefig(output_filename)
+    plt.close(fig)
     print(f"$ Saved neighbor distances plot: {output_filename}")
 
     return mean_dx, mean_dy, mean_dz, std_dx, std_dy, std_dz
@@ -388,7 +579,9 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         print(f"$ Saved KDE projection plot: {output_filename}")
 
 
-def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
+def analyze_trace(
+    trace, trace_file, plotXYZ=False, format="png", neighbor_distance_range="1"
+):
     """
     Perform comprehensive analysis on a chromatin trace file.
 
@@ -408,6 +601,9 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
         Flag to control whether XYZ traces should be plotted. Default is False.
     format : str, optional
         Output file format for figures ('png', 'svg', or 'pdf'). Default is 'png'.
+    neighbor_distance_range : str or float, optional
+        Hexbin axis range. Use "auto" to scale from the data, or provide a
+        positive maximum distance in µm for fixed axes from 0 to that value.
 
     Returns
     -------
@@ -432,7 +628,9 @@ def analyze_trace(trace, trace_file, plotXYZ=False, format="png"):
     # Compute and plot neighbor distances
     neighbor_distances_output = f"{base_filename}_first_neighbor_distances.{format}"
     mean_dx, mean_dy, mean_dz, std_dx, std_dy, std_dz = plot_neighbor_distances(
-        trace, neighbor_distances_output
+        trace,
+        neighbor_distances_output,
+        neighbor_distance_range=neighbor_distance_range,
     )
     print(
         f"$ Mean distances between neighboring barcodes: X={mean_dx:.3f}, Y={mean_dy:.3f}, Z={mean_dz:.3f}"
@@ -496,7 +694,13 @@ def process_traces(p):
                 )
 
             print(f"> Analyzing traces for {trace_file}")
-            analyze_trace(trace, trace_file, plotXYZ=p["plotXYZ"], format=p["format"])
+            analyze_trace(
+                trace,
+                trace_file,
+                plotXYZ=p["plotXYZ"],
+                format=p["format"],
+                neighbor_distance_range=p["neighbor_distance_range"],
+            )
 
     else:
         print(
