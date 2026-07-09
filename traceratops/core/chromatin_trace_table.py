@@ -66,6 +66,23 @@ def relabel_pyhim_identifiers(csv_data):
     return csv_data
 
 
+def micrometer_scale_from_xyz_unit(xyz_unit):
+    """Return the factor needed to convert an XYZ unit to micrometers."""
+    normalized_unit = xyz_unit.strip().lower().replace("µ", "u")
+    micrometer_units = {"micron", "microns", "micrometer", "micrometers", "um"}
+    nanometer_units = {"nm", "nanometer", "nanometers"}
+
+    if normalized_unit in micrometer_units:
+        return 1.0
+    if normalized_unit in nanometer_units:
+        return 0.001
+
+    raise ValueError(
+        f"Unsupported FOF-CT XYZ_unit '{xyz_unit}'. "
+        "Supported coordinate units are micrometers and nanometers."
+    )
+
+
 def random_label_cmap(n_labels=256, seed=42):
     """
     Generates a random colormap similar to stardist (so you don't have to import this library just to do it).
@@ -207,8 +224,10 @@ class ChromatinTraceTable:
                     self.experimenter_name = line.split(": ")[1].strip()
                 elif line.startswith("#experimenter_contact:"):
                     self.experimenter_contact = line.split(": ")[1].strip()
-                elif line.startswith("##genome_assembly:"):
-                    self.genome_assembly = line.split("=")[1].strip()
+                elif line.startswith("##genome_assembly="):
+                    self.genome_assembly = line.split("=", 1)[1].strip()
+                elif line.startswith("##XYZ_unit="):
+                    self.xyz_unit = line.split("=", 1)[1].strip()
                 elif line.startswith("#Software_Title:"):
                     self.software_title = line.split(": ")[1].strip()
                 elif line.startswith("#Software_Authors:"):
@@ -242,6 +261,17 @@ class ChromatinTraceTable:
 
         # Rename XYZ columns for Astropy compatibility
         csv_data.rename(columns={"X": "x", "Y": "y", "Z": "z"}, inplace=True)
+
+        # pyHiM Astropy trace tables store XYZ coordinates in micrometers.
+        # FOF-CT tables declare their coordinate unit in the ##XYZ_unit header,
+        # so convert when needed before returning the Astropy table.
+        micrometer_scale = micrometer_scale_from_xyz_unit(self.xyz_unit)
+        for coordinate in ("x", "y", "z"):
+            if coordinate in csv_data.columns:
+                csv_data[coordinate] = (
+                    csv_data[coordinate].astype(float) * micrometer_scale
+                )
+        self.xyz_unit = "micron"
 
         # Handle optional Cell_ID column
         if "Cell_ID" in csv_data.columns:
@@ -671,7 +701,9 @@ class ChromatinTraceTable:
             ax1.set_xlabel("barcode IDs", fontsize=18)
 
             # Add colorbar
-            cbar = fig.colorbar(pos, ax=ax1,location="bottom",anchor=(0.5, 1), shrink=0.4)
+            cbar = fig.colorbar(
+                pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4
+            )
             cbar.set_label(label, fontsize=label_fontsize)
             cbar.ax.tick_params(labelsize=tick_fontsize)
 

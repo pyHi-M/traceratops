@@ -3,6 +3,8 @@ import os
 import subprocess
 import uuid
 
+import pytest
+
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 INPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_merge", "IN")
 OUTPUT_DIR = os.path.join(TESTS_DIR, "data", "trace_merge", "OUT")
@@ -73,6 +75,9 @@ def test_merge_4dn_numeric_spot_id_with_ecsv_spot_id(tmp_path):
 
     assert uuid.UUID(str(fofct_table["Spot_ID"][0]))
     assert uuid.UUID(str(fofct_table["Trace_ID"][0]))
+    assert fofct_table["x"][0] == pytest.approx(1.2757)
+    assert fofct_table["y"][0] == pytest.approx(1.8179)
+    assert fofct_table["z"][0] == pytest.approx(5.3624)
     assert len(merged) == 2
 
 
@@ -118,3 +123,25 @@ def test_4dn_conversion_relabels_ids_to_pyhim_nomenclature(tmp_path, monkeypatch
         "00000000-0000-0000-0000-000000000004",
         "00000000-0000-0000-0000-000000000005",
     ]
+
+
+def test_4dn_conversion_keeps_micron_coordinates(tmp_path):
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    fofct_file = tmp_path / "micron_coordinates.4dn"
+    fofct_file.write_text(
+        "##FOF-CT_version=v0.1\n"
+        "##Table_namespace=4dn_FOF-CT_core\n"
+        "##genome_assembly=GRCm38\n"
+        "##XYZ_unit=micron\n"
+        "##columns=(Spot_ID, Trace_ID, X, Y, Z, Chrom, Chrom_Start, Chrom_End)\n"
+        "1,100001,1.7361530513467,1.5554513693079502,6.9461968567717295,chr13,55635001,55645000\n"
+    )
+
+    trace = ChromatinTraceTable()
+    fofct_table = trace.load(str(fofct_file))
+
+    assert fofct_table["x"][0] == pytest.approx(1.7361530513467)
+    assert fofct_table["y"][0] == pytest.approx(1.5554513693079502)
+    assert fofct_table["z"][0] == pytest.approx(6.9461968567717295)
+    assert trace.xyz_unit == "micron"
