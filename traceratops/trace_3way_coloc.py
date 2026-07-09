@@ -218,6 +218,7 @@ def plot_threeway_matrix(
     distance_cutoff=0.2,
     vmin=None,
     vmax=None,
+    output_format='png'
 ):
     """
     Creates a heatmap of three-way co-localization frequencies using matplotlib.
