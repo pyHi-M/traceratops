@@ -131,12 +131,6 @@ def parse_arguments():
         default=0.0,
         help="Minimum intensity threshold for localizations. Uses mean_intensity for new localization tables and peak for legacy tables.",
     )
-    psr_intensity.add_argument(
-        "--mean_intensity_min",
-        type=float,
-        default=0.0,
-        help="Minimum mean_intensity threshold for localizations.",
-    )
     for metric in (
         "snr",
         "spot_pixel_percentage",
@@ -195,7 +189,6 @@ def args_quality_filters_to_dict(args):
         "skew": args.skew_min,
         "patch_size": args.patch_size_min,
         "object_class": args.object_class_min,
-        "mean_intensity": args.mean_intensity_min,
         "roundness": args.roundness_min,
     }
     return {metric: minimum for metric, minimum in quality_filters.items() if minimum}
