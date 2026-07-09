@@ -206,13 +206,13 @@ def _resolve_neighbor_distance_limits(distance_range, distance_values):
 
 def _plot_neighbor_hexbin(ax, previous_distances, next_distances, title, axis_limits):
     """Plot density of previous-versus-next neighbor distances as a hexbin map."""
-    ax.set_xlabel(r"$d(i+1,i)$, µm", fontsize=14, labelpad=4)
-    ax.set_ylabel(r"$d(i,i-1)$, µm", fontsize=14, labelpad=4)
-    ax.set_title(title, fontsize=12, pad=6)
+    ax.set_xlabel(r"$d(i+1,i)$, µm", fontsize=18, labelpad=4)
+    ax.set_ylabel(r"$d(i,i-1)$, µm", fontsize=18, labelpad=4)
+    ax.set_title(title, fontsize=15, pad=6)
     ax.set_xlim(axis_limits)
     ax.set_ylim(axis_limits)
     ax.set_aspect("equal", adjustable="box")
-    ax.tick_params(axis="both", labelsize=12)
+    ax.tick_params(axis="both", labelsize=16)
 
     if len(previous_distances) == 0 or len(next_distances) == 0:
         ax.text(0.5, 0.5, "No consecutive triplets", ha="center", va="center")
@@ -331,21 +331,54 @@ def plot_neighbor_distances(
     gs = fig.add_gridspec(
         2,
         8,
+        width_ratios=[1, 1, 1, 0.12, 1, 1, 1, 0.12],
         height_ratios=[2.2, 1],
-        hspace=0.55,
+        hspace=0.45,
         wspace=0.85,
         left=0.07,
         right=0.96,
         top=0.88,
         bottom=0.08,
     )
-    hexbin_axes = [fig.add_subplot(gs[0, :3]), fig.add_subplot(gs[0, 4:7])]
-    colorbar_axes = [fig.add_subplot(gs[0, 3]), fig.add_subplot(gs[0, 7])]
-    hist_axes = [
-        fig.add_subplot(gs[1, 0:2]),
-        fig.add_subplot(gs[1, 3:5]),
-        fig.add_subplot(gs[1, 6:8]),
+
+    fig = plt.figure(figsize=(18, 13))
+    outer = fig.add_gridspec(
+        2, 1,
+        height_ratios=[2.2, 1],
+        hspace=0.55,
+        left=0.07,
+        right=0.96,
+        top=0.88,
+        bottom=0.08,
+    )
+
+    top_gs = outer[0].subgridspec(
+        1, 4,
+        width_ratios=[1, 0.035, 1, 0.035],
+        wspace=0.35,
+    )
+
+    bottom_gs = outer[1].subgridspec(
+        1, 3,
+        wspace=0.75,
+    )
+
+    hexbin_axes = [
+        fig.add_subplot(top_gs[0, 0]),
+        fig.add_subplot(top_gs[0, 2]),
     ]
+
+    colorbar_axes = [
+        fig.add_subplot(top_gs[0, 1]),
+        fig.add_subplot(top_gs[0, 3]),
+    ]
+
+    hist_axes = [
+        fig.add_subplot(bottom_gs[0, 0]),
+        fig.add_subplot(bottom_gs[0, 1]),
+        fig.add_subplot(bottom_gs[0, 2]),
+    ]
+
     fig.suptitle(
         "Distances between consecutive genomic neighboring barcodes",
         fontsize=22,
@@ -362,10 +395,10 @@ def plot_neighbor_distances(
         hist_axes, data, labels, means, stds, colors
     ):
         ax.hist(dist, bins=30, alpha=0.7, color=color, edgecolor="black")
-        ax.set_xlabel(label, fontsize=14)
-        ax.set_ylabel("Counts", fontsize=14)
-        ax.set_title(f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=10, pad=6)
-        ax.tick_params(axis="both", labelsize=12)
+        ax.set_xlabel(label, fontsize=18)
+        ax.set_ylabel("Counts", fontsize=18)
+        ax.set_title(f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=14, pad=6)
+        ax.tick_params(axis="both", labelsize=16)
 
     xy_hexbin = _plot_neighbor_hexbin(
         hexbin_axes[0],
@@ -384,13 +417,17 @@ def plot_neighbor_distances(
     hexbin_axes[1].set_ylabel("")
 
     if xy_hexbin is not None:
-        colorbar = fig.colorbar(xy_hexbin, cax=colorbar_axes[0])
+        colorbar = fig.colorbar(xy_hexbin, 
+                                cax=colorbar_axes[0],
+                                )                   
         colorbar.ax.set_title("Counts", fontsize=12, pad=6)
         colorbar.ax.tick_params(labelsize=12)
     else:
         colorbar_axes[0].axis("off")
     if xyz_hexbin is not None:
-        colorbar = fig.colorbar(xyz_hexbin, cax=colorbar_axes[1])
+        colorbar = fig.colorbar(xyz_hexbin, 
+                                cax=colorbar_axes[1],
+                                )                   
         colorbar.ax.set_title("Counts", fontsize=12, pad=6)
         colorbar.ax.tick_params(labelsize=12)
     else:
