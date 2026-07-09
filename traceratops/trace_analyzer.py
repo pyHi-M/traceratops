@@ -98,9 +98,9 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
 
     trace_lengths = list()
     trace_unique_barcodes = list()
-    #trace_repeated_barcodes = list()
+    # trace_repeated_barcodes = list()
     number_unique_barcodes = list()
-    #number_repeated_barcodes = list()
+    # number_repeated_barcodes = list()
 
     for sub_trace_table in trace_by_ID.groups:
         trace_lengths.append(len(sub_trace_table))
@@ -113,8 +113,8 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     axis_x_labels = [
         "$N_{barcodes}$",
         "$N_{unique-barcodes}$",
-        ]
-        
+    ]
+
     number_plots = len(distributions)
 
     fig = plt.figure(constrained_layout=True)
@@ -122,7 +122,7 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     fig.set_size_inches((im_size * number_plots, im_size))
     gs = fig.add_gridspec(1, number_plots)
     axes = [fig.add_subplot(gs[0, i]) for i in range(number_plots)]
-    bins=np.arange(1,np.max(number_unique_barcodes))
+    bins = np.arange(1, np.max(number_unique_barcodes))
 
     for axis, distribution, xlabel in zip(axes, distributions, axis_x_labels):
         axis.hist(distribution, bins=bins, alpha=0.3)
@@ -138,12 +138,68 @@ def get_barcode_statistics(trace, output_filename="test_barcodes.png"):
     plt.savefig(output_filename)
 
 
+def _get_genomic_barcode_order(trace_table):
+    """Return barcode order after sorting unique barcodes by genomic coordinates."""
+    genomic_columns = ["Chrom", "Chrom_Start", "Chrom_End"]
+    missing_columns = [
+        col for col in genomic_columns if col not in trace_table.colnames
+    ]
+    if missing_columns:
+        raise ValueError(
+            "Trace table is missing genomic coordinate columns required for "
+            f"neighbor ordering: {', '.join(missing_columns)}"
+        )
+
+    barcode_coordinates = {}
+    for row in trace_table:
+        barcode = row["Barcode #"]
+        genomic_coordinate = (row["Chrom"], row["Chrom_Start"], row["Chrom_End"])
+        if (
+            barcode in barcode_coordinates
+            and barcode_coordinates[barcode] != genomic_coordinate
+        ):
+            raise ValueError(
+                f"Barcode {barcode} has multiple genomic coordinates: "
+                f"{barcode_coordinates[barcode]} and {genomic_coordinate}"
+            )
+        barcode_coordinates[barcode] = genomic_coordinate
+
+    return [
+        barcode
+        for barcode, _ in sorted(
+            barcode_coordinates.items(),
+            key=lambda item: (item[1][0], item[1][1], item[1][2]),
+        )
+    ]
+
+
+def _plot_neighbor_hexbin(ax, previous_distances, next_distances, title):
+    """Plot density of previous-versus-next neighbor distances as a hexbin map."""
+    ax.set_xlabel(r"$|distance(barcode\ i+1, barcode\ i)|$, um")
+    ax.set_ylabel(r"$|distance(barcode\ i, barcode\ i-1)|$, um")
+    ax.set_title(title, fontsize=10)
+
+    if len(previous_distances) == 0 or len(next_distances) == 0:
+        ax.text(0.5, 0.5, "No consecutive triplets", ha="center", va="center")
+        return None
+
+    return ax.hexbin(
+        next_distances,
+        previous_distances,
+        gridsize=35,
+        mincnt=1,
+        cmap="cubehelix_r",
+    )
+
+
 def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
     """
     Calculate and visualize distances between consecutive neighboring barcodes.
 
-    This function computes the mean and standard deviation of X, Y, and Z distances
-    between strictly consecutive neighboring barcodes and generates histograms for each dimension.
+    This function computes X, Y, and Z distances between barcodes that are
+    consecutive both numerically and in genomic-coordinate order. It also plots
+    hexbin density maps comparing each barcode's distance to its next and
+    previous genomic neighbors.
 
     Parameters
     ----------
@@ -160,34 +216,73 @@ def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
     """
     trace_table = trace.data
     trace_by_ID = trace_table.group_by("Trace_ID")
+    genomic_barcode_order = _get_genomic_barcode_order(trace_table)
+    genomic_barcode_rank = {
+        barcode: rank for rank, barcode in enumerate(genomic_barcode_order)
+    }
 
     dx_all, dy_all, dz_all = [], [], []
+    xy_previous_all, xy_next_all = [], []
+    xyz_previous_all, xyz_next_all = [], []
 
     for sub_trace_table in trace_by_ID.groups:
-        # Sort by Barcode #
-        sorted_trace = sub_trace_table[np.argsort(sub_trace_table["Barcode #"])]
+        # Sort barcodes according to ascending genomic coordinates.
+        sorted_trace = sub_trace_table[
+            np.argsort(
+                [
+                    genomic_barcode_rank[barcode]
+                    for barcode in sub_trace_table["Barcode #"]
+                ]
+            )
+        ]
 
-        # Get barcodes and coordinates
         barcodes = sorted_trace["Barcode #"].data
         x_coords = sorted_trace["x"].data
         y_coords = sorted_trace["y"].data
         z_coords = sorted_trace["z"].data
+        neighbor_distances = {}
 
-        # Iterate and calculate distances only for strictly consecutive barcodes
         for i in range(len(barcodes) - 1):
-            if barcodes[i + 1] == barcodes[i] + 1:  # Ensure strict consecutiveness
-                dx_all.append(x_coords[i + 1] - x_coords[i])
-                dy_all.append(y_coords[i + 1] - y_coords[i])
-                dz_all.append(z_coords[i + 1] - z_coords[i])
+            is_numeric_neighbor = barcodes[i + 1] == barcodes[i] + 1
+            is_genomic_neighbor = (
+                genomic_barcode_rank[barcodes[i + 1]]
+                == genomic_barcode_rank[barcodes[i]] + 1
+            )
+            if is_numeric_neighbor and is_genomic_neighbor:
+                dx = x_coords[i + 1] - x_coords[i]
+                dy = y_coords[i + 1] - y_coords[i]
+                dz = z_coords[i + 1] - z_coords[i]
+                dx_all.append(dx)
+                dy_all.append(dy)
+                dz_all.append(dz)
+                neighbor_distances[barcodes[i]] = (
+                    np.hypot(dx, dy),
+                    np.sqrt(dx**2 + dy**2 + dz**2),
+                )
+
+        for i in range(1, len(barcodes) - 1):
+            previous_barcode = barcodes[i - 1]
+            current_barcode = barcodes[i]
+            if (
+                previous_barcode in neighbor_distances
+                and current_barcode in neighbor_distances
+            ):
+                previous_xy, previous_xyz = neighbor_distances[previous_barcode]
+                next_xy, next_xyz = neighbor_distances[current_barcode]
+                xy_previous_all.append(abs(previous_xy))
+                xy_next_all.append(abs(next_xy))
+                xyz_previous_all.append(abs(previous_xyz))
+                xyz_next_all.append(abs(next_xyz))
 
     # Compute mean and standard deviation
     mean_dx, std_dx = (np.mean(dx_all), np.std(dx_all)) if dx_all else (0, 0)
     mean_dy, std_dy = (np.mean(dy_all), np.std(dy_all)) if dy_all else (0, 0)
     mean_dz, std_dz = (np.mean(dz_all), np.std(dz_all)) if dz_all else (0, 0)
 
-    # Create figure with three histograms
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle("Distances between consecutive neighboring barcodes", fontsize=25)
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    fig.suptitle(
+        "Distances between consecutive genomic neighboring barcodes", fontsize=25
+    )
 
     data = [dx_all, dy_all, dz_all]
     labels = [r"$\Delta x$, um", r"$\Delta y$, um", r"$\Delta z$, um"]
@@ -195,18 +290,30 @@ def plot_neighbor_distances(trace, output_filename="neighbor_distances.png"):
     means = [mean_dx, mean_dy, mean_dz]
     stds = [std_dx, std_dy, std_dz]
 
-    for i, (ax, dist, label, mean_val, std_val, color) in enumerate(
-        zip(axes, data, labels, means, stds, colors)
+    for ax, dist, label, mean_val, std_val, color in zip(
+        axes[0], data, labels, means, stds, colors
     ):
         ax.hist(dist, bins=30, alpha=0.7, color=color, edgecolor="black")
         ax.set_xlabel(label)
         ax.set_ylabel("Counts")
-        ax.set_title(
-            f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=10
-        )  # Smaller title
+        ax.set_title(f"Mean: {mean_val:.3f}\nStd: {std_val:.3f}", fontsize=10)
+
+    xy_hexbin = _plot_neighbor_hexbin(
+        axes[1, 0], xy_previous_all, xy_next_all, "XY neighbor-distance density"
+    )
+    xyz_hexbin = _plot_neighbor_hexbin(
+        axes[1, 1], xyz_previous_all, xyz_next_all, "XYZ neighbor-distance density"
+    )
+    axes[1, 2].axis("off")
+
+    if xy_hexbin is not None:
+        fig.colorbar(xy_hexbin, ax=axes[1, 0], label="Counts")
+    if xyz_hexbin is not None:
+        fig.colorbar(xyz_hexbin, ax=axes[1, 1], label="Counts")
 
     plt.tight_layout()
     plt.savefig(output_filename)
+    plt.close(fig)
     print(f"$ Saved neighbor distances plot: {output_filename}")
 
     return mean_dx, mean_dy, mean_dz, std_dx, std_dy, std_dz
