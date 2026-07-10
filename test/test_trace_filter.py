@@ -279,12 +279,67 @@ def test_filter_by_localization_metrics_combines_thresholds():
             "intensity": 10.0,
             "snr": 5.0,
             "object_class": 1,
-            "roundness": 0.6,
         },
+        {"roundness": 0.6},
     )
 
-    assert list(trace.data["Spot_ID"]) == ["spot-1", "spot-4"]
-    assert intensities_kept == [10.0, 12.0]
+    assert list(trace.data["Spot_ID"]) == ["spot-4"]
+    assert intensities_kept == [12.0]
+
+
+def test_args_quality_filters_uses_maximums_for_roundness_and_spot_pixel_percentage():
+    from traceratops.trace_filter import args_quality_filters_to_dict, parse_arguments
+
+    parser = parse_arguments()
+    args = parser.parse_args(
+        [
+            "--input",
+            "trace.ecsv",
+            "--snr_min",
+            "5",
+            "--roundness_max",
+            "0.75",
+            "--spot_pixel_percentage_max",
+            "40",
+        ]
+    )
+
+    assert args_quality_filters_to_dict(args) == {
+        "minimum": {"snr": 5.0},
+        "maximum": {"spot_pixel_percentage": 40.0, "roundness": 0.75},
+    }
+
+
+def test_filter_by_localization_metrics_removes_values_above_maximums():
+    from astropy.table import Table
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("spot-1", "trace-a", 1),
+            ("spot-2", "trace-a", 2),
+            ("spot-3", "trace-a", 3),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #"),
+    )
+    localizations = Table(
+        rows=[
+            ("spot-1", 0.5, 20.0),
+            ("spot-2", 0.7, 20.0),
+            ("spot-3", 0.5, 45.0),
+        ],
+        names=("Buid", "roundness", "spot_pixel_percentage"),
+    )
+
+    trace.filter_by_localization_metrics(
+        trace,
+        localizations,
+        {},
+        {"roundness": 0.6, "spot_pixel_percentage": 40.0},
+    )
+
+    assert list(trace.data["Spot_ID"]) == ["spot-1"]
 
 
 def test_clean_spots_preserves_reused_spot_ids_across_traces():
