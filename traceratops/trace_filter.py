@@ -40,7 +40,7 @@ The script can process single files or multiple files via pipe input.
     $ trace_filter --input Trace.ecsv --remove_label region1
 
     # Filter by localization quality metrics
-    $ trace_filter --input Trace.ecsv --localization_file Localizations.ecsv --intensity_min 1000 --snr_min 5 --object_class_min 1
+    $ trace_filter --input Trace.ecsv --localization_file Localizations.ecsv --intensity_min 1000 --snr_min 5 --object_class_min 1 --roundness_max 0.8
 
     # Process multiple files via pipe
     $ ls *Trace.ecsv | trace_filter --pipe --n_barcodes 3
@@ -131,19 +131,19 @@ def parse_arguments():
         default=0.0,
         help="Minimum intensity threshold for localizations. Uses mean_intensity for new localization tables and peak for legacy tables.",
     )
-    for metric in (
-        "snr",
-        "spot_pixel_percentage",
-        "skew",
-        "patch_size",
-        "object_class",
-        "roundness",
-    ):
+    for metric in ("snr", "skew", "patch_size", "object_class"):
         psr_intensity.add_argument(
             f"--{metric}_min",
             type=float,
             default=0.0,
             help=f"Minimum {metric} threshold for localizations.",
+        )
+    for metric in ("spot_pixel_percentage", "roundness"):
+        psr_intensity.add_argument(
+            f"--{metric}_max",
+            type=float,
+            default=0.0,
+            help=f"Maximum {metric} threshold for localizations.",
         )
 
     psr_coord = parser.add_argument_group(
@@ -183,15 +183,24 @@ def args_coord_to_dict(args):
 
 
 def args_quality_filters_to_dict(args):
-    quality_filters = {
+    minimum_filters = {
         "snr": args.snr_min,
-        "spot_pixel_percentage": args.spot_pixel_percentage_min,
         "skew": args.skew_min,
         "patch_size": args.patch_size_min,
         "object_class": args.object_class_min,
-        "roundness": args.roundness_min,
     }
-    return {metric: minimum for metric, minimum in quality_filters.items() if minimum}
+    maximum_filters = {
+        "spot_pixel_percentage": args.spot_pixel_percentage_max,
+        "roundness": args.roundness_max,
+    }
+    return {
+        "minimum": {
+            metric: minimum for metric, minimum in minimum_filters.items() if minimum
+        },
+        "maximum": {
+            metric: maximum for metric, maximum in maximum_filters.items() if maximum
+        },
+    }
 
 
 def get_files_from_args(args):
@@ -278,8 +287,10 @@ def runtime(
         )
 
     quality_filters = quality_filters or {}
+    minimum_filters = quality_filters.get("minimum", quality_filters)
+    maximum_filters = quality_filters.get("maximum", {})
     if intensity_min:
-        quality_filters["intensity"] = intensity_min
+        minimum_filters["intensity"] = intensity_min
 
     localizations_data = None
     if localizations_file:
@@ -342,9 +353,9 @@ def runtime(
 
         # removes localizations that do not satisfy localization quality thresholds
         print("\n$ Filtering barcodes based on localization quality")
-        if quality_filters and localizations_file:
+        if (minimum_filters or maximum_filters) and localizations_file:
             intensities_kept = trace.filter_by_localization_metrics(
-                trace, localizations_data, quality_filters
+                trace, localizations_data, minimum_filters, maximum_filters
             )
             if intensity_min:
                 output_file = trace_file.split(".")[0]
@@ -352,7 +363,7 @@ def runtime(
                     intensities_kept,
                     output_file=f"{output_file}_filtered_intensities.{output_format}",
                 )
-        elif quality_filters and not localizations_file:
+        elif (minimum_filters or maximum_filters) and not localizations_file:
             print("! Localization quality filters require --localization_file; skipping.")
 
         print("\n$ Filtering barcode number")

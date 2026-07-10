@@ -559,7 +559,9 @@ class ChromatinTraceTable:
             trace, localizations, {"intensity": intensity_min}
         )
 
-    def filter_by_localization_metrics(self, trace, localizations, minimum_thresholds):
+    def filter_by_localization_metrics(
+        self, trace, localizations, minimum_thresholds, maximum_thresholds=None
+    ):
         """Filter trace rows by one or more localization-table quality thresholds.
 
         Parameters
@@ -573,18 +575,26 @@ class ChromatinTraceTable:
             The special ``intensity`` key keeps backward-compatible behavior by
             resolving to ``mean_intensity`` in new tables or ``peak`` in legacy
             tables.
+        maximum_thresholds : dict, optional
+            Mapping of localization-table metric names to maximum values to keep.
         """
-        thresholds = {
+        minimum_thresholds = {
             metric: minimum
             for metric, minimum in minimum_thresholds.items()
             if minimum is not None
         }
-        if not thresholds:
+        maximum_thresholds = {
+            metric: maximum
+            for metric, maximum in (maximum_thresholds or {}).items()
+            if maximum is not None
+        }
+        if not minimum_thresholds and not maximum_thresholds:
             return []
 
         localizations.add_index("Buid")  # Add an index for fast lookup
-        resolved_thresholds = {}
-        for metric, minimum in thresholds.items():
+        resolved_minimum_thresholds = {}
+        resolved_maximum_thresholds = {}
+        for metric, minimum in minimum_thresholds.items():
             column_name = (
                 self._get_localization_intensity_column(localizations)
                 if metric == "intensity"
@@ -595,14 +605,27 @@ class ChromatinTraceTable:
                     f"Localization table must contain a '{column_name}' column "
                     f"to filter by '{metric}'."
                 )
-            resolved_thresholds[column_name] = minimum
+            resolved_minimum_thresholds[column_name] = minimum
+
+        for metric, maximum in maximum_thresholds.items():
+            column_name = (
+                self._get_localization_intensity_column(localizations)
+                if metric == "intensity"
+                else metric
+            )
+            if column_name not in localizations.colnames:
+                raise KeyError(
+                    f"Localization table must contain a '{column_name}' column "
+                    f"to filter by '{metric}'."
+                )
+            resolved_maximum_thresholds[column_name] = maximum
 
         rows_to_remove = []
         number_spots = len(trace.data)
         intensities_kept = list()
         intensity_column = (
             self._get_localization_intensity_column(localizations)
-            if "intensity" in thresholds
+            if "intensity" in minimum_thresholds or "intensity" in maximum_thresholds
             else None
         )
 
@@ -614,10 +637,15 @@ class ChromatinTraceTable:
                 continue  # If Spot_ID is not found, keep the entry
 
             remove_row = False
-            for column_name, minimum in resolved_thresholds.items():
+            for column_name, minimum in resolved_minimum_thresholds.items():
                 if localization[column_name] < minimum:
                     remove_row = True
                     break
+            if not remove_row:
+                for column_name, maximum in resolved_maximum_thresholds.items():
+                    if localization[column_name] > maximum:
+                        remove_row = True
+                        break
 
             if remove_row:
                 rows_to_remove.append(idx)
@@ -626,11 +654,17 @@ class ChromatinTraceTable:
 
         trace.data.remove_rows(rows_to_remove)
         threshold_summary = ", ".join(
-            f"{column_name}>={minimum}"
-            for column_name, minimum in resolved_thresholds.items()
+            [
+                f"{column_name}>={minimum}"
+                for column_name, minimum in resolved_minimum_thresholds.items()
+            ]
+            + [
+                f"{column_name}<={maximum}"
+                for column_name, maximum in resolved_maximum_thresholds.items()
+            ]
         )
         print(
-            f"> Removed {len(rows_to_remove)}/{number_spots} localizations below localization quality thresholds ({threshold_summary})."
+            f"> Removed {len(rows_to_remove)}/{number_spots} localizations outside localization quality thresholds ({threshold_summary})."
         )
         print(f"> Number of rows in filtered trace table: {len(trace.data)}")
 
