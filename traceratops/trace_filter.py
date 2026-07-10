@@ -50,6 +50,7 @@ The script can process single files or multiple files via pipe input.
 
 from traceratops.script_banner import print_script_banner
 import argparse
+import os
 import sys
 
 import numpy as np
@@ -260,6 +261,24 @@ def filter_label(label_to_keep, label_to_remove, trace):
     return trace, file_tag
 
 
+def get_filtered_localizations(localizations_data, trace_data):
+    """Return localizations whose ``Buid`` is still present in the trace table."""
+    if localizations_data is None or trace_data is None or len(trace_data) == 0:
+        return localizations_data[:0]
+
+    remaining_spot_ids = {str(spot_id) for spot_id in trace_data["Spot_ID"]}
+    rows_to_keep = [
+        str(localization_id) in remaining_spot_ids
+        for localization_id in localizations_data["Buid"]
+    ]
+    return localizations_data[rows_to_keep]
+
+
+def get_file_root(file_name):
+    """Return a file path without its final extension."""
+    return os.path.splitext(file_name)[0]
+
+
 def runtime(
     trace_files=[],
     n_barcodes=2,
@@ -305,7 +324,7 @@ def runtime(
             localizations_data
         )
         intensities = [row[intensity_column] for row in localizations_data]
-        output_file = localizations_file.split(".")[0]
+        output_file = get_file_root(localizations_file)
         localization_table.plot_intensity_distribution(
             intensities,
             output_file=f"{output_file}_localization_intensities.{output_format}",
@@ -358,7 +377,7 @@ def runtime(
                 trace, localizations_data, minimum_filters, maximum_filters
             )
             if intensity_min:
-                output_file = trace_file.split(".")[0]
+                output_file = get_file_root(trace_file)
                 localization_table.plot_intensity_distribution(
                     intensities_kept,
                     output_file=f"{output_file}_filtered_intensities.{output_format}",
@@ -370,9 +389,29 @@ def runtime(
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
-        outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
+        output_root = get_file_root(trace_file) + "_" + tag + file_tag
+        outputfile = output_root + ".ecsv"
         trace.save(outputfile, comments=", ".join(comments))
         print(f"$ Saved output trace file at: {outputfile}")
+
+        if localizations_file:
+            filtered_localizations = get_filtered_localizations(
+                localizations_data, trace.data
+            )
+            localization_outputfile = output_root + "_localizations.ecsv"
+            localization_table.save(
+                localization_outputfile,
+                filtered_localizations,
+                comments="localizations kept in filtered trace table",
+            )
+            print(
+                "$ Saved filtered localization table with "
+                f"{len(filtered_localizations)} rows at: {localization_outputfile}"
+            )
+            localization_table.plot_distribution_fluxes(
+                filtered_localizations,
+                [f"{output_root}_localization_distribution_fluxes.{output_format}"],
+            )
     return len(trace_files)
 
 
