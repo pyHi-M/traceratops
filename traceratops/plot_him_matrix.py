@@ -6,7 +6,6 @@ This script calculates and plots matrices (PWD and proximity) from:
     - a file with the unique barcodes used
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -21,6 +20,7 @@ from traceratops.core.him_matrix_operations import (
     plot_him_matrix,
     plot_nan_matrix,
 )
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

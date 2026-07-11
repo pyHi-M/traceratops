@@ -10,13 +10,13 @@ and merges them into a single output file. It preserves all data from the origin
 while combining them into one comprehensive table.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
 import sys
 
 from traceratops.core.localization_table import LocalizationTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

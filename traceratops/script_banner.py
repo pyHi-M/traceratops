@@ -34,7 +34,9 @@ _SCRIPT_DESCRIPTIONS = {
 def print_script_banner(script_file: str, description: str | None) -> None:
     """Print a standard banner with the script name and a short description."""
     script_name = Path(script_file).name
-    summary = _SCRIPT_DESCRIPTIONS.get(script_name, "") or _first_description_line(description)
+    summary = _SCRIPT_DESCRIPTIONS.get(script_name, "") or _first_description_line(
+        description
+    )
 
     print(f"------- Running {script_name} --------")
     if summary:

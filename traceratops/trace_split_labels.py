@@ -13,11 +13,11 @@ Example:
         Trace_filtered_not:Pdx1.ecsv
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 # === ARGUMENTS ===

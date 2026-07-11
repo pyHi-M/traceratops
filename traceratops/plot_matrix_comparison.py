@@ -8,7 +8,6 @@ Compare PWD matrices from two experiments
 - same but single cell [TODO]
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import sys
 
@@ -21,6 +20,7 @@ from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
     calculate_ensemble_pwd_matrix,
 )
+from traceratops.script_banner import print_script_banner
 
 sns.set(font_scale=2)
 

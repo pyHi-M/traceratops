@@ -4,7 +4,6 @@
 Load a trace file and a number of numpy masks and assign them labels
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -15,6 +14,7 @@ import numpy as np
 import tifffile as tf
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

@@ -17,7 +17,6 @@ This is particularly useful for analyzing higher-order chromatin organization an
 spatial relationships in microscopy data.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -28,6 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff):
@@ -218,7 +218,7 @@ def plot_threeway_matrix(
     distance_cutoff=0.2,
     vmin=None,
     vmax=None,
-    output_format='png'
+    output_format="png",
 ):
     """
     Creates a heatmap of three-way co-localization frequencies using matplotlib.

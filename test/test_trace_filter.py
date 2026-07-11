@@ -223,6 +223,7 @@ def test_intensity():
 
 def test_localization_intensity_column_prefers_mean_intensity():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     localization_table = Table(
@@ -238,6 +239,7 @@ def test_localization_intensity_column_prefers_mean_intensity():
 
 def test_localization_intensity_column_accepts_legacy_peak():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     localization_table = Table(rows=[(20.0,)], names=("peak",))
@@ -250,6 +252,7 @@ def test_localization_intensity_column_accepts_legacy_peak():
 
 def test_filter_by_localization_metrics_combines_thresholds():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     trace = ChromatinTraceTable()
@@ -312,6 +315,7 @@ def test_args_quality_filters_uses_maximums_for_roundness_and_spot_pixel_percent
 
 def test_filter_by_localization_metrics_removes_values_above_maximums():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     trace = ChromatinTraceTable()
@@ -344,6 +348,7 @@ def test_filter_by_localization_metrics_removes_values_above_maximums():
 
 def test_clean_spots_preserves_reused_spot_ids_across_traces():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     trace = ChromatinTraceTable()
@@ -366,6 +371,7 @@ def test_clean_spots_preserves_reused_spot_ids_across_traces():
 
 def test_filter_traces_by_n_handles_empty_trace_table():
     from astropy.table import Table
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     trace = ChromatinTraceTable()

@@ -255,8 +255,10 @@ def list_sc_to_keep(p, mask):
         a = [i for i in range(len(mask)) if mask[i] == 0]
         cells_to_plot = a
 
-    print(f'>> label: {p["label"]}\t action:{p["action"]}\
-            \t Ncells2plot:{max(cells_to_plot)}\t Ncells in sc_matrix:{len(mask)}')
+    print(
+        f'>> label: {p["label"]}\t action:{p["action"]}\
+            \t Ncells2plot:{max(cells_to_plot)}\t Ncells in sc_matrix:{len(mask)}'
+    )
 
     return cells_to_plot
 

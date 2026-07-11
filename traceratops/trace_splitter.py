@@ -4,7 +4,6 @@
 Split chromatin traces using K-means clustering when their radius of gyration exceeds a threshold.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -15,6 +14,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

@@ -4,7 +4,6 @@
 uses the core routines of pyHiM to convert a trace file to a matrix in a standalone script
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -12,6 +11,7 @@ import sys
 import numpy as np
 
 from traceratops.core.build_matrix import BuildMatrix
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

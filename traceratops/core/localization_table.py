@@ -364,7 +364,15 @@ class LocalizationTable:
         parts["cmins"].set_color("black")
         parts["cmaxes"].set_color("black")
 
-        p_2 = ax[1].scatter(snr, zcentroid, c=object_class, cmap="seismic", alpha=0.55, vmin=-0.1, vmax=1.1)
+        p_2 = ax[1].scatter(
+            snr,
+            zcentroid,
+            c=object_class,
+            cmap="seismic",
+            alpha=0.55,
+            vmin=-0.1,
+            vmax=1.1,
+        )
         ax[1].set_xlabel("snr", fontsize=axes_label_size)
         ax[1].set_ylabel("z_centroid", fontsize=axes_label_size)
 

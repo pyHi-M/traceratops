@@ -52,6 +52,7 @@ def test_merge_conflict():
 
 def test_merge_4dn_numeric_spot_id_with_ecsv_spot_id(tmp_path):
     from astropy.table import Table, vstack
+
     from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 
     fofct_file = tmp_path / "numeric_spot_ids.4dn"

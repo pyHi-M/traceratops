@@ -7,12 +7,12 @@ in the trace table based on the 'Barcode #' column. If the BED file provides a f
 the barcode in the trace table is updated to the new value.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
