@@ -6,7 +6,6 @@ Analyze chromatin trace files.
 
 from traceratops.script_banner import print_script_banner
 import argparse
-import collections
 import select
 import sys
 from collections import defaultdict
@@ -325,20 +324,6 @@ def plot_neighbor_distances(
     )
     axis_limits = _resolve_neighbor_distance_limits(
         neighbor_distance_range, all_neighbor_distances
-    )
-
-    fig = plt.figure(figsize=(18, 13))
-    gs = fig.add_gridspec(
-        2,
-        8,
-        width_ratios=[1, 1, 1, 0.12, 1, 1, 1, 0.12],
-        height_ratios=[2.2, 1],
-        hspace=0.45,
-        wspace=0.85,
-        left=0.07,
-        right=0.96,
-        top=0.88,
-        bottom=0.08,
     )
 
     fig = plt.figure(figsize=(18, 13))

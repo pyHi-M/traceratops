@@ -1,0 +1,25 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: Buid, datatype: string}
+# - {name: 'ROI #', datatype: int64}
+# - {name: 'CellID #', datatype: int64}
+# - {name: 'Barcode #', datatype: int64}
+# - {name: id, datatype: int64}
+# - {name: zcentroid, datatype: float32}
+# - {name: xcentroid, datatype: float32}
+# - {name: ycentroid, datatype: float32}
+# - {name: sharpness, datatype: float32}
+# - {name: roundness1, datatype: float32}
+# - {name: roundness2, datatype: float32}
+# - {name: npix, datatype: int64}
+# - {name: sky, datatype: float32}
+# - {name: peak, datatype: float32}
+# - {name: flux, datatype: float32}
+# - {name: mag, datatype: float32}
+# meta: !!omap
+# - comments: [localizations kept in filtered trace table]
+# schema: astropy-2.0
+Buid "ROI #" "CellID #" "Barcode #" id zcentroid xcentroid ycentroid sharpness roundness1 roundness2 npix sky peak flux mag
+0000005 5 0 22 4 8.0 201.0 62.0 0.41 7.98 0.41 260 0.0 570.0 11300.0 -10.3
+0000007 5 0 24 6 8.0 203.0 62.0 0.39 7.9 0.39 250 0.0 590.0 11500.0 -10.5
