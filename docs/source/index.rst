@@ -3,6 +3,9 @@ traceratops documentation
 
 **Date**: |today| **Version**: |release|
 
+A toolbox for trace analysis, visualization and quality assessment.
+Corresponding to the post-processing of pyHiM data, compatible with the `4DN FISH Omics Format <https://fish-omics-format.readthedocs.io/en/latest/>`_.
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
@@ -14,8 +17,17 @@ traceratops documentation
    :maxdepth: 1
    :caption: Tutorials
 
-   Filter by intensity<tutorials/filter_intensity>
-   Plot interactions<tutorials/plot_interactions>
+   Getting started with notebooks<tutorials/start_with_ipynb>
+   Using the --pipe argument<tutorials/using_pipe>
+   01 - Merge Multi-ROI<tutorials/tutorial_01_merge_multi_roi.ipynb>
+   02 - Quality Control<tutorials/tutorial_02_quality_control.ipynb>
+   03 - Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
+   04 - Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
+   05 - Split Traces<tutorials/tutorial_05_split_traces.ipynb>
+   06 - Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
+   07 - Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
+   08 - Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
+   09 - Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
 
 .. toctree::
    :maxdepth: 1
@@ -32,6 +44,7 @@ traceratops documentation
    :caption: Contribute
 
    contribute/CONTRIBUTING
-   Installation [DEV]<contribute/dev_installation>
+   contribute/dev_installation
    contribute/how_to_document
    contribute/pr_checklists
+   contribute/release_guide

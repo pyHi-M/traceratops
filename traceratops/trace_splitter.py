@@ -14,6 +14,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -120,9 +121,9 @@ def split_large_traces(trace_table, std_threshold, num_clusters):
         rg = compute_radius_of_gyration(coords)
 
         if rg > rg_threshold and len(coords) > num_clusters:
-            print(
-                f"$ Splitting trace {original_trace_id} (Rg={rg:.3f}) into {num_clusters} clusters."
-            )
+            # print(
+            #     f"$ Splitting trace {original_trace_id} (Rg={rg:.3f}) into {num_clusters} clusters."
+            # )
             kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
             labels = kmeans.fit_predict(coords)
 
@@ -141,6 +142,7 @@ def split_large_traces(trace_table, std_threshold, num_clusters):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """Main function to handle input, processing, and output."""
     parser = parse_arguments()
     args = parser.parse_args()
@@ -170,8 +172,7 @@ def main():
                 f"Applying K-means clustering with {args.num_clusters} clusters on traces with Rg > mean + {args.std_threshold} * std_dev..."
             )
             split_large_traces(trace_table, args.std_threshold, args.num_clusters)
-
-            trace_table.save(output_filename, trace_table.data)
+            trace_table.save(output_filename)
             # print(f"Saved modified trace table: {output_filename}")
 
     else:

@@ -53,16 +53,20 @@ def _test_trace_filter_common(
 
 # ==== FILE LISTS ====
 
-INPUT_FILES = os.listdir(INPUT_DIR)
+# Keep parametrized inputs explicit so generated files from interrupted or failed
+# test runs do not become test cases on the next invocation. Several tests write
+# outputs back into INPUT_DIR before cleaning them up; if a run is interrupted,
+# those stale ``.ecsv``/``.png`` files must not pollute collection.
+INPUT_FILES = sorted(os.listdir(INPUT_DIR))
 
 trace_input_files = [
-    f
-    for f in INPUT_FILES
-    if f.endswith(".ecsv") and "_filtered" not in f and "trace" in f
+    "one_trace_four_spots.ecsv",
+    "trace_3D_barcode_KDtree_ROI-5.ecsv",
+    "two_traces_seven_spots.ecsv",
 ]
-forpipe_files = [f for f in INPUT_FILES if f.endswith(".txt") and "forpipe" in f]
-one_trace_files = [f for f in INPUT_FILES if "one_trace_four_spots.ecsv" in f]
-duplicate_spot_files = [f for f in INPUT_FILES if "duplicate_spot" in f]
+forpipe_files = ["forpipe1file.txt", "forpipe2files.txt"]
+one_trace_files = ["one_trace_four_spots.ecsv"]
+duplicate_spot_files = ["duplicate_spot.ecsv", "duplicate_spot_id.ecsv"]
 
 
 # ==== TESTS ====
@@ -215,3 +219,166 @@ def test_intensity():
     ]
 
     _test_trace_filter_common(input_file, args, suffix="_intensity", clean_png=True)
+
+
+def test_localization_intensity_column_prefers_mean_intensity():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(
+        rows=[(10.0, 20.0)],
+        names=("mean_intensity", "peak"),
+    )
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "mean_intensity"
+    )
+
+
+def test_localization_intensity_column_accepts_legacy_peak():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    localization_table = Table(rows=[(20.0,)], names=("peak",))
+
+    assert (
+        ChromatinTraceTable._get_localization_intensity_column(localization_table)
+        == "peak"
+    )
+
+
+def test_filter_by_localization_metrics_combines_thresholds():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("spot-1", "trace-a", 1),
+            ("spot-2", "trace-a", 2),
+            ("spot-3", "trace-a", 3),
+            ("spot-4", "trace-a", 4),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #"),
+    )
+    localizations = Table(
+        rows=[
+            ("spot-1", 10.0, 5.0, 1, 0.9),
+            ("spot-2", 9.0, 4.0, 1, 0.8),
+            ("spot-3", 11.0, 6.0, 0, 0.7),
+            ("spot-4", 12.0, 7.0, 1, 0.6),
+        ],
+        names=("Buid", "mean_intensity", "snr", "object_class", "roundness"),
+    )
+
+    intensities_kept = trace.filter_by_localization_metrics(
+        trace,
+        localizations,
+        {
+            "intensity": 10.0,
+            "snr": 5.0,
+            "object_class": 1,
+        },
+        {"roundness": 0.6},
+    )
+
+    assert list(trace.data["Spot_ID"]) == ["spot-4"]
+    assert intensities_kept == [12.0]
+
+
+def test_args_quality_filters_uses_maximums_for_roundness_and_spot_pixel_percentage():
+    from traceratops.trace_filter import args_quality_filters_to_dict, parse_arguments
+
+    parser = parse_arguments()
+    args = parser.parse_args(
+        [
+            "--input",
+            "trace.ecsv",
+            "--snr_min",
+            "5",
+            "--roundness_max",
+            "0.75",
+            "--spot_pixel_percentage_max",
+            "40",
+        ]
+    )
+
+    assert args_quality_filters_to_dict(args) == {
+        "minimum": {"snr": 5.0},
+        "maximum": {"spot_pixel_percentage": 40.0, "roundness": 0.75},
+    }
+
+
+def test_filter_by_localization_metrics_removes_values_above_maximums():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("spot-1", "trace-a", 1),
+            ("spot-2", "trace-a", 2),
+            ("spot-3", "trace-a", 3),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #"),
+    )
+    localizations = Table(
+        rows=[
+            ("spot-1", 0.5, 20.0),
+            ("spot-2", 0.7, 20.0),
+            ("spot-3", 0.5, 45.0),
+        ],
+        names=("Buid", "roundness", "spot_pixel_percentage"),
+    )
+
+    trace.filter_by_localization_metrics(
+        trace,
+        localizations,
+        {},
+        {"roundness": 0.6, "spot_pixel_percentage": 40.0},
+    )
+
+    assert list(trace.data["Spot_ID"]) == ["spot-1"]
+
+
+def test_clean_spots_preserves_reused_spot_ids_across_traces():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        rows=[
+            ("1", "trace-a", 1, 0.0, 0.0, 0.0),
+            ("1", "trace-b", 2, 1.0, 1.0, 1.0),
+            ("2", "trace-b", 3, 2.0, 2.0, 2.0),
+            ("2", "trace-b", 4, 3.0, 3.0, 3.0),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z"),
+    )
+
+    trace.remove_duplicates()
+
+    assert len(trace.data) == 2
+    assert list(trace.data["Trace_ID"]) == ["trace-a", "trace-b"]
+    assert list(trace.data["Spot_ID"]) == ["1", "1"]
+
+
+def test_filter_traces_by_n_handles_empty_trace_table():
+    from astropy.table import Table
+
+    from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+
+    trace = ChromatinTraceTable()
+    trace.data = Table(
+        names=("Spot_ID", "Trace_ID", "Barcode #"), dtype=(str, str, int)
+    )
+
+    trace.filter_traces_by_n(minimum_number_barcodes=4)
+
+    assert len(trace.data) == 0

@@ -20,6 +20,7 @@ from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 from traceratops.core.io_manager import create_folder
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -36,6 +37,12 @@ def parse_arguments():
 
     parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
+    )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     return parser
 
@@ -70,6 +77,7 @@ def create_dict_args(args):
     else:
         p["N_barcodes"] = 2
 
+    p["output_format"] = args.output_format
     p["trace_files"] = []
     if args.pipe:
         p["pipe"] = True
@@ -128,12 +136,21 @@ def plot_repeated_barcodes(trace_data):
 
 
 class FilterTraces:
-    def __init__(self, data_folder, data_file, dest_folder, threshold=0, verbose=False):
+    def __init__(
+        self,
+        data_folder,
+        data_file,
+        dest_folder,
+        threshold=0,
+        verbose=False,
+        output_format="png",
+    ):
         self.data_folder: str = data_folder
         self.data_file: str = data_file
         self.dest_folder: str = dest_folder
         self.overlapping_threshold: float = threshold  # in µm
         self.verbose: bool = verbose
+        self.output_format: str = output_format
         self.data = None
         self.p95: float = 0
         self.p99: float = 0
@@ -253,8 +270,10 @@ class FilterTraces:
                 f"Median={med}µm - quantile 95%={self.p95}µm - quantile 99%={self.p99}µm"
             )
             if save:
-                fig_path = os.path.join(self.dest_folder, "pairwise_distance_stat.png")
-                plt.savefig(fig_path, dpi=200, format="png")
+                fig_path = os.path.join(
+                    self.dest_folder, f"pairwise_distance_stat.{self.output_format}"
+                )
+                plt.savefig(fig_path, dpi=200, format=self.output_format)
             else:
                 plt.show()
 
@@ -354,8 +373,10 @@ class FilterTraces:
         ax2.legend()
 
         if save:
-            fig_path = os.path.join(self.dest_folder, f"trace_stat_{tag}.png")
-            plt.savefig(fig_path, dpi=200, format="png")
+            fig_path = os.path.join(
+                self.dest_folder, f"trace_stat_{tag}.{self.output_format}"
+            )
+            plt.savefig(fig_path, dpi=200, format=self.output_format)
         else:
             plt.show()
 
@@ -627,8 +648,10 @@ class FilterTraces:
             plt.ylabel("number of occurrences")
             plt.title("distribution of pwd for the repeated barcodes")
             if save:
-                fig_path = os.path.join(self.dest_folder, "duplicated_bc_pwd_stat.png")
-                plt.savefig(fig_path, dpi=200, format="png")
+                fig_path = os.path.join(
+                    self.dest_folder, f"duplicated_bc_pwd_stat.{self.output_format}"
+                )
+                plt.savefig(fig_path, dpi=200, format=self.output_format)
             else:
                 plt.show()
 
@@ -763,6 +786,7 @@ class FilterTraces:
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()
@@ -783,7 +807,11 @@ def main():
         # instantiate the class
         # ---------------------
         _trace = FilterTraces(
-            data_folder, file, dest_folder, threshold=overlapping_threshold
+            data_folder,
+            file,
+            dest_folder,
+            threshold=overlapping_threshold,
+            output_format=p["output_format"],
         )
         n_traces_total = _trace.data.shape[0]
 

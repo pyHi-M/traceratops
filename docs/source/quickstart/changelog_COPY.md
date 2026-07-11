@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - process_him_matrix: unused & deprecated script
 - trace_combinator: unused & deprecated script
+- pwd_matrix_2_pdb: unused & deprecated script
 
 
 ## [0.4.0] - 2025-04-09
@@ -35,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * trace_splitter
     * trace_plot
     * trace_pearsons
-    * trace_impute_genomic_coordinates
+    * trace_genomic_coordinates
     * trace_import_from_fofct
     * trace_export_to_fofct
     * trace_filter_advanced

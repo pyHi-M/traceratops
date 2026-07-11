@@ -20,6 +20,7 @@ from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
     calculate_ensemble_pwd_matrix,
 )
+from traceratops.script_banner import print_script_banner
 
 sns.set(font_scale=2)
 
@@ -30,6 +31,12 @@ def parse_arguments():
     parser.add_argument("--input2", help="Name of second input trace file.")
     parser.add_argument(
         "--output", help="Name of output plot. Default: scatter_plot.png"
+    )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument(
         "--mode",
@@ -58,12 +65,9 @@ def create_dict_args(args):
         p["input2"] = args.input2
     else:
         p["input2"] = None
-    if args.output:
-        p["output"] = args.output
-        if len(p["output"].split(".")) < 2:
-            p["output"] = p["output"] + ".png"
-    else:
-        p["output"] = "output.png"
+    output_root = args.output if args.output else "output"
+    output_root = output_root.rsplit(".", 1)[0]
+    p["output"] = f"{output_root}.{args.output_format}"
     if args.mode:
         p["mode"] = args.mode
     else:
@@ -199,17 +203,20 @@ def calculates_ensemble_matrices(matrices, mode="median", max_distance=2):
     for matrix in matrices:
         matrix[matrix > max_distance] = np.nan
         if "proximity" in mode:
-            mean_sc_matrix, n_cells = calculate_contact_probability_matrix(
+            mean_sc_matrix = calculate_contact_probability_matrix(
                 matrix,
-                list(),
-                1.0,
-                norm="n_cells",
+                1,
             )
         else:
             cells_to_plot = range(matrix.shape[2])
-            mean_sc_matrix, _ = calculate_ensemble_pwd_matrix(
+            mean_sc_matrix, keep_plotting = calculate_ensemble_pwd_matrix(
                 matrix, 1.0, cells_to_plot, mode=mode
             )
+            if not keep_plotting:
+                raise ValueError(
+                    f"Unable to calculate ensemble matrix for mode '{mode}' "
+                    f"from input matrix with shape {matrix.shape}."
+                )
         mean_sc_matrices.append(mean_sc_matrix)
     return mean_sc_matrices
 
@@ -251,6 +258,7 @@ def main_script(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()

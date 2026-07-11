@@ -17,10 +17,21 @@ ChromatinTraceTable() object and output .ecsv formatted file with assembled trac
 """
 
 import argparse
+import contextlib
+import io
 import os
 import sys
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
+
+
+def silent_load(trace, path, verbose=False):
+    if verbose:
+        trace.load(path)
+    else:
+        with contextlib.redirect_stdout(io.StringIO()):
+            trace.load(path)
 
 
 def parse_arguments():
@@ -43,6 +54,7 @@ def parse_arguments():
         help="Output folder (default: ``Current Working Directory``)",
         default=None,
     )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     return parser
 
 
@@ -67,27 +79,29 @@ def get_files_from_args(args):
         return os.listdir(args.traces)
 
 
-def appends_traces(traces, trace_files):
+def appends_traces(traces, trace_files, verbose=False):
     new_trace = ChromatinTraceTable()
-    # iterates over traces in folder
+
     for trace_file in trace_files:
-        # reads new trace
-        new_trace.load(trace_file)
-        # adds it to existing trace collection
+        silent_load(new_trace, trace_file, verbose=verbose)
 
         traces.append(new_trace.data)
         traces.number_traces += 1
-        print(f" $ appended trace file with {len(new_trace.data)} traces")
+
+        if verbose:
+            print(f" $ appended trace file with {len(new_trace.data)} traces")
+
     print(f" $ Merged trace file will contain {len(traces.data)} traces")
     return traces
 
 
-def load_traces(trace_files=[]):
+def load_traces(trace_files=[], verbose=False):
     traces = ChromatinTraceTable()
     traces.initialize()
+
     if len(trace_files) > 1:
-        # user provided a list of files to concatenate
-        traces = appends_traces(traces, trace_files)
+        traces = appends_traces(traces, trace_files, verbose=verbose)
+
     print(f"Read and accumulated {traces.number_traces} trace files")
     return traces
 
@@ -99,6 +113,7 @@ def create_out_folder(folder_path):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     # [parsing arguments]
     parser = parse_arguments()
     args = parser.parse_args()
@@ -110,9 +125,9 @@ def main():
         raise ValueError("\nNothing to process...\n")
     args_folder = args.folder or os.getcwd()
     create_out_folder(args_folder)
-    traces = load_traces(trace_files)
+    traces = load_traces(trace_files, verbose=args.verbose)
     traces.save(
-        args.name,
+        os.path.join(args_folder, args.name),
         comments="appended_trace_files=" + str(traces.number_traces),
     )
 

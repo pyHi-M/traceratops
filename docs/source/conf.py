@@ -91,11 +91,13 @@ extensions = [
     "myst_parser",  # parse markdown files to be understood by sphinx
     "sphinxarg.ext",
     "sphinx_panels",  # for creating panels like pandas or numpy main doc page
+    "nbsphinx",  # include jupyter notebook file, WARNING: incompatible with mermaid on ReadTheDocs
 ]
 
-templates_path = ["_templates"]
-exclude_patterns = []
+nbsphinx_execute = "never"  # notebooks are pre-executed; don't re-run during doc build
 
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -104,5 +106,7 @@ exclude_patterns = []
 html_theme = "sphinx_rtd_theme"
 html_context = {"default_mode": "light"}
 html_static_path = ["_static"]
+
+html_logo = "_static/logo_traceratops.png"
 
 myst_heading_anchors = 2

@@ -20,11 +20,14 @@ This class:
 
 import glob
 import os
+import time
+from pathlib import Path
 
 import numpy as np
 from astropy.table import unique
+from joblib import Parallel, delayed
 from sklearn.metrics import pairwise_distances
-from tqdm.contrib import tzip
+from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.him_matrix_operations import (
@@ -95,7 +98,84 @@ class BuildMatrix:
         r_mum = np.column_stack((x, y, z))
         return pairwise_distances(r_mum)
 
-    def build_distance_matrix(self, mode="min", distance_threshold=np.inf):
+    @staticmethod
+    def _build_trace_distance_slice(
+        trace, unique_barcode_to_index, number_unique_barcodes, mode, distance_threshold
+    ):
+        """Build one single-trace distance matrix slice.
+
+        The default ``min`` mode is vectorized because it is the runtime-critical
+        path used by ``trace_to_matrix``. The ``last`` and legacy iterative
+        ``mean`` modes keep their original row-major update order so duplicate
+        barcode observations produce byte-for-byte equivalent results.
+        """
+        barcodes_to_process = np.asarray(trace["Barcode #"].data)
+        coordinates = np.column_stack(
+            (
+                np.asarray(trace["x"].data),
+                np.asarray(trace["y"].data),
+                np.asarray(trace["z"].data),
+            )
+        )
+        pwd_matrix = pairwise_distances(coordinates)
+        barcode_indices = np.fromiter(
+            (unique_barcode_to_index[barcode] for barcode in barcodes_to_process),
+            dtype=np.intp,
+            count=len(barcodes_to_process),
+        )
+
+        matrix_slice = np.full(
+            (number_unique_barcodes, number_unique_barcodes), np.nan, dtype=float
+        )
+
+        if mode == "min":
+            different_barcodes = (
+                barcodes_to_process[:, None] != barcodes_to_process[None, :]
+            )
+            valid_distances = different_barcodes & (pwd_matrix < distance_threshold)
+            if np.any(valid_distances):
+                row_positions, column_positions = np.nonzero(valid_distances)
+                rows = barcode_indices[row_positions]
+                columns = barcode_indices[column_positions]
+                distances = pwd_matrix[row_positions, column_positions]
+                flat_matrix = np.full(matrix_slice.size, np.inf, dtype=float)
+                np.minimum.at(
+                    flat_matrix,
+                    np.ravel_multi_index((rows, columns), matrix_slice.shape),
+                    distances,
+                )
+                matrix_slice = flat_matrix.reshape(matrix_slice.shape)
+                matrix_slice[np.isinf(matrix_slice)] = np.nan
+            return matrix_slice
+
+        for barcode1, ibarcode1 in zip(
+            barcodes_to_process, range(len(barcodes_to_process))
+        ):
+            index_barcode_1 = barcode_indices[ibarcode1]
+            for barcode2, ibarcode2 in zip(
+                barcodes_to_process, range(len(barcodes_to_process))
+            ):
+                if barcode1 != barcode2:
+                    index_barcode_2 = barcode_indices[ibarcode2]
+                    newdistance = pwd_matrix[ibarcode1, ibarcode2]
+                    if newdistance < distance_threshold:
+                        if mode == "last":
+                            matrix_slice[index_barcode_1][index_barcode_2] = newdistance
+                        elif mode == "mean":
+                            matrix_slice[index_barcode_1][index_barcode_2] = np.nanmean(
+                                [
+                                    newdistance,
+                                    matrix_slice[index_barcode_1][index_barcode_2],
+                                ]
+                            )
+                        else:
+                            raise ValueError(
+                                f"Unsupported distance matrix mode: {mode}"
+                            )
+
+        return matrix_slice
+
+    def build_distance_matrix(self, mode="min", distance_threshold=np.inf, n_jobs=1):
         """
         Builds pairwise distance matrix from a coordinates table
 
@@ -105,6 +185,9 @@ class BuildMatrix:
             The default is "mean": calculates the mean distance if there are several combinations possible.
             "min": calculates the minimum distance if there are several combinations possible.
             "last": keeps the last distance calculated
+        n_jobs : int, optional
+            Number of parallel workers used across independent traces. ``1`` keeps
+            the serial execution path; ``-1`` uses all available workers.
 
         Returns
         -------
@@ -126,73 +209,47 @@ class BuildMatrix:
             "INFO",
         )
 
-        # Initializes sc_matrix
-        sc_matrix = np.zeros(
-            (number_unique_barcodes, number_unique_barcodes, number_matrices)
-        )
-        sc_matrix[:] = np.NaN
+        unique_barcode_to_index = {
+            barcode: index for index, barcode in enumerate(unique_barcodes)
+        }
 
         # loops over traces
         print("> Processing traces...", "INFO")
         data_traces = self.trace_table.data.group_by("Trace_ID")
-        for trace, itrace in tzip(data_traces.groups, range(number_matrices)):
-            barcodes_to_process = trace["Barcode #"].data
+        trace_groups = list(data_traces.groups)
 
-            # gets lists of x, y and z coordinates for barcodes assigned to a cell mask
-            x, y, z = (
-                np.array(trace["x"].data),
-                np.array(trace["y"].data),
-                np.array(trace["z"].data),
+        if n_jobs == 1:
+            slices = [
+                self._build_trace_distance_slice(
+                    trace,
+                    unique_barcode_to_index,
+                    number_unique_barcodes,
+                    mode,
+                    distance_threshold,
+                )
+                for trace in tqdm(
+                    trace_groups,
+                    total=number_matrices,
+                    desc="Building per-trace PWD matrices",
+                )
+            ]
+        else:
+            slices = Parallel(n_jobs=n_jobs)(
+                delayed(self._build_trace_distance_slice)(
+                    trace,
+                    unique_barcode_to_index,
+                    number_unique_barcodes,
+                    mode,
+                    distance_threshold,
+                )
+                for trace in tqdm(
+                    trace_groups,
+                    total=number_matrices,
+                    desc="Building per-trace PWD matrices",
+                )
             )
-            pwd_matrix = self.calculate_pwd_single_mask(x, y, z)
 
-            # loops over barcodes detected in cell mask: barcode1
-            for barcode1, ibarcode1 in zip(
-                barcodes_to_process, range(len(barcodes_to_process))
-            ):
-                index_barcode_1 = np.nonzero(unique_barcodes == barcode1)[0][0]
-
-                # loops over barcodes detected in cell mask: barcode2
-                for barcode2, ibarcode2 in zip(
-                    barcodes_to_process, range(len(barcodes_to_process))
-                ):
-                    if barcode1 != barcode2:
-                        index_barcode_2 = np.nonzero(unique_barcodes == barcode2)[0][0]
-
-                        # attributes distance from the PWDmatrix field in the sc_pwd_item table
-                        newdistance = pwd_matrix[ibarcode1, ibarcode2]
-
-                        # checks distance
-                        if newdistance < distance_threshold:
-                            # inserts newdistance into sc_matrix using desired method
-                            if mode == "last":
-                                sc_matrix[index_barcode_1][index_barcode_2][
-                                    itrace
-                                ] = newdistance
-                            elif mode == "mean":
-                                sc_matrix[index_barcode_1][index_barcode_2][itrace] = (
-                                    np.nanmean(
-                                        [
-                                            newdistance,
-                                            sc_matrix[index_barcode_1][index_barcode_2][
-                                                itrace
-                                            ],
-                                        ]
-                                    )
-                                )
-                            elif mode == "min":
-                                sc_matrix[index_barcode_1][index_barcode_2][itrace] = (
-                                    np.nanmin(
-                                        [
-                                            newdistance,
-                                            sc_matrix[index_barcode_1][index_barcode_2][
-                                                itrace
-                                            ],
-                                        ]
-                                    )
-                                )
-
-        self.sc_matrix = sc_matrix
+        self.sc_matrix = np.stack(slices, axis=2)
         self.unique_barcodes = unique_barcodes
 
     def calculate_n_matrix(self):
@@ -206,14 +263,37 @@ class BuildMatrix:
 
         self.n_matrix = n_matrix
 
-    def plots_all_matrices(self, file):
+    def get_output_prefix(self, file, outputFolder=None):
+        """
+        Build the output filename prefix for a trace file.
+
+        Outputs are written next to the input trace by default, or inside
+        outputFolder when it is provided. In both cases, the input trace
+        filename stem is preserved in the generated filenames.
+        """
+        trace_path = Path(file)
+        output_dir = (
+            Path(outputFolder) if outputFolder is not None else trace_path.parent
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return str(output_dir / f"{trace_path.stem}_Matrix")
+
+    def _time_section(self, section_name, callback):
+        print(f"> Starting {section_name}...")
+        start_time = time.perf_counter()
+        result = callback()
+        elapsed_time = time.perf_counter() - start_time
+        print(f"$ Elapsed time for {section_name}: {elapsed_time:.2f} s")
+        return result
+
+    def plots_all_matrices(self, output_filename, plot_histograms=False):
         """
         Plots all matrices after analysis
 
         Parameters
         ----------
-        file : str
-            trace file name used for get output filenames.
+        output_filename : str
+            Output filename prefix used for generated plots.
 
         Returns
         -------
@@ -222,108 +302,120 @@ class BuildMatrix:
         """
         number_rois = 1  # by default we plot one ROI at a time.
 
-        filepath_split = file.split(".")[0].split(os.sep)
-        try:
-            filepath_split.remove("data")
-        except ValueError:
-            pass
-        filepath_without_data_folder = (os.sep).join(filepath_split)
-        output_filename = filepath_without_data_folder + "_Matrix"
-
         clim_scale = 1.0  # factor to multiply the clim by. If 1, the clim will be the mean of the PWD distribution of the whole map
         pixel_size = 1  # this is 1 as coordinates are in microns.
         n_cells = self.sc_matrix.shape[2]
 
         # plots PWD matrix
         # uses KDE
-        plot_matrix(
-            self.sc_matrix,
-            self.unique_barcodes,
-            pixel_size,
-            number_rois,
-            output_filename,
-            self.log_name_md,
-            figtitle="PWD matrix - KDE",
-            mode="KDE",  # median or KDE
-            clim=clim_scale * np.nanmean(self.sc_matrix),
-            n_cells=n_cells,
-            c_m=self.colormaps["PWD_KDE"],
-            cmtitle="distance, um",
-            filename_ending="_PWDmatrixKDE.png",
+        self._time_section(
+            "plot PWD matrix - KDE",
+            lambda: plot_matrix(
+                self.sc_matrix,
+                self.unique_barcodes,
+                pixel_size,
+                number_rois,
+                output_filename,
+                self.log_name_md,
+                figtitle="PWD matrix - KDE",
+                mode="KDE",  # median or KDE
+                clim=clim_scale * np.nanmean(self.sc_matrix),
+                n_cells=n_cells,
+                c_m=self.colormaps["PWD_KDE"],
+                cmtitle="distance, um",
+                filename_ending="_PWDmatrixKDE.png",
+            ),
         )
 
         # uses median
-        plot_matrix(
-            self.sc_matrix,
-            self.unique_barcodes,
-            pixel_size,
-            number_rois,
-            output_filename,
-            self.log_name_md,
-            figtitle="PWD matrix - median",
-            mode="median",  # median or KDE
-            clim=clim_scale * np.nanmean(self.sc_matrix),
-            cmtitle="distance, um",
-            n_cells=n_cells,
-            c_m=self.colormaps["PWD_median"],
-            filename_ending="_PWDmatrixMedian.png",
+        self._time_section(
+            "plot PWD matrix - median",
+            lambda: plot_matrix(
+                self.sc_matrix,
+                self.unique_barcodes,
+                pixel_size,
+                number_rois,
+                output_filename,
+                self.log_name_md,
+                figtitle="PWD matrix - median",
+                mode="median",  # median or KDE
+                clim=clim_scale * np.nanmean(self.sc_matrix),
+                cmtitle="distance, um",
+                n_cells=n_cells,
+                c_m=self.colormaps["PWD_median"],
+                filename_ending="_PWDmatrixMedian.png",
+            ),
         )
 
         # calculates and plots contact probability matrix from merged samples/datasets
-        him_matrix, n_cells = calculate_contact_probability_matrix(
-            self.sc_matrix,
-            self.unique_barcodes,
-            pixel_size,
-            norm="nonNANs",
-        )  # norm: n_cells (default), nonNANs
-
+        him_matrix = self._time_section(
+            "calculate contact probability matrix",
+            lambda: calculate_contact_probability_matrix(
+                self.sc_matrix,
+                pixel_size,
+                remove_nan=True,
+            ),
+        )
+        n_cells = self.sc_matrix.shape[2]
         c_scale = him_matrix.max()
-        plot_matrix(
-            him_matrix,
-            self.unique_barcodes,
-            pixel_size,
-            number_rois,
-            output_filename,
-            self.log_name_md,
-            figtitle="Hi-M matrix",
-            mode="counts",
-            clim=c_scale,
-            n_cells=n_cells,
-            c_m=self.colormaps["contact"],
-            cmtitle="proximity frequency",
-            filename_ending="_HiMmatrix.png",
+        self._time_section(
+            "plot Hi-M matrix",
+            lambda: plot_matrix(
+                him_matrix,
+                self.unique_barcodes,
+                pixel_size,
+                number_rois,
+                output_filename,
+                self.log_name_md,
+                figtitle="Hi-M matrix",
+                mode="counts",
+                clim=c_scale,
+                n_cells=n_cells,
+                c_m=self.colormaps["contact"],
+                cmtitle="proximity frequency",
+                filename_ending="_HiMmatrix.png",
+            ),
         )
 
         # plots n_matrix
-        plot_matrix(
-            self.n_matrix,
-            self.unique_barcodes,
-            pixel_size,
-            number_rois,
-            output_filename,
-            self.log_name_md,
-            figtitle="N-matrix",
-            mode="counts",
-            n_cells=n_cells,
-            clim=np.max(self.n_matrix),
-            c_m=self.colormaps["Nmatrix"],
-            cmtitle="number of measurements",
-            filename_ending="_Nmatrix.png",
+        self._time_section(
+            "plot N-matrix",
+            lambda: plot_matrix(
+                self.n_matrix,
+                self.unique_barcodes,
+                pixel_size,
+                number_rois,
+                output_filename,
+                self.log_name_md,
+                figtitle="N-matrix",
+                mode="counts",
+                n_cells=n_cells,
+                clim=np.max(self.n_matrix),
+                c_m=self.colormaps["Nmatrix"],
+                cmtitle="number of measurements",
+                filename_ending="_Nmatrix.png",
+            ),
         )
 
-        plot_distance_histograms(
-            self.sc_matrix,
-            pixel_size,
-            output_filename,
-            self.log_name_md,
-            mode="KDE",
-            kernel_width=0.25,
-            optimize_kernel_width=False,
-        )
+        if plot_histograms:
+            self._time_section(
+                "plot PWD histograms - KDE",
+                lambda: plot_distance_histograms(
+                    self.sc_matrix,
+                    pixel_size,
+                    output_filename,
+                    self.log_name_md,
+                    mode="KDE",
+                    kernel_width=0.25,
+                    optimize_kernel_width=False,
+                ),
+            )
+        else:
+            print(
+                "> Skipping PWD histograms - KDE. Use --plot_histograms to enable this slow optional step."
+            )
 
-    def save_matrices(self, file):
-        output_filename = file.split(".")[0] + "_Matrix"
-
+    def save_matrices(self, output_filename):
         # saves output
         np.save(f"{output_filename}_PWDscMatrix.npy", self.sc_matrix)
         print(f"$ saved: {output_filename}_PWDscMatrix.npy")
@@ -340,7 +432,14 @@ class BuildMatrix:
         np.save(f"{output_filename}_Nmatrix.npy", self.n_matrix)
         print(f"$ saved: {output_filename}_Nmatrix.npy")
 
-    def launch_analysis(self, file, distance_threshold=np.inf):
+    def launch_analysis(
+        self,
+        file,
+        distance_threshold=np.inf,
+        outputFolder=None,
+        n_jobs=1,
+        plot_histograms=False,
+    ):
         """
         run analysis for a chromatin trace table.
 
@@ -350,23 +449,39 @@ class BuildMatrix:
 
         """
 
+        total_start_time = time.perf_counter()
+
         # creates and loads trace table
-        self.trace_table = ChromatinTraceTable()
-        self.trace_table.load(file)
+        def load_trace_table():
+            self.trace_table = ChromatinTraceTable()
+            self.trace_table.load(file)
+
+        self._time_section("load trace table", load_trace_table)
+        output_filename = self.get_output_prefix(file, outputFolder)
 
         # runs calculation of PWD matrix
-        self.build_distance_matrix(
-            "min", distance_threshold=distance_threshold
+        self._time_section(
+            "build single-cell PWD matrix",
+            lambda: self.build_distance_matrix(
+                "min", distance_threshold=distance_threshold, n_jobs=n_jobs
+            ),
         )  # mean min last
 
         # calculates N-matrix: number of PWD distances for each barcode combination
-        self.calculate_n_matrix()
+        self._time_section("calculate N-matrix", self.calculate_n_matrix)
 
         # runs plotting operations
-        self.plots_all_matrices(file)
+        self._time_section(
+            "plot all matrices and histograms",
+            lambda: self.plots_all_matrices(
+                output_filename, plot_histograms=plot_histograms
+            ),
+        )
 
         # saves matrix
-        self.save_matrices(file)
+        self._time_section("save matrices", lambda: self.save_matrices(output_filename))
+        total_elapsed_time = time.perf_counter() - total_start_time
+        print(f"$ Total elapsed time for trace analysis: {total_elapsed_time:.2f} s")
 
     def run(self, data_path, matrix_params):
         self.label = "barcode"

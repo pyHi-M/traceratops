@@ -4,7 +4,6 @@
 contains functions and classes needed for the analysis and plotting of HiM matrices
 """
 
-
 import csv
 import itertools
 import json
@@ -312,27 +311,44 @@ def plot_matrix(
         if inverse_matrix:
             mean_sc_matrix = np.reciprocal(mean_sc_matrix)
 
-        # plots figure
-        plt.figure(figsize=(15, 15))
-        pos = plt.imshow(mean_sc_matrix, cmap=c_m)  # colormaps RdBu seismic
-        plt.xlabel("barcode #", fontsize=float(font_size) * 1.2)
-        plt.ylabel("barcode #", fontsize=float(font_size) * 1.2)
-        plt.title(
+        # plots figure using the same axes-based heatmap style as plot_threeway_matrix
+        fig, ax = plt.subplots(figsize=(15, 15))
+        pos = ax.imshow(
+            mean_sc_matrix,
+            interpolation="nearest",
+            cmap=c_m,
+            vmin=c_min,
+            vmax=clim,
+        )  # colormaps RdBu seismic
+
+        ax.set_xlabel("barcode #", fontsize=float(font_size) * 1.2)
+        ax.set_ylabel("barcode #", fontsize=float(font_size) * 1.2)
+        ax.set_title(
             f"{figtitle} | {str(mean_sc_matrix.shape[0])} barcodes | n={str(n_cells)}",
             fontsize=float(font_size) * 1.3,
         )
 
-        plt.xticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
-        )
-        plt.yticks(
-            np.arange(sc_matrix_collated.shape[0]), unique_barcodes, fontsize=font_size
-        )
-        cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+        tick_positions = np.arange(mean_sc_matrix.shape[0])
+        tick_font_size = max(float(font_size) * 0.45, 6)
+        ax.set_xticks(tick_positions)
+        ax.set_yticks(tick_positions)
+        ax.set_xticklabels(unique_barcodes, fontsize=tick_font_size)
+        ax.set_yticklabels(unique_barcodes, fontsize=tick_font_size)
+
+        # Rotate and anchor x tick labels to keep longer barcode names from overlapping.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+        # Add grid lines between matrix cells for the cleaner three-way matrix style.
+        ax.set_xticks(np.arange(-0.5, mean_sc_matrix.shape[0], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, mean_sc_matrix.shape[0], 1), minor=True)
+        ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
+        ax.tick_params(which="minor", bottom=False, left=False)
+
+        cbar = fig.colorbar(pos, ax=ax, fraction=0.046, pad=0.04)
         cbar.ax.tick_params(labelsize=float(font_size) * 0.8)
         cbar.minorticks_on()
         cbar.set_label(cmtitle, fontsize=float(font_size) * 1.0)
-        plt.clim(c_min, clim)
+        plt.tight_layout()
 
         if len(output_filename.split(".")) > 1:
             if output_filename.split(".")[1] == "png":
@@ -605,6 +621,11 @@ def is_notebook():
         return False  # Probably standard Python interpreter
 
 
+def is_nan_symmetric_matrix(sc_matrix):
+    """Return True when a 3D single-cell matrix is symmetric, treating NaNs as equal."""
+    return np.allclose(sc_matrix, np.swapaxes(sc_matrix, 0, 1), equal_nan=True)
+
+
 def plot_distance_histograms(
     sc_matrix_collated,
     pixel_size,
@@ -633,26 +654,39 @@ def plot_distance_histograms(
         figsize=(size_x, size_y), ncols=n_plots_x, nrows=n_plots_y, sharex=True
     )
 
-    for i in trange(n_plots_x):
+    symmetric_matrix = is_nan_symmetric_matrix(sc_matrix_collated)
+    kde_cache = {}
+
+    progress_description = (
+        "Plotting PWD KDE histograms"
+        if mode == "KDE"
+        else "Plotting PWD distance histograms"
+    )
+    for i in trange(n_plots_x, desc=progress_description):
         for j in range(n_plots_y):
             if i != j:
                 if mode == "hist":
                     axs[i, j].hist(pixel_size * sc_matrix_collated[i, j, :], bins=bins)
                 else:
+                    cache_key = tuple(sorted((i, j))) if symmetric_matrix else (i, j)
+                    if cache_key not in kde_cache:
+                        kde_cache[cache_key] = (
+                            distribution_maximum_kernel_density_estimation(
+                                sc_matrix_collated,
+                                i,
+                                j,
+                                pixel_size,
+                                optimize_kernel_width=optimize_kernel_width,
+                                kernel_width=kernel_width,
+                                max_distance=max_distance,
+                            )
+                        )
                     (
                         max_kde,
                         distance_distribution,
                         kde,
                         x_d,
-                    ) = distribution_maximum_kernel_density_estimation(
-                        sc_matrix_collated,
-                        i,
-                        j,
-                        pixel_size,
-                        optimize_kernel_width=optimize_kernel_width,
-                        kernel_width=kernel_width,
-                        max_distance=max_distance,
-                    )
+                    ) = kde_cache[cache_key]
                     axs[i, j].fill_between(x_d, kde, alpha=0.5)
                     axs[i, j].plot(
                         distance_distribution,
@@ -692,6 +726,19 @@ def adjust_colorbar(cbar, pos, c_min, clim):
     - c_min: The minimum value to set on the colorbar.
     - clim: The maximum value to set on the colorbar.
     """
+    # Matrices can legitimately contain only zeros (for example with a
+    # proximity threshold of 0 or lower). In that case ``adjust_cmin_cmax``
+    # keeps the historical output filename component as ``nan-0.00``, but
+    # Matplotlib cannot apply non-finite or equal color limits reliably across
+    # versions. Use finite plotting limits while leaving the saved filename
+    # unchanged.
+    if not np.isfinite(c_min):
+        c_min = 0.0
+    if not np.isfinite(clim):
+        clim = 1.0
+    if clim <= c_min:
+        clim = c_min + 1.0
+
     # Set color limits for the colormap
     pos.set_clim(c_min, clim)
 
@@ -725,18 +772,34 @@ def adjust_colorbar(cbar, pos, c_min, clim):
 def plot_single_matrix(
     matrix, cmap, matrix_title, fontsize, barcode_names, cm_title, c_min, clim, fig_path
 ):
-    plt.figure(figsize=(15, 15))
-    pos = plt.imshow(matrix, cmap=cmap)
-    plt.title(matrix_title, fontsize=float(fontsize) * 1.3)
-    plt.xlabel("barcode #", fontsize=float(fontsize) * 1.2)
-    plt.ylabel("barcode #", fontsize=float(fontsize) * 1.2)
-    plt.xticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
-    plt.yticks(np.arange(len(barcode_names)), barcode_names, fontsize=fontsize)
-    cbar = plt.colorbar(pos, fraction=0.046, pad=0.04)
+    fig, ax = plt.subplots(figsize=(15, 15))
+    pos = ax.imshow(matrix, interpolation="nearest", cmap=cmap)
+
+    ax.set_title(matrix_title, fontsize=float(fontsize) * 1.3)
+    ax.set_xlabel("barcode #", fontsize=float(fontsize) * 1.2)
+    ax.set_ylabel("barcode #", fontsize=float(fontsize) * 1.2)
+
+    tick_positions = np.arange(len(barcode_names))
+    tick_font_size = max(float(fontsize) * 0.45, 6)
+    ax.set_xticks(tick_positions)
+    ax.set_yticks(tick_positions)
+    ax.set_xticklabels(barcode_names, fontsize=tick_font_size)
+    ax.set_yticklabels(barcode_names, fontsize=tick_font_size)
+
+    # Match the matrix heatmap style used by plot_matrix and plot_threeway_matrix.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    ax.set_xticks(np.arange(-0.5, matrix.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, matrix.shape[0], 1), minor=True)
+    ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    cbar = fig.colorbar(pos, ax=ax, fraction=0.046, pad=0.04)
     cbar.ax.tick_params(labelsize=float(fontsize) * 0.8)
     cbar.minorticks_on()
     cbar.set_label(cm_title, fontsize=float(fontsize) * 1.0)
     adjust_colorbar(cbar, pos, c_min, clim)
+    plt.tight_layout()
     plt.savefig(fig_path)
 
 
@@ -808,7 +871,7 @@ def plot_nan_matrix(
         file_format,
         c_min,
         c_max,
-        mode="nan%",
+        mode="nan",
         remove_nan=remove_nan,
     )
     plot_single_matrix(
@@ -1086,7 +1149,7 @@ def get_rg_from_pwd(pwd_matrix_0, min_number_pwd=4, threshold=6):
         raise SystemExit("get_rg_from_pwd: Expected square matrix as input.")
 
     # make sure the diagonal is NaN
-    np.fill_diagonal(pwd_matrix, np.NaN)
+    np.fill_diagonal(pwd_matrix, np.nan)
 
     # filters out PWD
     pwd_matrix[pwd_matrix > threshold] = np.nan
@@ -1097,7 +1160,7 @@ def get_rg_from_pwd(pwd_matrix_0, min_number_pwd=4, threshold=6):
     )  # default is to compute the sum of the flattened array
 
     if num_not_nan < min_number_pwd:
-        return np.NaN
+        return np.nan
 
     # calculate Rg
     sqr = np.square(pwd_matrix)
@@ -1126,7 +1189,7 @@ def get_detection_eff_barcodes(sc_matrix_collated):
 
     # make sure the diagonal is NaN
     for i in range(sc_matrix_collated.shape[0]):
-        sc_matrix_collated[i, i, :] = np.NaN
+        sc_matrix_collated[i, i, :] = np.nan
 
     # calculate barcode efficiency
     n_cells = sc_matrix_collated.shape[2]
@@ -1152,7 +1215,7 @@ def get_barcodes_per_cell(sc_matrix_collated):
 
     # make sure the diagonal is NaN
     for i in range(sc_matrix_collated.shape[0]):
-        sc_matrix_collated[i, i, :] = np.NaN
+        sc_matrix_collated[i, i, :] = np.nan
 
     num_barcodes = np.sum(~np.isnan(sc_matrix_collated), axis=0)
     num_barcodes[num_barcodes > 1] = 1
@@ -1263,8 +1326,17 @@ def calculate_ensemble_pwd_matrix(sc_matrix, pixel_size, cells_to_plot, mode="me
 
             keep_plotting = False
         else:
-            for bin1 in trange(n_barcodes):
-                for bin2 in range(n_barcodes):
+            sc_matrix_to_plot = sc_matrix[:, :, cells_to_plot]
+            symmetric_matrix = is_nan_symmetric_matrix(sc_matrix_to_plot)
+            for bin1 in trange(
+                n_barcodes, desc="Calculating ensemble PWD matrix (KDE)"
+            ):
+                bin2_values = (
+                    range(bin1 + 1, n_barcodes)
+                    if symmetric_matrix
+                    else range(n_barcodes)
+                )
+                for bin2 in bin2_values:
                     if bin1 != bin2:
                         # print(f"cells_to_plot:{cells_to_plot}, ncells:{sc_matrix.shape}")
                         (
@@ -1273,12 +1345,14 @@ def calculate_ensemble_pwd_matrix(sc_matrix, pixel_size, cells_to_plot, mode="me
                             _,
                             _,
                         ) = distribution_maximum_kernel_density_estimation(
-                            sc_matrix[:, :, cells_to_plot],
+                            sc_matrix_to_plot,
                             bin1,
                             bin2,
                             pixel_size,
                             optimize_kernel_width=False,
                         )
                         mean_sc_matrix[bin1, bin2] = maximum_kernel_distribution
+                        if symmetric_matrix:
+                            mean_sc_matrix[bin2, bin1] = maximum_kernel_distribution
 
     return mean_sc_matrix, keep_plotting

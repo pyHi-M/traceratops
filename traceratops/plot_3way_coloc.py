@@ -6,6 +6,7 @@ Replot 3-way co-localization matrices from .npy files.
 
 It visualizes the frequency of co-localization between barcodes with reference to an anchor barcode, highlighting the anchor's position with perpendicular lines on the heatmap.
 """
+
 import argparse
 import csv
 import os
@@ -15,6 +16,8 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -35,6 +38,12 @@ def parse_arguments():
     parser.add_argument(
         "--label_map_file", help="Text file with barcode numbers per row"
     )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
     return parser
 
 
@@ -47,6 +56,7 @@ def plot_threeway_matrix(
     vmax=None,
     cmap="RdBu",
     label_map=None,
+    file_format="png",
 ):
     all_barcodes = set()
     for b1, b2 in pair_means.keys():
@@ -118,8 +128,9 @@ def plot_threeway_matrix(
     ax.set_ylabel("Barcode #", fontsize=14)
     plt.tight_layout()
     output_filename = f"{output_file.split('.')[0]}_anchor_{anchor_barcode}_replot"
-    plt.savefig(f"{output_filename}.png", dpi=300)
-    print(f"Saved three-way co-localization heatmap to: {output_filename}")
+    output_path = f"{output_filename}.{file_format}"
+    plt.savefig(output_path, dpi=300)
+    print(f"Saved three-way co-localization heatmap to: {output_path}")
     plt.close()
 
 
@@ -150,6 +161,7 @@ def load_label_map(filepath, anchor):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     matrix_files = list(args.input)
@@ -196,6 +208,7 @@ def main():
             vmax=args.vmax,
             cmap=args.cmap,
             label_map=label_map,
+            file_format=args.output_format,
         )
 
 

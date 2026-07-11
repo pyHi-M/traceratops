@@ -16,6 +16,7 @@ import select
 import sys
 
 from traceratops.core.localization_table import LocalizationTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -25,7 +26,9 @@ def parse_arguments():
         "--output_file",
         help="Output File name. Default = merged_localizations.ecsv",
     )
-    parser.add_argument("-O", "--output_folder", help="Output File name. Default = ./")
+    parser.add_argument(
+        "-O", "--output_folder", help="Output folder name. Default = ./"
+    )
     return parser
 
 
@@ -71,7 +74,7 @@ def appends_traces(loc_files):
         else:
             collected_tables = new_loc_table.append(collected_tables, new_table)
         number_loc_tables += 1
-        print(f" $ appended loc file with {len(new_table)} localizations")
+        # print(f" $ appended loc file with {len(new_table)} localizations")
     print(f" $ Merged loc file will contain {len(collected_tables)} localizations")
     return collected_tables, number_loc_tables
 
@@ -94,7 +97,7 @@ def run(p):
     # loads and merges traces
     collected_tables, number_loc_tables = load_localizations(loc_files=p["loc_files"])
     # saves merged trace table
-    output_file = p["output_file"]
+    output_file = os.path.join(p["outputFolder"], p["output_file"])
     localizations.save(
         output_file,
         collected_tables,
@@ -105,6 +108,7 @@ def run(p):
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     p = create_dict_args(args)

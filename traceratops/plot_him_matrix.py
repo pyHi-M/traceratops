@@ -6,7 +6,6 @@ This script calculates and plots matrices (PWD and proximity) from:
     - a file with the unique barcodes used
 """
 
-
 import argparse
 import itertools
 import os
@@ -21,6 +20,7 @@ from traceratops.core.him_matrix_operations import (
     plot_him_matrix,
     plot_nan_matrix,
 )
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -61,9 +61,10 @@ Outputs:
         "-O", "--output", help="Folder for outputs", default="plots"
     )
     parser_advanced.add_argument(
-        "--plot_format",
-        help="Available options: svg, pdf, png",
+        "--output_format",
+        choices=["png", "svg", "pdf"],
         default="png",
+        help="Output image format. Default = png.",
     )
     parser_advanced.add_argument(
         "--shuffle",
@@ -91,10 +92,9 @@ Outputs:
     )
     parser_proximity.add_argument(
         "-K",
-        "--keep_nan",
-        help="Matrix normalization mode. By default, NaN values per bin are removed before compute statistics for proximity. Activate this mode to keep NaN values.",
-        action="store_true",
-        default=False,
+        "--matrix_norm_mode",
+        help="Matrix normalization mode. By default ('nonNANs'), NaN values per bin are removed before compute statistics for proximity. Can be 'n_cells' or 'nonNANs'.",
+        default="nonNANs",
     )
 
     parser_visu = parser.add_argument_group(
@@ -119,6 +119,17 @@ Outputs:
     )
     parser_visu.add_argument(
         "--fontsize", help="Size of fonts to be used in matrix", default=22
+    )
+    parser_visu.add_argument(
+        "--triangular",
+        action="store_true",
+        help="Plot only upper triangle (useful for genomic coordinate visualization)",
+    )
+    parser_visu.add_argument(
+        "--triangular_mode",
+        choices=["upper", "lower"],
+        default="upper",
+        help="Which triangle to display (upper or lower)",
     )
     return parser
 
@@ -206,7 +217,42 @@ def apply_nan_threshold(matrix, nan_matrix, threshold):
     return matrix
 
 
+def apply_triangular_mask(matrix, mode="upper"):
+    """
+    Apply triangular mask to matrix.
+
+    Parameters:
+    -----------
+    matrix : np.ndarray
+        2D matrix to mask
+    mode : str
+        'upper' to keep upper triangle (i <= j)
+        'lower' to keep lower triangle (i >= j)
+
+    Returns:
+    --------
+    np.ndarray
+        Masked matrix with NaN values in masked region
+    """
+    matrix_masked = matrix.copy()
+    n = matrix.shape[0]
+
+    if mode == "upper":
+        # Keep upper triangle, mask lower
+        for i in range(n):
+            for j in range(i):
+                matrix_masked[i, j] = np.nan
+    else:  # lower
+        # Keep lower triangle, mask upper
+        for i in range(n):
+            for j in range(i + 1, n):
+                matrix_masked[i, j] = np.nan
+
+    return matrix_masked
+
+
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
     check_required_arg(args, parser)
@@ -217,12 +263,19 @@ def main():
         u_barcodes, sc_matrices = new_shuffle_matrix(
             args.shuffle, u_barcodes, sc_matrices
         )
-    rm_nan = not args.keep_nan
+    rm_nan = args.matrix_norm_mode == "nonNANs"
     matrix_to_plot = merge_matrices(args.mode, sc_matrices, args.threshold, rm_nan)
     nan_matrix = calculate_nan_matrix(sc_matrices)
     if args.nan_threshold:
         matrix_to_plot = apply_nan_threshold(
             matrix_to_plot, nan_matrix, args.nan_threshold
+        )
+
+    # Apply triangular mask if requested
+    if args.triangular:
+        print(f"$ Applying {args.triangular_mode} triangular mask")
+        matrix_to_plot = apply_triangular_mask(
+            matrix_to_plot, mode=args.triangular_mode
         )
     cmtitle = "proximity frequency" if args.mode == "proximity" else "distance, µm"
     n_cells = sc_matrices.shape[2]
@@ -232,7 +285,7 @@ def main():
             u_barcodes,
             input_filename=args.matrix,
             output_folder=args.output,
-            file_format=args.plot_format,
+            file_format=args.output_format,
             n_cells=n_cells,
             font_size=args.fontsize,
             remove_nan=rm_nan,
@@ -243,7 +296,7 @@ def main():
         u_barcodes,
         input_filename=args.matrix,
         output_folder=args.output,
-        file_format=args.plot_format,
+        file_format=args.output_format,
         mode=args.mode,
         n_cells=n_cells,
         font_size=args.fontsize,

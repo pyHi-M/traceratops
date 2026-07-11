@@ -16,6 +16,8 @@ required_keys = ["genome_assembly", "experimenter_name", "experimenter_contact"]
 import csv
 import json
 import os
+import select
+import sys
 from argparse import ArgumentParser
 
 import pandas as pd
@@ -24,7 +26,11 @@ from astropy.io import ascii
 
 def parse_arguments():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("--ecsv_file", help="Path to the ECSV file")
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--input", help="Path to the ECSV file")
+    input_group.add_argument(
+        "--pipe", action="store_true", help="Read input filenames from stdin (pipe)."
+    )
     parser.add_argument("--bed_file", help="Path to the BED file")
     parser.add_argument(
         "--json_file",
@@ -36,6 +42,21 @@ def parse_arguments():
         "--output_file", default=None, help="Path to the output CSV file"
     )
     return parser
+
+
+def get_trace_files(args):
+    if args.pipe:
+        if select.select([sys.stdin], [], [], 0.0)[0]:
+            trace_files = [line.strip() for line in sys.stdin if line.strip()]
+        else:
+            print(
+                "Error: No filenames received from stdin. Provide input with --pipe or use --input."
+            )
+            sys.exit(1)
+    else:
+        trace_files = [args.input]
+
+    return trace_files
 
 
 def load_trace_ecsv_file(ecsv_file):
@@ -228,18 +249,30 @@ if __name__ == "__main__":
     parser = parse_arguments()
     args = parser.parse_args()
 
+    trace_files = get_trace_files(args)
+    if not args.bed_file:
+        print("Error: --bed_file is required.")
+        sys.exit(1)
+
+    if args.output_file and len(trace_files) > 1:
+        print(
+            "Error: --output_file can only be used when processing a single input file."
+        )
+        sys.exit(1)
+
     # Load the metadata
     args_json_file = args.json_file or os.path.join(os.getcwd(), "parameters.json")
     metadata = load_json_file(args_json_file)
     check_metadata(metadata)
 
-    output = get_output_file(args.ecsv_file, args.output_file)
+    for ecsv_file in trace_files:
+        output = get_output_file(ecsv_file, args.output_file)
 
-    convert_ecsv_to_csv(
-        args.ecsv_file,
-        output,
-        args.bed_file,
-        metadata["genome_assembly"],
-        metadata["experimenter_name"],
-        metadata["experimenter_contact"],
-    )
+        convert_ecsv_to_csv(
+            ecsv_file,
+            output,
+            args.bed_file,
+            metadata["genome_assembly"],
+            metadata["experimenter_name"],
+            metadata["experimenter_contact"],
+        )

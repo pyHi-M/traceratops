@@ -5,13 +5,20 @@ trace table management class
 
 import os
 import sys
+import uuid
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import Table, vstack
-from tqdm import tqdm
+from matplotlib.colors import ListedColormap
+
+from traceratops.core.localization_table import (
+    build_color_dict,
+    decode_rois,
+    plots_localization_projection,
+)
 
 font = {"weight": "normal", "size": 22}
 matplotlib.rc("font", **font)
@@ -37,19 +44,54 @@ def save_table_to_ecsv(data, path):
     )
 
 
-def decode_rois(data):
-    data_indexed = data.group_by("ROI #")
-    number_rois = len(data_indexed.groups.keys)
-    print(f"\n$ rois detected: {number_rois}")
-    return data_indexed, number_rois
+def generate_pyhim_identifier():
+    """Return a pyHiM-style UUID identifier."""
+    return str(uuid.uuid4())
 
 
-def build_color_dict(data, key="Barcode #"):
-    unique_barcodes = np.unique(data[key])
-    output_array = range(unique_barcodes.shape[0])
-    return {
-        str(barcode): output for barcode, output in zip(unique_barcodes, output_array)
-    }
+def relabel_pyhim_identifiers(csv_data):
+    """Relabel 4DN identifiers to pyHiM Astropy UUID nomenclature."""
+    if "Spot_ID" in csv_data.columns:
+        csv_data["Spot_ID"] = [
+            generate_pyhim_identifier() for _ in range(len(csv_data))
+        ]
+
+    if "Trace_ID" in csv_data.columns:
+        trace_id_map = {
+            trace_id: generate_pyhim_identifier()
+            for trace_id in pd.unique(csv_data["Trace_ID"])
+        }
+        csv_data["Trace_ID"] = csv_data["Trace_ID"].map(trace_id_map)
+
+    return csv_data
+
+
+def micrometer_scale_from_xyz_unit(xyz_unit):
+    """Return the factor needed to convert an XYZ unit to micrometers."""
+    normalized_unit = xyz_unit.strip().lower().replace("µ", "u")
+    micrometer_units = {"micron", "microns", "micrometer", "micrometers", "um"}
+    nanometer_units = {"nm", "nanometer", "nanometers"}
+
+    if normalized_unit in micrometer_units:
+        return 1.0
+    if normalized_unit in nanometer_units:
+        return 0.001
+
+    raise ValueError(
+        f"Unsupported FOF-CT XYZ_unit '{xyz_unit}'. "
+        "Supported coordinate units are micrometers and nanometers."
+    )
+
+
+def random_label_cmap(n_labels=256, seed=42):
+    """
+    Generates a random colormap similar to stardist (so you don't have to import this library just to do it).
+    Label 0 (background) is black, the others are given random colours.
+    """
+    rng = np.random.default_rng(seed)
+    colors = np.zeros((n_labels, 3))  # RGB
+    colors[1:] = rng.random((n_labels - 1, 3))  # labels > 0
+    return ListedColormap(colors)
 
 
 class ChromatinTraceTable:
@@ -120,30 +162,40 @@ class ChromatinTraceTable:
             sys.exit()
 
         file_ext = os.path.splitext(file)[1].lower()
-        if file_ext == ".ecsv":
+        if file_ext in (".ecsv", ".dat"):
             print("$ Importing table from pyHiM format")
             self.data = read_table_from_ecsv(file)
             self.original_format = "ecsv"
-        elif file_ext == ".4dn":
+        elif file_ext == ".4dn" or file_ext == ".csv":
             print("$ Importing table from fof-ct format")
             self._read_metadata_from_4dn(file)
             self.data = self._convert_4dn_to_astropy(file)
             self.original_format = "4dn"
         else:
-            raise ValueError("Unsupported file format. Use .ecsv or .4dn")
+            raise ValueError(
+                "Unsupported file format. Use .ecsv for pyHiM format, .4dn or .csv for FOF-CT format"
+            )
 
         print(f"Successfully loaded trace table: {file}")
         return self.data
 
     def remove_empty_comments(self):
-        if len(self.data.meta["comments"]):
-            self.data.meta["comments"] = [
-                com for com in self.data.meta["comments"] if com
-            ]
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = [
+                    com for com in self.data.meta["comments"] if com
+                ]
+        except KeyError:
+            return
 
     def remove_duplicate_comments(self):
-        if len(self.data.meta["comments"]):
-            self.data.meta["comments"] = list(dict.fromkeys(self.data.meta["comments"]))
+        try:
+            if len(self.data.meta["comments"]):
+                self.data.meta["comments"] = list(
+                    dict.fromkeys(self.data.meta["comments"])
+                )
+        except KeyError:
+            return
 
     def save(self, file_name, comments=""):
         """
@@ -172,8 +224,10 @@ class ChromatinTraceTable:
                     self.experimenter_name = line.split(": ")[1].strip()
                 elif line.startswith("#experimenter_contact:"):
                     self.experimenter_contact = line.split(": ")[1].strip()
-                elif line.startswith("##genome_assembly:"):
-                    self.genome_assembly = line.split("=")[1].strip()
+                elif line.startswith("##genome_assembly="):
+                    self.genome_assembly = line.split("=", 1)[1].strip()
+                elif line.startswith("##XYZ_unit="):
+                    self.xyz_unit = line.split("=", 1)[1].strip()
                 elif line.startswith("#Software_Title:"):
                     self.software_title = line.split(": ")[1].strip()
                 elif line.startswith("#Software_Authors:"):
@@ -200,8 +254,24 @@ class ChromatinTraceTable:
         column_names = self.columns  # self._read_column_names_from_4dn(fofct_file)
         csv_data = pd.read_csv(fofct_file, comment="#", header=None, names=column_names)
 
+        # 4DN tables can use numeric IDs that clash with pyHiM tooling after
+        # conversion. Relabel them using pyHiM UUID nomenclature before
+        # creating the Astropy table.
+        csv_data = relabel_pyhim_identifiers(csv_data)
+
         # Rename XYZ columns for Astropy compatibility
         csv_data.rename(columns={"X": "x", "Y": "y", "Z": "z"}, inplace=True)
+
+        # pyHiM Astropy trace tables store XYZ coordinates in micrometers.
+        # FOF-CT tables declare their coordinate unit in the ##XYZ_unit header,
+        # so convert when needed before returning the Astropy table.
+        micrometer_scale = micrometer_scale_from_xyz_unit(self.xyz_unit)
+        for coordinate in ("x", "y", "z"):
+            if coordinate in csv_data.columns:
+                csv_data[coordinate] = (
+                    csv_data[coordinate].astype(float) * micrometer_scale
+                )
+        self.xyz_unit = "micron"
 
         # Handle optional Cell_ID column
         if "Cell_ID" in csv_data.columns:
@@ -218,12 +288,18 @@ class ChromatinTraceTable:
             csv_data["ROI #"] = 0  # Default value if missing
 
         # Assign Barcode # by ordering and mapping unique genomic positions
-        unique_barcodes = (
-            csv_data[["Chrom", "Chrom_Start", "Chrom_End"]]
-            .drop_duplicates()
-            .sort_values(by=["Chrom", "Chrom_Start", "Chrom_End"])
-            .reset_index(drop=True)
-        )
+        try:
+            unique_barcodes = (
+                csv_data[["Chrom", "Chrom_Start", "Chrom_End"]]
+                .drop_duplicates()
+                .sort_values(by=["Chrom", "Chrom_Start", "Chrom_End"])
+                .reset_index(drop=True)
+            )
+        except KeyError:
+            raise SystemExit(
+                f"! ERROR\nInput file <{fofct_file}> not in FOF-CT format."
+            )
+
         unique_barcodes["Barcode #"] = range(1, len(unique_barcodes) + 1)
         barcode_mapping = {
             tuple(row[:3]): row[3]
@@ -239,7 +315,8 @@ class ChromatinTraceTable:
         csv_data["label"] = "None"  # Placeholder for label
 
         # Save BED file with Barcode # mapping
-        bed_file = fofct_file.replace(".4dn", ".bed")
+
+        bed_file = fofct_file.split(".")[0] + "_genomic_coordinates.bed"
         unique_barcodes.to_csv(bed_file, sep="\t", header=False, index=False)
         print(f"Saved BED file: {bed_file}")
 
@@ -478,29 +555,134 @@ class ChromatinTraceTable:
         """
         Filters localizations in the trace file based on intensity from the localization table.
         """
+        return self.filter_by_localization_metrics(
+            trace, localizations, {"intensity": intensity_min}
+        )
+
+    def filter_by_localization_metrics(
+        self, trace, localizations, minimum_thresholds, maximum_thresholds=None
+    ):
+        """Filter trace rows by one or more localization-table quality thresholds.
+
+        Parameters
+        ----------
+        trace : ChromatinTraceTable
+            Trace table to filter in place.
+        localizations : astropy.table.Table
+            Localization table indexed by ``Buid``.
+        minimum_thresholds : dict
+            Mapping of localization-table metric names to minimum values to keep.
+            The special ``intensity`` key keeps backward-compatible behavior by
+            resolving to ``mean_intensity`` in new tables or ``peak`` in legacy
+            tables.
+        maximum_thresholds : dict, optional
+            Mapping of localization-table metric names to maximum values to keep.
+        """
+        minimum_thresholds = {
+            metric: minimum
+            for metric, minimum in minimum_thresholds.items()
+            if minimum is not None
+        }
+        maximum_thresholds = {
+            metric: maximum
+            for metric, maximum in (maximum_thresholds or {}).items()
+            if maximum is not None
+        }
+        if not minimum_thresholds and not maximum_thresholds:
+            return []
+
         localizations.add_index("Buid")  # Add an index for fast lookup
+        resolved_minimum_thresholds = {}
+        resolved_maximum_thresholds = {}
+        for metric, minimum in minimum_thresholds.items():
+            column_name = (
+                self._get_localization_intensity_column(localizations)
+                if metric == "intensity"
+                else metric
+            )
+            if column_name not in localizations.colnames:
+                raise KeyError(
+                    f"Localization table must contain a '{column_name}' column "
+                    f"to filter by '{metric}'."
+                )
+            resolved_minimum_thresholds[column_name] = minimum
+
+        for metric, maximum in maximum_thresholds.items():
+            column_name = (
+                self._get_localization_intensity_column(localizations)
+                if metric == "intensity"
+                else metric
+            )
+            if column_name not in localizations.colnames:
+                raise KeyError(
+                    f"Localization table must contain a '{column_name}' column "
+                    f"to filter by '{metric}'."
+                )
+            resolved_maximum_thresholds[column_name] = maximum
 
         rows_to_remove = []
         number_spots = len(trace.data)
         intensities_kept = list()
+        intensity_column = (
+            self._get_localization_intensity_column(localizations)
+            if "intensity" in minimum_thresholds or "intensity" in maximum_thresholds
+            else None
+        )
+
         for idx, row in enumerate(trace.data):
             spot_id = row["Spot_ID"]
             try:
-                intensity = localizations.loc[spot_id]["peak"]
-                if intensity < intensity_min:
-                    rows_to_remove.append(idx)
-                else:
-                    intensities_kept.append(intensity)
+                localization = localizations.loc[spot_id]
             except KeyError:
                 continue  # If Spot_ID is not found, keep the entry
 
+            remove_row = False
+            for column_name, minimum in resolved_minimum_thresholds.items():
+                if localization[column_name] < minimum:
+                    remove_row = True
+                    break
+            if not remove_row:
+                for column_name, maximum in resolved_maximum_thresholds.items():
+                    if localization[column_name] > maximum:
+                        remove_row = True
+                        break
+
+            if remove_row:
+                rows_to_remove.append(idx)
+            elif intensity_column is not None:
+                intensities_kept.append(localization[intensity_column])
+
         trace.data.remove_rows(rows_to_remove)
+        threshold_summary = ", ".join(
+            [
+                f"{column_name}>={minimum}"
+                for column_name, minimum in resolved_minimum_thresholds.items()
+            ]
+            + [
+                f"{column_name}<={maximum}"
+                for column_name, maximum in resolved_maximum_thresholds.items()
+            ]
+        )
         print(
-            f"> Removed {len(rows_to_remove)}/{number_spots} localizations below intensity threshold ({intensity_min})."
+            f"> Removed {len(rows_to_remove)}/{number_spots} localizations outside localization quality thresholds ({threshold_summary})."
         )
         print(f"> Number of rows in filtered trace table: {len(trace.data)}")
 
         return intensities_kept
+
+    @staticmethod
+    def _get_localization_intensity_column(localization_table):
+        """Return the supported localization intensity column for filtering.
+
+        Newer localization tables use ``mean_intensity`` while legacy pyHiM-style
+        tables use ``peak`` for the same intensity-based decisions.
+        """
+        for column_name in ("mean_intensity", "peak"):
+            if column_name in localization_table.colnames:
+                return column_name
+        raise KeyError(
+            "Localization table must contain a 'mean_intensity' or 'peak' column."
+        )
 
     def barcode_statistics(self, trace_table):
         """
@@ -524,7 +706,7 @@ class ChromatinTraceTable:
         # iterates over traces
         print("$ Calculating barcode stats...")
 
-        for trace in tqdm(trace_table_indexed.groups):
+        for trace in trace_table_indexed.groups:
             unique_barcodes = list(set(trace["Barcode #"].data))
             barcodes = list(trace["Barcode #"].data)
 
@@ -569,13 +751,24 @@ class ChromatinTraceTable:
         sorted_barcodes = sorted([int(x) for x in collective_barcode_stats.keys()])
         data = [collective_barcode_stats[str(key)] for key in sorted_barcodes]
 
-        fig, (ax1) = plt.subplots(nrows=1, ncols=1, figsize=(15, 15))
-
         label, density = ("frequency", True) if norm else ("counts", False)
-        ax1.set_title("Relative barcode frequencies", fontsize=30)
+
+        title_fontsize = 16
+        label_fontsize = 12
+        tick_fontsize = 10
 
         if "violin" in kind:
-            self._extracted_from_plots_barcode_statistics_38(ax1, data, sorted_barcodes)
+            figure_size = (15, 15)
+        else:
+            figure_size = self._barcode_matrix_figure_size(len(sorted_barcodes))
+
+        fig, ax1 = plt.subplots(
+            nrows=1, ncols=1, figsize=figure_size, constrained_layout=True
+        )
+        ax1.set_title("Relative barcode frequencies", fontsize=title_fontsize)
+
+        if "violin" in kind:
+            self._extracted_from_plots_barcode_statistics(ax1, data, sorted_barcodes)
         else:
             bins = range(1, 10)
             matrix = np.zeros((len(sorted_barcodes), len(bins) - 1))
@@ -583,22 +776,39 @@ class ChromatinTraceTable:
                 matrix[idx, :], _ = np.histogram(
                     barcode_data, bins=bins, density=density
                 )
-            bin_number = list(bins)
-            pos = ax1.imshow(np.transpose(matrix), cmap="Reds")
-            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes, fontsize=15)
-            ax1.set_yticks(np.arange(0, len(bins)), bin_number, fontsize=15)
-            ax1.set_ylabel("number of barcodes", fontsize=25)
-            ax1.set_xlabel("barcode IDs", fontsize=25)
-            fig.colorbar(
-                pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4, label=label
+            bin_number = list(bins[:-1])
+            pos = ax1.imshow(np.transpose(matrix), cmap="Reds", aspect="auto")
+            ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes)
+            ax1.tick_params(axis="x", labelsize=8)
+            plt.setp(
+                ax1.get_xticklabels(),
+                rotation=45,
+                ha="right",
+                rotation_mode="anchor",
             )
+            ax1.set_yticks(np.arange(len(bin_number)), bin_number, fontsize=12)
+            ax1.set_ylabel("number of barcodes", fontsize=18)
+            ax1.set_xlabel("barcode IDs", fontsize=18)
+
+            # Add colorbar
+            cbar = fig.colorbar(
+                pos, ax=ax1, location="bottom", anchor=(0.5, 1), shrink=0.4
+            )
+            cbar.set_label(label, fontsize=label_fontsize)
+            cbar.ax.tick_params(labelsize=tick_fontsize)
+
         print(
             f"$ Exporting relative barcode frequencies figure to: {file_name}.{format}"
         )
-        fig.savefig(f"{file_name}.{format}")
+        fig.savefig(f"{file_name}.{format}", bbox_inches="tight")
 
-    # TODO Rename this here and in `plots_barcode_statistics`
-    def _extracted_from_plots_barcode_statistics_38(self, ax1, data, sorted_barcodes):
+    @staticmethod
+    def _barcode_matrix_figure_size(number_barcodes):
+        """Return a wide figure size that follows the barcode matrix aspect ratio."""
+        width = min(max(number_barcodes * 0.18, 8), 24)
+        return (width, 4.5)
+
+    def _extracted_from_plots_barcode_statistics(self, ax1, data, sorted_barcodes):
         ax1.set_ylabel("number of barcodes")
         ax1.violinplot(data)
 
@@ -708,7 +918,7 @@ class ChromatinTraceTable:
 
             # iterates over traces
             spots_to_remove = []
-            for trace in tqdm(trace_table_indexed.groups):
+            for trace in trace_table_indexed.groups:
                 unique_barcodes = list(set(trace["Barcode #"].data))
                 number_unique_barcodes = len(unique_barcodes)
                 barcodes = list(trace["Barcode #"].data)
@@ -740,22 +950,25 @@ class ChromatinTraceTable:
             print(f"$ Number of rows to remove: {len(rows_to_remove)}")
 
             if len(trace_table_new) > 0:
-                trace_table_indexed = trace_table_new.group_by("Trace_ID")
+                number_traces_left = len(trace_table_new.group_by("Trace_ID").groups)
+            else:
+                number_traces_left = 0
 
             print(
-                f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {len(trace_table_indexed.groups)}"
+                f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {number_traces_left}"
             )
 
-            # calculates the statistics for the table before processing
-            collective_barcode_stats_new = self.barcode_statistics(trace_table_new)
+            if len(trace_table_new) > 0:
+                # calculates the statistics for the table after processing
+                collective_barcode_stats_new = self.barcode_statistics(trace_table_new)
 
-            # plots statistics of barcodes and saves in file
-            self.plots_barcode_statistics(
-                collective_barcode_stats_new,
-                file_name=f"{trace_file.split('.')[0]}_filtered",
-                kind="matrix",
-                norm=False,
-            )
+                # plots statistics of barcodes and saves in file
+                self.plots_barcode_statistics(
+                    collective_barcode_stats_new,
+                    file_name=f"{trace_file.split('.')[0]}_filtered",
+                    kind="matrix",
+                    norm=False,
+                )
 
         else:
             print("! Error: you are trying to filter an empty trace table!")
@@ -764,13 +977,14 @@ class ChromatinTraceTable:
     def remove_duplicates_loc(self, localization_table=None):
         """
         Removes duplicated barcodes within each trace.
-        If a localization_table is provided, keeps only the spot with the highest intensity ("peak").
+        If a localization_table is provided, keeps only the spot with the highest intensity.
         Otherwise, removes all instances of duplicated barcodes.
 
         Parameters
         ----------
         localization_table : astropy Table, optional
-            Localization table with 'Buid' and 'peak' columns. Used to select spot with highest intensity.
+            Localization table with 'Buid' and an intensity column ('mean_intensity' or 'peak').
+            Used to select spot with highest intensity.
 
         Returns
         -------
@@ -791,8 +1005,11 @@ class ChromatinTraceTable:
         if localization_table is not None:
             print("$ Using intensity to resolve duplicates...")
             localization_table.add_index("Buid")
+            intensity_column = self._get_localization_intensity_column(
+                localization_table
+            )
 
-            for trace in tqdm(trace_table_indexed.groups):
+            for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
                 for group in barcode_groups:
                     if len(group) == 1:
@@ -802,7 +1019,7 @@ class ChromatinTraceTable:
                     for row in group:
                         spot_id = row["Spot_ID"]
                         try:
-                            peak = localization_table.loc[spot_id]["peak"]
+                            peak = localization_table.loc[spot_id][intensity_column]
                         except KeyError:
                             peak = -1
                         peaks.append(peak)
@@ -859,23 +1076,22 @@ class ChromatinTraceTable:
         trace_table_new = trace_table.copy()
         print("\n$ Removing duplicated barcodes within traces...")
         if len(trace_table) > 0:
-            # indexes trace file
-            trace_table_indexed = trace_table.group_by("Spot_ID")
-
-            # finds barcodes with the same UID and stores UIDs in list
-            spots_to_remove = [
-                trace["Spot_ID"][0]
-                for trace in tqdm(trace_table_indexed.groups)
+            # Spot_ID values are not guaranteed to be globally unique after
+            # merging trace files. Treat a duplicated UID as duplicated only
+            # within the same trace, otherwise clean_spots can remove every
+            # spot from merged tables whose Spot_ID counters restart at 1.
+            trace_table_indexed = trace_table.group_by(["Trace_ID", "Spot_ID"])
+            duplicated_trace_spot_ids = {
+                (trace["Trace_ID"][0], trace["Spot_ID"][0])
+                for trace in trace_table_indexed.groups
                 if len(trace) > 1
-            ]
+            }
 
-            # finds row of the first offending barcode
-            # this only removes one of the duplicated barcodes --> assumes at most there are two copies
-            rows_to_remove = []
-            for idx, row in enumerate(trace_table):
-                spot_id = row["Spot_ID"]
-                if spot_id in spots_to_remove:
-                    rows_to_remove.append(idx)
+            rows_to_remove = [
+                idx
+                for idx, row in enumerate(trace_table)
+                if (row["Trace_ID"], row["Spot_ID"]) in duplicated_trace_spot_ids
+            ]
 
             # removes from table
             trace_table_new.remove_rows(rows_to_remove)
@@ -928,7 +1144,7 @@ class ChromatinTraceTable:
 
             # builds the list with the rows to remove
             rows_to_remove = []
-            for idx, row in enumerate(tqdm(trace_table)):
+            for idx, row in enumerate(trace_table):
                 spot_id = row["Spot_ID"]
 
                 if spot_id in spots_to_remove:
@@ -966,6 +1182,10 @@ class ChromatinTraceTable:
 
         trace_table = self.data
 
+        if len(trace_table) == 0:
+            print("! Error: you are trying to filter an empty trace table!")
+            return
+
         # indexes trace file
         trace_table_indexed = trace_table.group_by("Trace_ID")
 
@@ -978,7 +1198,7 @@ class ChromatinTraceTable:
         barcodes_to_remove = []
         print("$ Analyzing traces...")
 
-        for trace in tqdm(trace_table_indexed.groups):
+        for trace in trace_table_indexed.groups:
             number_unique_barcodes = len(list(set(trace["Barcode #"].data)))
 
             if number_unique_barcodes < minimum_number_barcodes:
@@ -987,12 +1207,12 @@ class ChromatinTraceTable:
         print(f"$ Number of traces to remove: {len(barcodes_to_remove)}")
 
         list_barcode_to_remove = []
-        for barcodes in tqdm(barcodes_to_remove):
+        for barcodes in barcodes_to_remove:
             list_barcode_to_remove.extend(iter(barcodes))
         rows_to_remove = []
 
         print("$ Finding which rows to remove...")
-        for idx, row in enumerate(tqdm(trace_table)):
+        for idx, row in enumerate(trace_table):
             spot_id = row["Spot_ID"]
             if spot_id in list_barcode_to_remove:
                 rows_to_remove.append(idx)
@@ -1009,3 +1229,147 @@ class ChromatinTraceTable:
         )
 
         self.data = trace_table
+
+    def plots_traces(
+        self, filename_list, masks=np.zeros((2048, 2048)), pixel_size=None
+    ):
+        """
+        This function plots 3 subplots (xy, xz, yz) with the localizations.
+        One figure is produced per ROI.
+
+        Parameters
+        ----------
+
+        filename_list: list
+            filename
+        """
+
+        if pixel_size is None:
+            pixel_size = [0.1, 0.1, 0.25]
+        data = self.data
+
+        # indexes table by ROI
+        data_indexed, number_rois = decode_rois(data)
+
+        im_size = 60
+        print(f"> Will make plots for {number_rois} ROI(s)")
+        for i_roi in range(number_rois):
+            # creates sub Table for this ROI
+            data_roi = data_indexed.groups[i_roi]
+            n_roi = data_roi["ROI #"][0]
+            print(f"> Plotting barcode localization map for ROI: {n_roi}")
+            color_dict = build_color_dict(data_roi, key="Barcode #")
+
+            # initializes figure
+            fig = plt.figure(constrained_layout=False)
+            fig.set_size_inches((im_size * 2, im_size))
+            gs = fig.add_gridspec(2, 2)
+            ax = [
+                fig.add_subplot(gs[:, 0]),
+                fig.add_subplot(gs[0, 1]),
+                fig.add_subplot(gs[1, 1]),
+            ]
+
+            # defines variables
+            x = data_roi["x"]
+            y = data_roi["y"]
+            z = data_roi["z"]
+
+            colors = [color_dict[str(x)] for x in data_roi["Barcode #"]]
+            titles = [
+                "Z-projection (pixel)",
+                "X-projection (pixel)",
+                "Y-projection (pixel)",
+            ]
+
+            # plots masks if available
+            if len(masks.shape) == 3:
+                masks = np.max(masks, axis=0)
+            ax[0].imshow(masks, cmap=random_label_cmap(), alpha=0.3)
+
+            # calculates mean trace positions and sizes by looping over traces
+            data_traces = data_roi.group_by("Trace_ID")
+            color_dict_traces = build_color_dict(data_traces, key="Trace_ID")
+            colors_traces = [color_dict_traces[str(x)] for x in data_traces["Trace_ID"]]
+            cmap_traces = plt.cm.get_cmap("hsv", np.max(colors_traces))
+            number_traces = len(colors_traces)
+
+            print(f"$ Plotting {number_traces} traces...")
+            for trace, color, trace_id in zip(
+                data_traces.groups, colors_traces, data_traces.groups.keys
+            ):
+                # Sort by barcode number
+                sorted_trace = trace[np.argsort(trace["Barcode #"])]
+
+                # Extract coordinates
+                x_trace = sorted_trace["x"].data / pixel_size[0]
+                y_trace = sorted_trace["y"].data / pixel_size[1]
+                z_trace = (
+                    sorted_trace["z"].data / pixel_size[2]
+                )  # If needed for other plots
+
+                # Plot scatter points
+                ax[0].scatter(
+                    x_trace,
+                    y_trace,
+                    color=cmap_traces(color),
+                    s=5,
+                    label=f"Trace {trace_id}",
+                    alpha=0.1,
+                )
+
+                # Plot line connecting the points in this trace
+                ax[0].plot(x_trace, y_trace, color="k", linewidth=1, alpha=0.4)
+
+                # Repeat for the other projections
+                ax[1].scatter(x_trace, z_trace, color=cmap_traces(color), s=5)
+                ax[1].plot(x_trace, z_trace, color="k", linewidth=1, alpha=0.4)
+
+                ax[2].scatter(y_trace, z_trace, color=cmap_traces(color), s=5)
+                ax[2].plot(y_trace, z_trace, color="k", linewidth=1, alpha=0.4)
+
+            print(f"$ Pixel_size = {pixel_size}")
+            # makes plot
+            plots_localization_projection(
+                x / pixel_size[0], y / pixel_size[1], ax[0], colors, titles[0]
+            )
+            plots_localization_projection(
+                x / pixel_size[0], z / pixel_size[2], ax[1], colors, titles[1]
+            )
+            plots_localization_projection(
+                y / pixel_size[1], z / pixel_size[2], ax[2], colors, titles[2]
+            )
+
+            fig.tight_layout()
+
+            """
+            for trace, color, trace_id in zip(
+                data_traces.groups, colors_traces, data_traces.groups.keys
+            ):
+
+                # Plots polygons for each trace
+                poly_coord = np.array(
+                    [
+                        (trace["x"].data) / pixel_size[0],
+                        (trace["y"].data) / pixel_size[1],
+                    ]
+                ).T
+                polygon = Polygon(
+                    poly_coord,
+                    closed=False,
+                    fill=False,
+                    edgecolor=cmap_traces(color),
+                    linewidth=1,
+                    alpha=1,
+                )
+                ax[0].add_patch(polygon) # this does not work so I commented it out
+            """
+
+            # saves output figure
+            filename_list_i = filename_list.copy()
+            filename_list_i.insert(-1, f"_ROI{str(n_roi)}")
+            traces = "".join(filename_list_i)
+            try:
+                fig.savefig(traces)
+            except ValueError:
+                print(f"\nValue error while saving output figure with traces:{traces}")

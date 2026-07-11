@@ -15,15 +15,16 @@ a plot showing the frequency of interaction between the anchor barcode and all o
 This is particularly useful for analyzing chromatin organization, DNA-DNA interactions,
 and spatial proximity relationships in microscopy data.
 """
+
 import argparse
 import select
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -55,6 +56,12 @@ def parse_arguments():
         "--output", default="colocalization_plot.png", help="Output file for the plot."
     )
     parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
+    parser.add_argument(
         "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
     )
     parser.add_argument("--x_min", type=int, default=None, help="xscale minimum")
@@ -71,7 +78,7 @@ def compute_colocalization(trace_table, anchor_barcode, distance_cutoff):
         )
     barcode_interactions = {}
     trace_groups = trace_table.group_by("Trace_ID").groups
-    for trace in tqdm(trace_groups, desc="Processing traces"):
+    for trace in trace_groups:
         anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
         other_barcodes = np.unique(trace["Barcode #"])
         for barcode in other_barcodes:
@@ -120,7 +127,7 @@ def bootstrap_colocalization(
         anchor_barcodes = [anchor_barcodes]
     barcode_samples = {anchor: {} for anchor in anchor_barcodes}
     trace_ids = np.unique(trace_table["Trace_ID"])
-    for _ in tqdm(range(n_bootstrap), desc="Bootstrapping"):
+    for _ in range(n_bootstrap):
         sampled_traces = np.random.choice(trace_ids, size=len(trace_ids), replace=True)
         sampled_table = trace_table[np.isin(trace_table["Trace_ID"], sampled_traces)]
         # Process each anchor barcode separately
@@ -166,7 +173,13 @@ def bootstrap_colocalization(
 
 
 def plot_frequencies(
-    mean_frequencies, sem_frequencies, anchor_barcodes, output_file, x_min=0, x_max=0
+    mean_frequencies,
+    sem_frequencies,
+    anchor_barcodes,
+    output_file,
+    x_min=0,
+    x_max=0,
+    output_format="png",
 ):
     """Plots colocalization frequencies for multiple anchors separately."""
     # Make sure anchor_barcodes is a list for consistent processing
@@ -201,12 +214,15 @@ def plot_frequencies(
         _x_max = x_max if x_max is not None else max(barcodes) + 1
         plt.xlim(_x_min, _x_max)
         plt.grid(True)
-        output_filename = f"{output_file.split('.')[0]}_anchor_{anchor}.png"
+        output_filename = (
+            f"{output_file.rsplit('.', 1)[0]}_anchor_{anchor}.{output_format}"
+        )
         plt.savefig(output_filename)
         plt.close()  # Close the figure to avoid memory issues with many anchors
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     parser = parse_arguments()
     args = parser.parse_args()
 
@@ -245,6 +261,7 @@ def main():
                 args.output,
                 x_min=args.x_min,
                 x_max=args.x_max,
+                output_format=args.output_format,
             )
 
     else:

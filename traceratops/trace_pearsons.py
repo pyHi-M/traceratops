@@ -23,14 +23,33 @@ import numpy as np
 from scipy.stats import pearsonr
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
+
+
+def silent_load_trace(trace, path):
+    import contextlib
+    import io
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        trace.load(path)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
+        "--input",
+        nargs="+",
+        help="Paths to trace files to compare.",
+    )
+    input_group.add_argument(
+        "--pipe", action="store_true", help="Read input filenames from stdin (pipe)."
+    )
     parser.add_argument(
+        "-O",
         "--output",
-        default="trace_correlation_matrix.png",
-        help="Output filename for the correlation matrix plot (default: trace_correlation_matrix.png)",
+        default=".",
+        help="Output folder name for the correlation matrix plot (filename: trace_correlation_matrix.png)",
     )
     parser.add_argument(
         "--vmin", type=float, default=-10, help="Minimum value for colormap scaling"
@@ -38,7 +57,29 @@ def parse_arguments():
     parser.add_argument(
         "--vmax", type=float, default=10, help="Maximum value for colormap scaling"
     )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Increase verbosity")
     return parser
+
+
+def get_trace_files(args):
+    if args.pipe:
+        if select.select([sys.stdin], [], [], 0.0)[0]:
+            trace_files = [line.strip() for line in sys.stdin if line.strip()]
+        else:
+            print(
+                "Error: No filenames received from stdin. Provide input with --pipe or use --input."
+            )
+            sys.exit(1)
+    else:
+        trace_files = args.input
+
+    return trace_files
 
 
 def find_unique_substrings(filenames):
@@ -256,6 +297,10 @@ def plot_correlation_matrix(
     # Create labels for the plot
     labels = [os.path.basename(unique_identifiers[f]) for f in files]
 
+    title_fontsize = 16
+    label_fontsize = 12
+    tick_fontsize = 10
+
     # Create the figure and axis
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -264,53 +309,47 @@ def plot_correlation_matrix(
         vmin = np.min(matrix)
     if vmax == 10:
         vmax = np.max(matrix)
-    im = ax.imshow(matrix, cmap="RdBu", interpolation="nearest", vmin=vmin, vmax=vmax)
+    im = ax.imshow(matrix, cmap="RdBu", interpolation="nearest", vmin=0, vmax=1)
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Pearson Correlation", fontsize=12)
+    cbar.set_label("Pearson Correlation", fontsize=label_fontsize)
+    cbar.ax.tick_params(labelsize=tick_fontsize)
 
     # Set tick labels
     ax.set_xticks(range(len(files)))
     ax.set_yticks(range(len(files)))
-    ax.set_xticklabels(labels, rotation=90, fontsize=10)
-    ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xticklabels(labels, rotation=90, fontsize=tick_fontsize)
+    ax.set_yticklabels(labels, fontsize=tick_fontsize)
 
     # Add axis labels
-    ax.set_xlabel("Files", fontsize=14)
-    ax.set_ylabel("Files", fontsize=14)
+    ax.set_xlabel("Files", fontsize=label_fontsize)
+    ax.set_ylabel("Files", fontsize=label_fontsize)
 
     # Add title
-    ax.set_title("Trace Table Similarity Matrix", fontsize=16)
+    ax.set_title("Trace Table Similarity Matrix", fontsize=title_fontsize)
 
     # Adjust layout and save
     plt.tight_layout()
     plt.savefig(output_filename, dpi=300)
     print(f"$ Saved correlation matrix as {output_filename}")
 
-    np.save(output_filename.split(".")[0] + ".npy", matrix)
+    np.save(os.path.splitext(output_filename)[0] + ".npy", matrix)
     print(
-        f"$ Saved correlation matrix data in NPY format: {output_filename.split('.')[0]+'.npy'}"
+        f"$ Saved correlation matrix data in NPY format: {os.path.splitext(output_filename)[0] + '.npy'}"
     )
 
     plt.close()
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     """
     Main function that executes the trace comparison workflow.
     """
     parser = parse_arguments()
     args = parser.parse_args()
-    trace_files = []
-    if select.select([sys.stdin], [], [], 0.0)[0]:
-        trace_files = [line.rstrip("\n") for line in sys.stdin]
-    else:
-        print(
-            "Nothing in stdin! Please provide list of tracefiles as in:\n$ ls *ecsv | trace_pearsons"
-        )
-    if not trace_files:
-        return
+    trace_files = get_trace_files(args)
 
     print(f"Analyzing {len(trace_files)} trace files...")
 
@@ -319,18 +358,28 @@ def main():
     for fpath in trace_files:
         print(f"Processing {os.path.basename(fpath)}")
         trace = ChromatinTraceTable()
-        trace.load(fpath)
+        if args.verbose:
+            trace.load(fpath)
+        else:
+            silent_load_trace(trace, fpath)
         distance_maps[fpath] = accumulate_distances(trace.data)
 
     # Compare distance maps and generate correlation matrix
     files, corr_matrix = compare_distance_maps(distance_maps)
 
-    print("\nPearson Correlation Matrix:")
-    print(corr_matrix)
+    if args.verbose:
+        print("\nPearson Correlation Matrix:")
+        print(corr_matrix)
 
     # Plot and save the correlation matrix
     plot_correlation_matrix(
-        files, corr_matrix, output_filename=args.output, vmin=args.vmin, vmax=args.vmax
+        files,
+        corr_matrix,
+        output_filename=os.path.join(
+            args.output, f"trace_correlation_matrix.{args.output_format}"
+        ),
+        vmin=args.vmin,
+        vmax=args.vmax,
     )
 
 

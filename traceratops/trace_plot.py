@@ -20,6 +20,7 @@ import sys
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.him_matrix_operations import write_xyz_2_pdb
 from traceratops.core.io_manager import create_folder, load_barcode_dict
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
@@ -168,6 +169,7 @@ def runtime(
 
 
 def main():
+    print_script_banner(__file__, __doc__)
 
     # [parsing arguments]
     parser = parse_arguments()

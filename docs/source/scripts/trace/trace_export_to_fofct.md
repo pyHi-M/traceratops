@@ -48,7 +48,7 @@ We need as run arguments:
 ## Example
 
 ```sh
-trace_export_to_fofct --ecsv_file /path/to/Trace_3D_barcode_KDtree_ROI-5.ecsv --bed_file /path/to/barcode.bed --json_file /path/to/parameters.json --output_file /path/to/output.csv
+trace_export_to_fofct --input /path/to/Trace_3D_barcode_KDtree_ROI-5.ecsv --bed_file /path/to/barcode.bed --json_file /path/to/parameters.json --output_file /path/to/output.csv
 ```
 
 Example json file:

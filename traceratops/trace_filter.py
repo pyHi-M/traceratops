@@ -39,8 +39,8 @@ The script can process single files or multiple files via pipe input.
     # Remove traces with a specific label
     $ trace_filter --input Trace.ecsv --remove_label region1
 
-    # Filter by localization intensity
-    $ trace_filter --input Trace.ecsv --localization_file Localizations.ecsv --intensity_min 1000
+    # Filter by localization quality metrics
+    $ trace_filter --input Trace.ecsv --localization_file Localizations.ecsv --intensity_min 1000 --snr_min 5 --object_class_min 1 --roundness_max 0.8
 
     # Process multiple files via pipe
     $ ls *Trace.ecsv | trace_filter --pipe --n_barcodes 3
@@ -49,12 +49,14 @@ The script can process single files or multiple files via pipe input.
 """
 
 import argparse
+import os
 import sys
 
 import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.localization_table import LocalizationTable
+from traceratops.script_banner import print_script_banner
 
 
 def check_required_arg(args, parser):
@@ -85,6 +87,12 @@ def parse_arguments():
         help="inputs Trace file list from stdin (for batch processing)",
         action="store_true",
     )
+    psr_basic.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
+    )
 
     psr_opt = parser.add_argument_group("Filtering options")
     psr_opt.add_argument(
@@ -114,7 +122,7 @@ def parse_arguments():
         default=None,
     )
 
-    psr_intensity = parser.add_argument_group("Intensity filtering")
+    psr_intensity = parser.add_argument_group("Localization quality filtering")
     psr_intensity.add_argument(
         "--localization_file", default=None, help="Name of input localizations file."
     )
@@ -122,8 +130,22 @@ def parse_arguments():
         "--intensity_min",
         type=float,
         default=0.0,
-        help="Minimum intensity threshold for localizations.",
+        help="Minimum intensity threshold for localizations. Uses mean_intensity for new localization tables and peak for legacy tables.",
     )
+    for metric in ("snr", "skew", "patch_size", "object_class"):
+        psr_intensity.add_argument(
+            f"--{metric}_min",
+            type=float,
+            default=0.0,
+            help=f"Minimum {metric} threshold for localizations.",
+        )
+    for metric in ("spot_pixel_percentage", "roundness"):
+        psr_intensity.add_argument(
+            f"--{metric}_max",
+            type=float,
+            default=0.0,
+            help=f"Maximum {metric} threshold for localizations.",
+        )
 
     psr_coord = parser.add_argument_group(
         "Coordinate filtering", description="Coordinate limits (default: 0 to infinity)"
@@ -161,6 +183,27 @@ def args_coord_to_dict(args):
     }
 
 
+def args_quality_filters_to_dict(args):
+    minimum_filters = {
+        "snr": args.snr_min,
+        "skew": args.skew_min,
+        "patch_size": args.patch_size_min,
+        "object_class": args.object_class_min,
+    }
+    maximum_filters = {
+        "spot_pixel_percentage": args.spot_pixel_percentage_max,
+        "roundness": args.roundness_max,
+    }
+    return {
+        "minimum": {
+            metric: minimum for metric, minimum in minimum_filters.items() if minimum
+        },
+        "maximum": {
+            metric: maximum for metric, maximum in maximum_filters.items() if maximum
+        },
+    }
+
+
 def get_files_from_args(args):
     """Read input directly without using select.select()"""
     if args.pipe:
@@ -184,7 +227,7 @@ def check_file_number(trace_files):
         print(f"\n$ {len(trace_files)} trace files to process: \n{f2p}")
 
 
-def filter_duplicat(
+def filter_duplicate(
     remove_duplicate_spots, trace, trace_file, localizations_file, localizations_data
 ):
     if remove_duplicate_spots:
@@ -218,6 +261,24 @@ def filter_label(label_to_keep, label_to_remove, trace):
     return trace, file_tag
 
 
+def get_filtered_localizations(localizations_data, trace_data):
+    """Return localizations whose ``Buid`` is still present in the trace table."""
+    if localizations_data is None or trace_data is None or len(trace_data) == 0:
+        return localizations_data[:0]
+
+    remaining_spot_ids = {str(spot_id) for spot_id in trace_data["Spot_ID"]}
+    rows_to_keep = [
+        str(localization_id) in remaining_spot_ids
+        for localization_id in localizations_data["Buid"]
+    ]
+    return localizations_data[rows_to_keep]
+
+
+def get_file_root(file_name):
+    """Return a file path without its final extension."""
+    return os.path.splitext(file_name)[0]
+
+
 def runtime(
     trace_files=[],
     n_barcodes=2,
@@ -229,6 +290,8 @@ def runtime(
     label_to_remove="",
     localizations_file=None,
     intensity_min=0,
+    quality_filters=None,
+    output_format="png",
 ):
     if len(trace_files) <= 0:
         print("No trace file found to process!")
@@ -242,6 +305,12 @@ def runtime(
             )
         )
 
+    quality_filters = quality_filters or {}
+    minimum_filters = quality_filters.get("minimum", quality_filters)
+    maximum_filters = quality_filters.get("maximum", {})
+    if intensity_min:
+        minimum_filters["intensity"] = intensity_min
+
     localizations_data = None
     if localizations_file:
         localization_table = LocalizationTable()
@@ -251,10 +320,14 @@ def runtime(
     if localizations_file and intensity_min:
 
         # Plot intensity distribution to help user choose a threshold
-        intensities = [row["peak"] for row in localizations_data]
-        output_file = localizations_file.split(".")[0]
+        intensity_column = ChromatinTraceTable._get_localization_intensity_column(
+            localizations_data
+        )
+        intensities = [row[intensity_column] for row in localizations_data]
+        output_file = get_file_root(localizations_file)
         localization_table.plot_intensity_distribution(
-            intensities, output_file=output_file + "_localization_intensities.png"
+            intensities,
+            output_file=f"{output_file}_localization_intensities.{output_format}",
         )
 
     # iterates over traces
@@ -265,7 +338,8 @@ def runtime(
         # reads new trace
         trace.load(trace_file)
 
-        trace = filter_duplicat(
+        print("\n$ Filtering duplicated barcodes")
+        trace = filter_duplicate(
             remove_duplicate_spots,
             trace,
             trace_file,
@@ -273,7 +347,8 @@ def runtime(
             localizations_data,
         )
 
-        # filters trace by coordinate
+        # fiters trace by coordinate
+        print("\n$ Filtering barcodes based on coordinates")
         for coord in ["x", "y", "z"]:
             coor_min = coord_limits[coord + "_min"]
             coor_max = coord_limits[coord + "_max"]
@@ -289,32 +364,61 @@ def runtime(
         # removes barcodes from a list provided by user
         if remove_barcode is not None:
             bc_list = remove_barcode.split(",")
-            print(f"\n$ Removing barcodes: {bc_list}")
+            print(f"\n$ Removing user provided barcodes: {bc_list}")
             for bc in bc_list:
                 trace.remove_barcode(bc)
 
         trace, file_tag = filter_label(label_to_keep, label_to_remove, trace)
 
-        # removes localizations with low intensity
-        if intensity_min and localizations_file:
-            intensities_kept = trace.filter_by_intensity(
-                trace, localizations_data, intensity_min
+        # removes localizations that do not satisfy localization quality thresholds
+        print("\n$ Filtering barcodes based on localization quality")
+        if (minimum_filters or maximum_filters) and localizations_file:
+            intensities_kept = trace.filter_by_localization_metrics(
+                trace, localizations_data, minimum_filters, maximum_filters
             )
-            output_file = trace_file.split(".")[0]
-            localization_table.plot_intensity_distribution(
-                intensities_kept, output_file=f"{output_file}_filtered_intensities"
+            if intensity_min:
+                output_file = get_file_root(trace_file)
+                localization_table.plot_intensity_distribution(
+                    intensities_kept,
+                    output_file=f"{output_file}_filtered_intensities.{output_format}",
+                )
+        elif (minimum_filters or maximum_filters) and not localizations_file:
+            print(
+                "! Localization quality filters require --localization_file; skipping."
             )
 
+        print("\n$ Filtering barcode number")
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)
 
         # saves output trace
-        outputfile = trace_file.split(".")[0] + "_" + tag + file_tag + ".ecsv"
+        output_root = get_file_root(trace_file) + "_" + tag + file_tag
+        outputfile = output_root + ".ecsv"
         trace.save(outputfile, comments=", ".join(comments))
         print(f"$ Saved output trace file at: {outputfile}")
+
+        if localizations_file:
+            filtered_localizations = get_filtered_localizations(
+                localizations_data, trace.data
+            )
+            localization_outputfile = output_root + "_localizations.ecsv"
+            localization_table.save(
+                localization_outputfile,
+                filtered_localizations,
+                comments="localizations kept in filtered trace table",
+            )
+            print(
+                "$ Saved filtered localization table with "
+                f"{len(filtered_localizations)} rows at: {localization_outputfile}"
+            )
+            localization_table.plot_distribution_fluxes(
+                filtered_localizations,
+                [f"{output_root}_localization_distribution_fluxes.{output_format}"],
+            )
     return len(trace_files)
 
 
 def main():
+    print_script_banner(__file__, __doc__)
     print("=" * 10 + "Started execution" + "=" * 10)
     # [parsing arguments]
     parser = parse_arguments()
@@ -336,6 +440,8 @@ def main():
         label_to_remove=args.remove_label,
         localizations_file=args.localization_file,
         intensity_min=args.intensity_min,
+        quality_filters=args_quality_filters_to_dict(args),
+        output_format=args.output_format,
     )
 
     print(f"Processed <{n_traces_processed}> trace file(s)\n")
