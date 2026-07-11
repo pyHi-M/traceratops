@@ -26,25 +26,22 @@ The package is intended for users who already have pyHiM-style localization or t
 
 ## Installation
 
-traceratops supports Linux, macOS, and Windows. We recommend installing it in a dedicated conda environment:
+traceratops supports Linux, macOS, and Windows. We recommend installing it in a dedicated `uv` environment. For a development installation, use the bundled installer:
 
 ```bash
-conda create -n traceratops python=3.11
-conda activate traceratops
+curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/main/install_traceratops_uv.bash
+bash install_traceratops_uv.bash
+source $HOME/Repositories/traceratops/.venv/bin/activate
 ```
 
-Clone the repository and install the package:
+To install manually with `uv`, clone the repository and install the development environment:
 
 ```bash
 git clone https://github.com/pyHi-M/traceratops.git
 cd traceratops
-pip install -e .
-```
-
-For development and documentation work, install the optional development dependencies:
-
-```bash
-pip install -e '.[dev]'
+uv venv .venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
 
 After installation, traceratops command-line tools such as `trace_filter`, `trace_merge`, `trace_to_matrix`, `trace_stats`, `plot_him_matrix`, and `localization_analyzer` should be available in the active environment.

@@ -4,35 +4,35 @@
 |:-:|:-:|:-:|:-:|
 |**compatibility**|Yes|Yes|Yes|
 
-## Install conda (virtual environment manager)
+## Install uv (virtual environment manager)
 
-*We use conda environment to avoid version problem with other application dependencies.*
+*We use `uv` environments to avoid version problems with other application dependencies and to keep installation commands reproducible.*
 
-We recommend to download the lighter version `miniconda`.
-
-- [Installing miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
-
-- [Installing anaconda distribution](https://www.anaconda.com/docs/getting-started/anaconda/install#basic-install-instructions)
-
-## Create conda environment
-
-Open a **terminal** (for Windows user: from the Start menu, open the **Anaconda Prompt**). Create a conda environment and activate it:
-```
-conda create -n traceratops python=3.11
-conda activate traceratops
-```
-
-## Download the source code
+If `uv` is not installed yet, install it with:
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+## Automated installation
+
+The fastest way to install traceratops from source is to run the bundled uv installer:
+
+```bash
+curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/main/install_traceratops_uv.bash
+bash install_traceratops_uv.bash
+source $HOME/Repositories/traceratops/.venv/bin/activate
+```
+
+## Manual installation
+
+```bash
+mkdir -p $HOME/Repositories
 cd $HOME/Repositories
 git clone https://github.com/pyHi-M/traceratops.git
-```
-
-
-## Install package
-
-```bash
-cd $HOME/Repositories/traceratops
-pip install -e .
+cd traceratops
+uv venv .venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
