@@ -29,12 +29,13 @@ Matches ``ROI-14.ecsv`` but rejects ``ROI-021.ecsv`` (different length).
 
 from __future__ import annotations
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from traceratops.script_banner import print_script_banner
 
 # ---------------------------------------------------------------------------
 # Business logic

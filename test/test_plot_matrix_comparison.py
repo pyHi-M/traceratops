@@ -1,10 +1,13 @@
 import sys
 import types
+
 import numpy as np
+
 from traceratops.plot_matrix_comparison import calculates_ensemble_matrices
 
-sys.modules.setdefault("seaborn", types.SimpleNamespace(set=lambda *args, **kwargs: None))
-
+sys.modules.setdefault(
+    "seaborn", types.SimpleNamespace(set=lambda *args, **kwargs: None)
+)
 
 
 def test_calculates_ensemble_matrices_returns_2d_median_matrix():

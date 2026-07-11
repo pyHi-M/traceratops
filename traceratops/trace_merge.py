@@ -16,7 +16,6 @@ outputs
 ChromatinTraceTable() object and output .ecsv formatted file with assembled trace tables.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import contextlib
 import io
@@ -24,6 +23,7 @@ import os
 import sys
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def silent_load(trace, path, verbose=False):

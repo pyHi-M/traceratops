@@ -16,7 +16,6 @@ This is particularly useful for analyzing chromatin organization, DNA-DNA intera
 and spatial proximity relationships in microscopy data.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -25,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

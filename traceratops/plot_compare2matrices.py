@@ -6,7 +6,6 @@ Plots either the ratio or the difference between two HiM matrices.
 It also plots both matrices together, with one in the upper triangle, and the other in the lower triangle.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -19,6 +18,7 @@ from traceratops.core.plotting_functions import (
     plot_mixed_matrix,
     plot_Wilcoxon_matrix,
 )
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

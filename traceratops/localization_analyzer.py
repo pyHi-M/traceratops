@@ -10,11 +10,11 @@ The script produces a figure with:
 - scatterplot of roundness versus skew
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 
 from traceratops.core.localization_table import LocalizationTable
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

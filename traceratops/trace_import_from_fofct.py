@@ -12,7 +12,6 @@ Required inputs:
 The script will produce an ECSV file that restores the missing columns (`Barcode #`, `Mask_id`, and `label`).
 """
 
-from traceratops.script_banner import print_script_banner
 import select
 import sys
 from argparse import ArgumentParser
@@ -20,6 +19,8 @@ from argparse import ArgumentParser
 import pandas as pd
 from astropy.io import ascii
 from astropy.table import Table
+
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

@@ -12,7 +12,6 @@ future:
     - output PDBs for all the traces in a trace file
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -21,6 +20,7 @@ import sys
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.him_matrix_operations import write_xyz_2_pdb
 from traceratops.core.io_manager import create_folder, load_barcode_dict
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

@@ -4,7 +4,6 @@
 Advanced script based on trace_filter.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import select
@@ -21,6 +20,7 @@ from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 from traceratops.core.io_manager import create_folder
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

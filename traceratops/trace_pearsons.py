@@ -10,7 +10,6 @@ trace datasets, helping to identify patterns and relationships in chromatin orga
 across multiple samples or conditions.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import itertools
 import os
@@ -24,6 +23,7 @@ import numpy as np
 from scipy.stats import pearsonr
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 
 def silent_load_trace(trace, path):

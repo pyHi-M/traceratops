@@ -48,7 +48,6 @@ The script can process single files or multiple files via pipe input.
 **Usage**
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -57,6 +56,7 @@ import numpy as np
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.localization_table import LocalizationTable
+from traceratops.script_banner import print_script_banner
 
 
 def check_required_arg(args, parser):
@@ -383,7 +383,9 @@ def runtime(
                     output_file=f"{output_file}_filtered_intensities.{output_format}",
                 )
         elif (minimum_filters or maximum_filters) and not localizations_file:
-            print("! Localization quality filters require --localization_file; skipping.")
+            print(
+                "! Localization quality filters require --localization_file; skipping."
+            )
 
         print("\n$ Filtering barcode number")
         trace, comments = filter_barcode_number(n_barcodes, trace, comments)

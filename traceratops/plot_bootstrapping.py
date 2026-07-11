@@ -8,7 +8,6 @@ INPUTS:
 - uniquebarcode list
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import os
 import sys
@@ -22,6 +21,7 @@ from traceratops.core.plotting_functions import (
     gets_matrix,
     plot_2d_matrix_simple,
 )
+from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():

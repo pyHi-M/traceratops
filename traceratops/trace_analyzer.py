@@ -4,7 +4,6 @@
 Analyze chromatin trace files.
 """
 
-from traceratops.script_banner import print_script_banner
 import argparse
 import select
 import sys
@@ -17,6 +16,7 @@ from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.script_banner import print_script_banner
 
 font = {"weight": "normal", "size": 22}
 matplotlib.rc("font", **font)
@@ -328,7 +328,8 @@ def plot_neighbor_distances(
 
     fig = plt.figure(figsize=(18, 13))
     outer = fig.add_gridspec(
-        2, 1,
+        2,
+        1,
         height_ratios=[2.2, 1],
         hspace=0.55,
         left=0.07,
@@ -338,13 +339,15 @@ def plot_neighbor_distances(
     )
 
     top_gs = outer[0].subgridspec(
-        1, 4,
+        1,
+        4,
         width_ratios=[1, 0.035, 1, 0.035],
         wspace=0.35,
     )
 
     bottom_gs = outer[1].subgridspec(
-        1, 3,
+        1,
+        3,
         wspace=0.75,
     )
 
@@ -402,17 +405,19 @@ def plot_neighbor_distances(
     hexbin_axes[1].set_ylabel("")
 
     if xy_hexbin is not None:
-        colorbar = fig.colorbar(xy_hexbin, 
-                                cax=colorbar_axes[0],
-                                )                   
+        colorbar = fig.colorbar(
+            xy_hexbin,
+            cax=colorbar_axes[0],
+        )
         colorbar.ax.set_title("Counts", fontsize=12, pad=6)
         colorbar.ax.tick_params(labelsize=12)
     else:
         colorbar_axes[0].axis("off")
     if xyz_hexbin is not None:
-        colorbar = fig.colorbar(xyz_hexbin, 
-                                cax=colorbar_axes[1],
-                                )                   
+        colorbar = fig.colorbar(
+            xyz_hexbin,
+            cax=colorbar_axes[1],
+        )
         colorbar.ax.set_title("Counts", fontsize=12, pad=6)
         colorbar.ax.tick_params(labelsize=12)
     else:
