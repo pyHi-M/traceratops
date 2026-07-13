@@ -545,18 +545,18 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         y = xyz[:, 1]
         z = xyz[:, 2]
 
-        scaling_factor=3
+        scaling_factor = 3
         coordinate_ranges = {
-            "x": scaling_factor*(np.std(x.max() - x.min())),
-            "y": scaling_factor*(np.std(y.max() - y.min())),
-            "z": scaling_factor*(np.std(z.max() - z.min())),
+            "x": scaling_factor * (np.std(x.max() - x.min())),
+            "y": scaling_factor * (np.std(y.max() - y.min())),
+            "z": scaling_factor * (np.std(z.max() - z.min())),
         }
         shared_range = max(coordinate_ranges.values())
         if shared_range == 0:
             shared_range = 1
 
         def _axis_limits(coordinates):
-            midpoint = 0.0 #0.5 * (coordinates.max() + coordinates.min())
+            midpoint = 0.0  # 0.5 * (coordinates.max() + coordinates.min())
             half_range = 0.5 * shared_range
             return (midpoint - half_range, midpoint + half_range)
 
@@ -598,13 +598,9 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
             ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection", (x_limits, y_limits)
         )
 
-        _plot(
-            ax_xz, x, z, "X (µm)", "Z (µm)", "XZ projection", (x_limits, z_limits)
-        )
+        _plot(ax_xz, x, z, "X (µm)", "Z (µm)", "XZ projection", (x_limits, z_limits))
 
-        _plot(
-            ax_yz, y, z, "Y (µm)", "Z (µm)", "YZ projection", (y_limits, z_limits)
-        )
+        _plot(ax_yz, y, z, "Y (µm)", "Z (µm)", "YZ projection", (y_limits, z_limits))
 
         cbar = fig.colorbar(im, cax=cax)
         cbar.set_label("density")
