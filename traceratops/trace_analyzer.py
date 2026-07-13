@@ -545,17 +545,18 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         y = xyz[:, 1]
         z = xyz[:, 2]
 
+        scaling_factor=3
         coordinate_ranges = {
-            "x": x.max() - x.min(),
-            "y": y.max() - y.min(),
-            "z": z.max() - z.min(),
+            "x": scaling_factor*(np.std(x.max() - x.min())),
+            "y": scaling_factor*(np.std(y.max() - y.min())),
+            "z": scaling_factor*(np.std(z.max() - z.min())),
         }
         shared_range = max(coordinate_ranges.values())
         if shared_range == 0:
             shared_range = 1
 
         def _axis_limits(coordinates):
-            midpoint = 0.5 * (coordinates.max() + coordinates.min())
+            midpoint = 0.0 #0.5 * (coordinates.max() + coordinates.min())
             half_range = 0.5 * shared_range
             return (midpoint - half_range, midpoint + half_range)
 
@@ -586,7 +587,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
 
         # === FIGURE ===
         fig = plt.figure(figsize=(12, 8))
-        gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05], hspace=0.05, wspace=0.200)
+        gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05], hspace=0.25, wspace=0.05)
 
         ax_xy = fig.add_subplot(gs[:, 0])
         ax_xz = fig.add_subplot(gs[0, 1])
@@ -606,7 +607,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         )
 
         cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label("Spot count")
+        cbar.set_label("density")
 
         fig.suptitle("Trace-centered projections", fontsize=30)
 
