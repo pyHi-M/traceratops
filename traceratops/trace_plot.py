@@ -73,7 +73,7 @@ def create_dict_args(args):
     if args.selected_trace:
         p["selected_trace"] = args.selected_trace
     else:
-        p["selected_trace"] = "fa9f0eb5-abcc-4730-bcc7-ba1da682d776"
+        p["selected_trace"] = "all"
 
     if args.barcode_type_dict:
         p["barcode_type_dict"] = args.barcode_type_dict
@@ -132,7 +132,7 @@ def runtime(
             trace.load(trace_file)
 
             # filters trace
-            trace.filter_traces_by_n(minimum_number_barcodes=N_barcodes)
+            # trace.filter_traces_by_n(minimum_number_barcodes=N_barcodes)
 
             # indexes traces by Trace_ID
             trace_table = trace.data
