@@ -558,6 +558,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
                 zi,
                 origin="lower",
                 extent=[x.min(), x.max(), y.min(), y.max()],
+                cmap="cubehelix_r",
             )
 
             ax.set_xlabel(xlabel)
@@ -575,14 +576,14 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
 
         # === FIGURE ===
         fig = plt.figure(figsize=(12, 8))
-        gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05], hspace=0.05, wspace=0.15)
+        gs = GridSpec(2, 3, width_ratios=[1, 1, 0.05], hspace=0.05, wspace=0.200)
 
         ax_xy = fig.add_subplot(gs[:, 0])
         ax_xz = fig.add_subplot(gs[0, 1])
         ax_yz = fig.add_subplot(gs[1, 1])
         cax = fig.add_subplot(gs[:, 2])
 
-        im = _plot(ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection (KDE)")
+        im = _plot(ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection")
 
         _plot(
             ax_xz, x, z_scaled, "X (µm)", "Z (µm)", "XZ projection", show_z_ticks=True
@@ -595,7 +596,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         cbar = fig.colorbar(im, cax=cax)
         cbar.set_label("Probability density")
 
-        fig.suptitle("Spatial KDE projections", fontsize=30)
+        fig.suptitle("Trace projections", fontsize=30)
 
         fig.subplots_adjust(
             left=0.07, right=0.92, top=0.88, bottom=0.08, wspace=0.25, hspace=0.15
@@ -603,7 +604,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         plt.savefig(output_filename)
         plt.close(fig)
 
-        print(f"$ Saved KDE projection plot: {output_filename}")
+        print(f"$ Saved projection plot: {output_filename}")
 
 
 def analyze_trace(
