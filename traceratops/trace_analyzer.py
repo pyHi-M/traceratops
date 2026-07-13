@@ -523,7 +523,8 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
     trace_table : astropy.table.Table
     output_filename : str
     target_ratio : float
-        Controls mild Z stretching
+        Deprecated; retained for backward compatibility. Projection axes are
+        displayed with the same automatically calculated range.
     """
     with matplotlib.rc_context({"font.size": 10}):
         relative_coordinates = []
@@ -544,34 +545,42 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         y = xyz[:, 1]
         z = xyz[:, 2]
 
-        # === Z scaling (mild) ===
-        x_range = x.max() - x.min()
-        y_range = y.max() - y.min()
-        z_range = z.max() - z.min()
+        coordinate_ranges = {
+            "x": x.max() - x.min(),
+            "y": y.max() - y.min(),
+            "z": z.max() - z.min(),
+        }
+        shared_range = max(coordinate_ranges.values())
+        if shared_range == 0:
+            shared_range = 1
 
-        xy_range = 0.5 * (x_range + y_range)
-        z_scale = (xy_range * target_ratio) / z_range if z_range > 0 else 1
-        z_scaled = z * z_scale
+        def _axis_limits(coordinates):
+            midpoint = 0.5 * (coordinates.max() + coordinates.min())
+            half_range = 0.5 * shared_range
+            return (midpoint - half_range, midpoint + half_range)
 
-        def _plot(ax, x_values, y_values, xlabel, ylabel, title, show_z_ticks=False):
+        x_limits = _axis_limits(x)
+        y_limits = _axis_limits(y)
+        z_limits = _axis_limits(z)
+
+        def _plot(ax, x_values, y_values, xlabel, ylabel, title, axis_limits):
+            x_axis_limits, y_axis_limits = axis_limits
             hexbins = ax.hexbin(
                 x_values,
                 y_values,
                 gridsize=45,
                 mincnt=1,
                 cmap="cubehelix_r",
+                extent=(*x_axis_limits, *y_axis_limits),
             )
 
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
             ax.set_title(title)
+            ax.set_xlim(x_axis_limits)
+            ax.set_ylim(y_axis_limits)
             ax.set_aspect("equal")
             ax.grid(alpha=0.3)
-
-            if show_z_ticks:
-                z_ticks = np.arange(np.floor(z.min()), np.ceil(z.max()) + 1, 1)
-                ax.set_yticks(z_ticks * z_scale)
-                ax.set_yticklabels([f"{int(t)}" for t in z_ticks])
 
             return hexbins
 
@@ -584,14 +593,16 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         ax_yz = fig.add_subplot(gs[1, 1])
         cax = fig.add_subplot(gs[:, 2])
 
-        im = _plot(ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection")
-
-        _plot(
-            ax_xz, x, z_scaled, "X (µm)", "Z (µm)", "XZ projection", show_z_ticks=True
+        im = _plot(
+            ax_xy, x, y, "X (µm)", "Y (µm)", "XY projection", (x_limits, y_limits)
         )
 
         _plot(
-            ax_yz, y, z_scaled, "Y (µm)", "Z (µm)", "YZ projection", show_z_ticks=True
+            ax_xz, x, z, "X (µm)", "Z (µm)", "XZ projection", (x_limits, z_limits)
+        )
+
+        _plot(
+            ax_yz, y, z, "Y (µm)", "Z (µm)", "YZ projection", (y_limits, z_limits)
         )
 
         cbar = fig.colorbar(im, cax=cax)
