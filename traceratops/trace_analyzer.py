@@ -13,7 +13,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
-from scipy.stats import gaussian_kde
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.script_banner import print_script_banner
@@ -512,22 +511,12 @@ def barcode_detection_efficiency(
     print(f"$ Exporting barcode detection plot to: {output_prefix}.{format}")
 
 
-def compute_kde(x, y, grid_size=200):
-    xy = np.vstack([x, y])
-    kde = gaussian_kde(xy)
-
-    xi, yi = np.meshgrid(
-        np.linspace(x.min(), x.max(), grid_size),
-        np.linspace(y.min(), y.max(), grid_size),
-    )
-
-    zi = kde(np.vstack([xi.ravel(), yi.ravel()]))
-    return zi.reshape(xi.shape)
-
-
 def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
     """
-    Plot KDE projections (XY, XZ, YZ) from trace data.
+    Plot hexbin projections (XY, XZ, YZ) from trace-centered data.
+
+    Each trace is centered independently by subtracting its XYZ center of mass
+    before all spot coordinates are pooled for projection plots.
 
     Parameters
     ----------
@@ -537,9 +526,23 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         Controls mild Z stretching
     """
     with matplotlib.rc_context({"font.size": 10}):
-        x = np.array(trace_table["x"])
-        y = np.array(trace_table["y"])
-        z = np.array(trace_table["z"])
+        relative_coordinates = []
+        trace_by_ID = trace_table.group_by("Trace_ID")
+
+        for sub_trace_table in trace_by_ID.groups:
+            trace_coordinates = np.column_stack(
+                (sub_trace_table["x"], sub_trace_table["y"], sub_trace_table["z"])
+            ).astype(float)
+            center_of_mass = np.mean(trace_coordinates, axis=0)
+            relative_coordinates.append(trace_coordinates - center_of_mass)
+
+        if not relative_coordinates:
+            raise ValueError("Cannot plot projections for an empty trace table")
+
+        xyz = np.vstack(relative_coordinates)
+        x = xyz[:, 0]
+        y = xyz[:, 1]
+        z = xyz[:, 2]
 
         # === Z scaling (mild) ===
         x_range = x.max() - x.min()
@@ -547,17 +550,15 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         z_range = z.max() - z.min()
 
         xy_range = 0.5 * (x_range + y_range)
-
-        z_scale = (xy_range * target_ratio) / z_range
+        z_scale = (xy_range * target_ratio) / z_range if z_range > 0 else 1
         z_scaled = z * z_scale
 
-        def _plot(ax, x, y, xlabel, ylabel, title, show_z_ticks=False):
-            zi = compute_kde(x, y)
-
-            im = ax.imshow(
-                zi,
-                origin="lower",
-                extent=[x.min(), x.max(), y.min(), y.max()],
+        def _plot(ax, x_values, y_values, xlabel, ylabel, title, show_z_ticks=False):
+            hexbins = ax.hexbin(
+                x_values,
+                y_values,
+                gridsize=45,
+                mincnt=1,
                 cmap="cubehelix_r",
             )
 
@@ -572,7 +573,7 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
                 ax.set_yticks(z_ticks * z_scale)
                 ax.set_yticklabels([f"{int(t)}" for t in z_ticks])
 
-            return im
+            return hexbins
 
         # === FIGURE ===
         fig = plt.figure(figsize=(12, 8))
@@ -594,9 +595,9 @@ def plot_kde_projections(trace_table, output_filename, target_ratio=0.5):
         )
 
         cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label("Probability density")
+        cbar.set_label("Spot count")
 
-        fig.suptitle("Trace projections", fontsize=30)
+        fig.suptitle("Trace-centered projections", fontsize=30)
 
         fig.subplots_adjust(
             left=0.07, right=0.92, top=0.88, bottom=0.08, wspace=0.25, hspace=0.15
