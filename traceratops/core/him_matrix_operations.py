@@ -418,7 +418,6 @@ def decodes_trace(single_trace):
     return barcodes, X, Y, Z, trace_name
 
 
-
 def write_xyz_2_pdb(file_name, single_trace, barcode_type=None):
     """
     Write a chromatin trace to a PDB file using pseudoatoms.
@@ -555,9 +554,7 @@ def write_xyz_2_pdb(file_name, single_trace, barcode_type=None):
         # Connect consecutive atoms to form the polymer.
         if n_atoms > 1:
             for atom_number in range(1, n_atoms):
-                fid.write(
-                    f"CONECT{atom_number:5d}{atom_number + 1:5d}\n"
-                )
+                fid.write(f"CONECT{atom_number:5d}{atom_number + 1:5d}\n")
 
         fid.write("END\n")
 
@@ -574,7 +571,7 @@ def write_xyz_2_pdb_legacy(file_name, single_trace, barcode_type=dict()):
     #
     # This script HAS BEEN SUPERSEEDED by write_xyz_2_pdb()
     # Will be removed in a later version of traceratops
-    # 
+    #
 
     default_atom_name = "xxx"
     barcodes, X, Y, Z, trace_name = decodes_trace(single_trace)

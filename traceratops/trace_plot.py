@@ -105,6 +105,7 @@ def create_dict_args(args):
 
     return p
 
+
 def runtime(
     N_barcodes=2,
     trace_files=[],
@@ -131,7 +132,7 @@ def runtime(
             trace.load(trace_file)
 
             # filters trace
-            #trace.filter_traces_by_n(minimum_number_barcodes=N_barcodes)
+            # trace.filter_traces_by_n(minimum_number_barcodes=N_barcodes)
 
             # indexes traces by Trace_ID
             trace_table = trace.data

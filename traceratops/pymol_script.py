@@ -1,15 +1,15 @@
 # load_pdb_grid.py
 
-from pathlib import Path
-from pymol import cmd
 from colorsys import hsv_to_rgb
+from pathlib import Path
 
+from pymol import cmd
 
 """
 
 To run in pymol:
 
-1- open pymol. 
+1- open pymol.
 
 Write:
 2- PyMol> run $TRACERATOPS/traceratops/traceratops/pymol_script.py. For example,
@@ -37,11 +37,9 @@ to make structures spin
 def color_all_barcodes():
 
     # Find all atom names beginning with "B"
-    names = sorted({
-        atom.name
-        for atom in cmd.get_model("all").atom
-        if atom.name.startswith("B")
-    })
+    names = sorted(
+        {atom.name for atom in cmd.get_model("all").atom if atom.name.startswith("B")}
+    )
 
     n = len(names)
 
@@ -53,6 +51,7 @@ def color_all_barcodes():
 
         cmd.set_color(color_name, [r, g, b])
         cmd.color(color_name, f"name {atom_name}")
+
 
 def load_pdb_grid(folder=".", pattern="*.pdb", max_structures=100):
     """
@@ -114,7 +113,6 @@ def load_pdb_grid(folder=".", pattern="*.pdb", max_structures=100):
             selection=object_name,
         )
 
-
         # Atom-based colors.
         cmd.util.cbag(object_name)
 
@@ -144,5 +142,3 @@ def spin_grid(axis="y", degrees_per_frame=2):
 cmd.extend("color_all_barcodes", color_all_barcodes)
 cmd.extend("load_pdb_grid", load_pdb_grid)
 cmd.extend("spin_grid", spin_grid)
-
-
