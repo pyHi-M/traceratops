@@ -4,12 +4,10 @@
 script to plot one or multiple traces in 3D
 
 Takes a trace file and either:
-    - ranks traces and plots a selection
-    - plots a user-selected trace in .ecsv (barcode, xyz) and PDF formats. The output files contain the trace name.
-    - saves output coordinates for selected traces in pdb format so they can be loaded by other means including https://www.rcsb.org/3d-view, pymol, or nglviewer.
-
-future:
-    - output PDBs for all the traces in a trace file
+    - exports the first N traces to PDB with --number_traces
+    - exports one trace to PDB with --selected_trace
+    - exports all traces to PDB with --all
+    - saves output coordinates for selected traces in PDB format so they can be loaded by other means including https://www.rcsb.org/3d-view, pymol, or nglviewer.
 """
 
 import argparse
