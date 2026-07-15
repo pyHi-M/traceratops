@@ -26,7 +26,12 @@ from traceratops.script_banner import print_script_banner
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", help="Name of input trace file.")
-    parser.add_argument("-n", "--number_traces", help="Number of traces treated")
+    parser.add_argument(
+        "-n",
+        "--number_traces",
+        help="Number of traces treated. Ignored when --all or --selected_trace is used.",
+        type=int,
+    )
     parser.add_argument(
         "-N", "--N_barcodes", help="minimum_number_barcodes. Default = 2"
     )
@@ -65,8 +70,10 @@ def create_dict_args(args):
     else:
         p["N_barcodes"] = 2
 
-    if args.number_traces:
-        p["number_traces"] = int(args.number_traces)
+    if args.number_traces is not None:
+        if args.number_traces < 1:
+            raise ValueError("--number_traces must be at least 1")
+        p["number_traces"] = args.number_traces
     else:
         p["number_traces"] = 2
 
@@ -82,8 +89,10 @@ def create_dict_args(args):
 
     if args.all:
         p["select_traces"] = "all"
-    else:
+    elif args.selected_trace:
         p["select_traces"] = "selected"
+    else:
+        p["select_traces"] = "first"
 
     p["trace_files"] = []
     if args.pipe:
@@ -108,13 +117,16 @@ def create_dict_args(args):
 
 def runtime(
     N_barcodes=2,
-    trace_files=[],
+    trace_files=None,
     selected_trace="fa9f0eb5-abcc-4730-bcc7-ba1da682d776",
-    barcode_type=dict(),
+    barcode_type=None,
     folder_path="./PDBs",
     select_traces="one",
+    number_traces=2,
 ):
     # gets trace files
+    trace_files = [] if trace_files is None else trace_files
+    barcode_type = {} if barcode_type is None else barcode_type
 
     if len(trace_files) > 0:
         print(
@@ -137,7 +149,16 @@ def runtime(
             # indexes traces by Trace_ID
             trace_table = trace.data
             trace_table_indexed = trace_table.group_by("Trace_ID")
-            print("$ number of traces to process: {}".format(len(trace_table_indexed)))
+            total_traces = len(trace_table_indexed.groups)
+            if select_traces == "first":
+                traces_to_process = min(number_traces, total_traces)
+            elif select_traces == "all":
+                traces_to_process = total_traces
+            else:
+                traces_to_process = 1
+
+            print(f"$ number of traces available: {total_traces}")
+            print(f"$ number of traces to process: {traces_to_process}")
 
             # iterates over traces
             for idx, single_trace in enumerate(trace_table_indexed.groups):
@@ -147,6 +168,8 @@ def runtime(
                 if select_traces == "selected" and trace_id == selected_trace:
                     flag = True
                 elif select_traces == "all":
+                    flag = True
+                elif select_traces == "first" and idx < number_traces:
                     flag = True
 
                 if flag:
@@ -191,6 +214,7 @@ def main():
         barcode_type=barcode_type,
         folder_path=folder_path,
         select_traces=p["select_traces"],
+        number_traces=p["number_traces"],
     )
 
     print(f"Processed <{n_traces_processed}> trace file(s)")
