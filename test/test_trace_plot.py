@@ -1,6 +1,6 @@
 import os
 
-from traceratops.trace_plot import parse_arguments, create_dict_args, runtime
+from traceratops.trace_plot import create_dict_args, parse_arguments, runtime
 
 TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
 TRACE_FILE = os.path.join(

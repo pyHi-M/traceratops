@@ -63,9 +63,9 @@ For this you need to first install pymol. Then in the top box you will find a te
 run /home/user/Repositories/traceratops/traceratops/pymol_script.py
 
 load_pdb_grid /home/user/data/outputs/PDBs
-  
+
 color_all_barcodes()
-  
+
 spin_grid
 ```
 
@@ -94,5 +94,3 @@ set grid_mode,1
 color green,  (name C*)
 color red, (name P*)
 ```
-
-
