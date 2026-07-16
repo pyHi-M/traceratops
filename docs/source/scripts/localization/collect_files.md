@@ -13,7 +13,7 @@
 When merging data from multiple ROIs, you need to collect one file per subdirectory
 into a single folder. Two problems arise:
 
-1. **Localization files** have the same name in every ROI (`localizations_3D_barcode.dat`),
+1. **Localization files** have the same name in every ROI (`localizations_3D_barcode.ecsv`),
    so they cannot be copied to the same folder without renaming.
 2. **Trace files** have different names (the ROI number varies), but you need to select
    only the right files and ignore others (e.g. Matrix files).
@@ -29,11 +29,11 @@ renamed by inserting the subdirectory name before the extension:
 
 ```bash
 collect_files --root data/RUT \
-    --example-file "localizations_3D_barcode.dat" \
+    --example-file "localizations_3D_barcode.ecsv" \
     --copy-to collected/
 ```
 
-Result: `localizations_3D_barcode_013_ROI.dat`, `localizations_3D_barcode_014_ROI.dat`, etc.
+Result: `localizations_3D_barcode_013_ROI.ecsv`, `localizations_3D_barcode_014_ROI.ecsv`, etc.
 
 ### Variable match (with `--variable-part`)
 
@@ -62,3 +62,7 @@ This matches `ROI-14.ecsv`, `ROI-25.ecsv`, etc. but rejects `ROI-021.ecsv`
 
 This script replaces the former `localization_cp_files` script and the `find -exec cp`
 pattern previously used for trace files.
+
+- Prefer `.ecsv` for localization tables. Legacy `.dat` localization inputs are
+  still readable for now, but traceratops warns that this support will be
+  discontinued in a future release.

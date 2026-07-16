@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Localization tables now standardize on `.ecsv` outputs while keeping legacy `.dat` input support with a deprecation warning.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

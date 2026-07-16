@@ -19,8 +19,10 @@ summary plot for the detected barcode localizations. The plot includes:
 - Roundness versus skew scatter plot, colored by barcode.
 
 The input table is read with `LocalizationTable.load`, so the script supports the
-same localization formats as the localization table reader, including `.ecsv`,
-`.dat`, and `.4dn` files.
+same localization formats as the localization table reader. Use `.ecsv` for
+localization tables; legacy `.dat` files still load for now but emit a
+deprecation warning because support will be discontinued in a future traceratops
+release. `.4dn` files are also supported.
 
 ## Usage examples
 
