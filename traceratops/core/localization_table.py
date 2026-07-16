@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from astropy.table import Table, vstack
 
-
 LEGACY_DAT_EXTENSION_WARNING = (
     "Localization files with the .dat extension are deprecated and support "
     "will be discontinued in a future traceratops release. Please rename or "
