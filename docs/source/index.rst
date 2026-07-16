@@ -33,6 +33,7 @@ Corresponding to the post-processing of pyHiM data, compatible with the `4DN FIS
    :maxdepth: 1
    :caption: Scripts
 
+   Data formats<scripts/data_formats>
    scripts/localization
    scripts/trace
    scripts/matrix
