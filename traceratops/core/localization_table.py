@@ -6,11 +6,40 @@ This class will contain methods to load, save, plot barcode localizations and st
 
 import os
 import sys
+import warnings
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import Table, vstack
+
+
+LEGACY_DAT_EXTENSION_WARNING = (
+    "Localization files with the .dat extension are deprecated and support "
+    "will be discontinued in a future traceratops release. Please rename or "
+    "save localization tables with the .ecsv extension."
+)
+
+
+def warn_legacy_dat_extension(file):
+    """Warn when a legacy ``.dat`` localization table is used as input."""
+    warnings.warn(LEGACY_DAT_EXTENSION_WARNING, FutureWarning, stacklevel=3)
+    print(f"WARNING: {LEGACY_DAT_EXTENSION_WARNING} File: {file}")
+
+
+def normalize_localization_output_path(file_name):
+    """Return an ECSV output path for non-4DN localization tables."""
+    path = Path(file_name)
+    if path.suffix.lower() == ".dat":
+        new_path = path.with_suffix(".ecsv")
+        print(
+            "WARNING: Saving localization tables with the .dat extension is "
+            "deprecated; writing ECSV output to "
+            f"{new_path} instead."
+        )
+        return str(new_path)
+    return str(path)
 
 
 class LocalizationTable:
@@ -184,6 +213,8 @@ class LocalizationTable:
 
         file_ext = os.path.splitext(file)[1].lower()
         if file_ext in (".ecsv", ".dat"):
+            if file_ext == ".dat":
+                warn_legacy_dat_extension(file)
             # print("$ Importing table from pyHiM format")
             barcode_map = read_table_from_ecsv(file)
             self.data = barcode_map
@@ -245,6 +276,7 @@ class LocalizationTable:
         if format == "4dn":
             self._convert_astropy_to_4dn(barcode_map, file_name)
         else:
+            file_name = normalize_localization_output_path(file_name)
             print(f"$ Saving output table as {file_name} ...")
             self.data = barcode_map
             self.remove_empty_comments()
