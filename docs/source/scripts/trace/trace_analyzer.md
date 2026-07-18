@@ -49,6 +49,16 @@ For each trace file analyzed, the script generates:
 4. `[tracefile]_relative_barcode_frequencies`: Barcode statistics file
 5. `[tracefile]_traces_XYZ.[format]`: Visual representation of the traces (if --plotXYZ is set)
 
+![](../../_static/merged_traces_barcode_detection.png)
+
+![](../../_static/merged_traces_relative_barcode_frequencies.png)
+
+![](../../_static/merged_traces_trace_statistics.png)
+
+![](../../_static/merged_traces_filtered_split_kde_projections.png)
+
+![](../../_static/merged_traces_filtered_split_first_neighbor_distances.png)
+
 ![Trace_3D_barcode_mask:DAPI_ROI:3_filtered_traces_XYZ_ROI3](https://github.com/pyHi-M/pyHiM/assets/341757/2b3f32f2-d9a6-41c8-98b7-372cc60a0439)
 
 ![Trace_3D_barcode_mask:DAPI_ROI:3_filtered_trace_statistics](https://github.com/pyHi-M/pyHiM/assets/341757/281cf895-d043-422c-a7c1-5fc7dcbbf857)
