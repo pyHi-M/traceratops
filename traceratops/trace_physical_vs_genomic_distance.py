@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.table import unique
+from scipy import stats
 from scipy.spatial.distance import pdist
 from tqdm import tqdm
 
@@ -143,6 +144,59 @@ def compute_physical_vs_genomic_distance(
     return pd.DataFrame.from_records(records)
 
 
+def fit_power_law(
+    df: pd.DataFrame, confidence: float = 0.95, n_points: int = 200
+) -> Optional[Dict[str, np.ndarray]]:
+    """Fit ``physical_distance = coefficient * genomic_distance ** exponent``.
+
+    The fit is estimated by ordinary least squares in log10 space. Confidence
+    intervals describe the fitted mean response transformed back to linear space.
+    """
+    fit_df = df.dropna(
+        subset=["genomic distance (kbp)", "median euclidean distance (nm)"]
+    )
+    fit_df = fit_df.loc[
+        (fit_df["genomic distance (kbp)"] > 0)
+        & (fit_df["median euclidean distance (nm)"] > 0)
+    ]
+    if len(fit_df) < 3:
+        return None
+
+    x_log = np.log10(fit_df["genomic distance (kbp)"].to_numpy(dtype=float))
+    y_log = np.log10(fit_df["median euclidean distance (nm)"].to_numpy(dtype=float))
+    slope, intercept = np.polyfit(x_log, y_log, 1)
+
+    x_fit_log = np.linspace(np.nanmin(x_log), np.nanmax(x_log), n_points)
+    y_fit_log = intercept + slope * x_fit_log
+
+    residuals = y_log - (intercept + slope * x_log)
+    degrees_of_freedom = len(x_log) - 2
+    residual_std_error = np.sqrt(np.sum(residuals**2) / degrees_of_freedom)
+    x_mean = np.mean(x_log)
+    sum_squared_x = np.sum((x_log - x_mean) ** 2)
+    if sum_squared_x == 0:
+        return None
+    t_value = stats.t.ppf((1 + confidence) / 2, degrees_of_freedom)
+    mean_se = residual_std_error * np.sqrt(
+        (1 / len(x_log)) + ((x_fit_log - x_mean) ** 2 / sum_squared_x)
+    )
+
+    lower_log = y_fit_log - t_value * mean_se
+    upper_log = y_fit_log + t_value * mean_se
+    return {
+        "coefficient": 10**intercept,
+        "exponent": slope,
+        "x_fit": 10**x_fit_log,
+        "y_fit": 10**y_fit_log,
+        "lower": 10**lower_log,
+        "upper": 10**upper_log,
+        "x_fit_log": x_fit_log,
+        "y_fit_log": y_fit_log,
+        "lower_log": lower_log,
+        "upper_log": upper_log,
+    }
+
+
 def plot_log_distance_graph(
     dist_df: pd.DataFrame, saving_filename: Union[str, Path]
 ) -> None:
@@ -150,25 +204,69 @@ def plot_log_distance_graph(
     import seaborn as sns
 
     axes = [axis for axis in ["3D", "X", "Y", "Z"] if axis in set(dist_df["axis"])]
+    sns.set_context("paper")
     fig, axs = plt.subplots(
-        nrows=len(axes), ncols=1, squeeze=False, figsize=(8, 4 * len(axes))
+        nrows=len(axes),
+        ncols=1,
+        squeeze=False,
+        figsize=(6.5, 2.2 * len(axes)),
+        sharex=True,
+        constrained_layout=True,
+    )
+    palette = dict(
+        zip(
+            dist_df["experiment"].dropna().unique(),
+            sns.color_palette(n_colors=dist_df["experiment"].nunique()),
+        )
     )
     for row_index, axis_name in enumerate(axes):
+        ax = axs[row_index, 0]
         df = dist_df.loc[dist_df["axis"] == axis_name]
         sns.scatterplot(
             data=df,
             x="log10 genomic dist (kbp)",
             y="log10 median dist (nm)",
             hue="experiment",
-            ax=axs[row_index, 0],
+            palette=palette,
+            s=16,
+            linewidth=0,
+            legend=False,
+            ax=ax,
         )
-        axs[row_index, 0].set_title(axis_name)
-        if len(dist_df["experiment"].unique()) == 1:
-            legend = axs[row_index, 0].get_legend()
-            if legend is not None:
-                legend.remove()
+        for experiment, exp_df in df.groupby("experiment", dropna=False):
+            fit = fit_power_law(exp_df)
+            if fit is None:
+                continue
+            label = (
+                f"{experiment}: a={fit['coefficient']:.2g}, " f"b={fit['exponent']:.3f}"
+            )
+            ax.plot(
+                fit["x_fit_log"],
+                fit["y_fit_log"],
+                color="r",
+                lw=1.2,
+                label=label,
+            )
+            ax.fill_between(
+                fit["x_fit_log"],
+                fit["lower_log"],
+                fit["upper_log"],
+                color="r",
+                alpha=0.18,
+                linewidth=0,
+            )
+        ax.set_title(axis_name, fontsize=11, pad=3)
+        ax.set_ylabel("")
+        ax.tick_params(axis="both", labelsize=9)
+        ax.legend(fontsize=7, frameon=False, loc="best")
+        if row_index < len(axes) - 1:
+            ax.set_xlabel("")
+            ax.tick_params(labelbottom=False)
+        else:
+            ax.set_xlabel("log10 genomic dist (kbp)", fontsize=10)
+    fig.supylabel("log10 median dist (nm)", fontsize=10)
     print(f"> Exporting figure to: {saving_filename}")
-    plt.savefig(saving_filename, dpi=100, bbox_inches="tight")
+    plt.savefig(saving_filename, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 

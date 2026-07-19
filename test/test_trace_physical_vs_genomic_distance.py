@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from astropy.table import Table
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
@@ -7,6 +8,7 @@ from traceratops.trace_physical_vs_genomic_distance import (
     compute_all_pwd,
     compute_genomic_dist_map,
     extract_traces_numpy,
+    fit_power_law,
 )
 
 
@@ -59,3 +61,22 @@ def test_calculate_physical_vs_genomic_distance_writes_csv_outputs(tmp_path):
     assert output_file.is_file()
     assert interloci_file.is_file()
     assert set(result["axis"]) == {"3D", "X", "Y", "Z"}
+
+
+def test_fit_power_law_recovers_exponent_and_coefficient():
+    genomic_distance = np.array([1, 2, 4, 8, 16], dtype=float)
+    physical_distance = 3 * genomic_distance**0.5
+    fit = fit_power_law(
+        pd.DataFrame(
+            {
+                "genomic distance (kbp)": genomic_distance,
+                "median euclidean distance (nm)": physical_distance,
+            }
+        )
+    )
+
+    assert fit is not None
+    np.testing.assert_allclose(fit["coefficient"], 3, rtol=1e-12)
+    np.testing.assert_allclose(fit["exponent"], 0.5, rtol=1e-12)
+    assert np.all(fit["lower_log"] <= fit["y_fit_log"])
+    assert np.all(fit["upper_log"] >= fit["y_fit_log"])
