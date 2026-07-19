@@ -237,15 +237,13 @@ def plot_log_distance_graph(
             fit = fit_power_law(exp_df)
             if fit is None:
                 continue
-            color = palette.get(experiment)
             label = (
-                f"{experiment}: a={fit['coefficient']:.2g}, "
-                f"b={fit['exponent']:.3f}"
+                f"{experiment}: a={fit['coefficient']:.2g}, " f"b={fit['exponent']:.3f}"
             )
             ax.plot(
                 fit["x_fit_log"],
                 fit["y_fit_log"],
-                color=color,
+                color="r",
                 lw=1.2,
                 label=label,
             )
@@ -253,7 +251,7 @@ def plot_log_distance_graph(
                 fit["x_fit_log"],
                 fit["lower_log"],
                 fit["upper_log"],
-                color=color,
+                color="r",
                 alpha=0.18,
                 linewidth=0,
             )
