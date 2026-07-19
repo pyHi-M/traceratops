@@ -13,6 +13,7 @@
 - Filter Advanced ([trace_filter_advanced](trace/trace_filter_advanced.md))
 - Assign Mask ([trace_assign_mask](trace/trace_assign_mask.md))
 - Analyzer ([trace_analyzer](trace/trace_analyzer.md))
+- Physical vs Genomic Distance ([trace_physical_vs_genomic_distance](trace/trace_physical_vs_genomic_distance.md))
 - Compute and Plot 3-Way co-localization ([trace_3way_coloc](trace/trace_3way_coloc.md))
 
 ```{toctree}
@@ -32,5 +33,6 @@ trace/trace_export_to_fofct
 trace/trace_filter_advanced
 trace/trace_assign_mask
 trace/trace_analyzer
+trace/trace_physical_vs_genomic_distance
 trace/trace_3way_coloc
 ```
