@@ -43,14 +43,18 @@ trace_analyzer --input trace_file.ecsv --plotXYZ
 
 For each trace file analyzed, the script generates:
 
-1. `[tracefile]_trace_statistics.[format]`: Histograms of barcode statistics
-2. `[tracefile]_first_neighbor_distances.[format]`: Histograms of distances between consecutive neighboring barcodes
-3. `[tracefile]_barcode_detection.[format]`: Plot of barcode detection efficiency
-4. `[tracefile]_relative_barcode_frequencies`: Barcode statistics file
-5. `[tracefile]_traces_XYZ.[format]`: Visual representation of the traces (if --plotXYZ is set)
+1. `[tracefile]_relative_barcode_frequencies`: Number of barcodes per trace, for each separate barcode. If only the top row is occupied, barcodes are present only once per trace. The second row represents the number of times barcodes are present twice in the trace, and so on.
+[](../../_static/merged_traces_relative_barcode_frequencies.png)
 
-![Trace_3D_barcode_mask:DAPI_ROI:3_filtered_traces_XYZ_ROI3](https://github.com/pyHi-M/pyHiM/assets/341757/2b3f32f2-d9a6-41c8-98b7-372cc60a0439)
+3. `[tracefile]_barcode_detection.[format]`: Plot of barcode detection efficiency. Errorbars are obtained by bootstrapping.
+![](../../_static/merged_traces_barcode_detection.png)
 
-![Trace_3D_barcode_mask:DAPI_ROI:3_filtered_trace_statistics](https://github.com/pyHi-M/pyHiM/assets/341757/281cf895-d043-422c-a7c1-5fc7dcbbf857)
+1. `[tracefile]_trace_statistics.[format]`: Histograms of number of barcodes per trace.
+!![](../../_static/merged_traces_trace_statistics.png)
 
-![Trace_3D_barcode_mask:DAPI_ROI:3_filtered_xyz_statistics](https://github.com/pyHi-M/pyHiM/assets/341757/c33e6a4b-0678-4f1e-b1cd-8834e0779560)
+5. `[tracefile]_kde_projections.[format]`: Traces are translated to their center of mass and reprojected along XY, XZ and YZ.
+![](../../_static/merged_traces_filtered_split_kde_projections.png)
+
+2. `[tracefile]_first_neighbor_distances.[format]`: Top plots represent the histogram of distances between next and previous neighbour for each barcode in the trace, for all traces, in XY and in XYZ. Bottom plots show histograms of distances between consecutive genomic barcodes in X, Y and Z.
+
+![](../../_static/merged_traces_filtered_split_first_neighbor_distances.png)
