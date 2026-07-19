@@ -167,6 +167,7 @@ def plot_log_distance_graph(
             legend = axs[row_index, 0].get_legend()
             if legend is not None:
                 legend.remove()
+    print(f"> Exporting figure to: {saving_filename}")
     plt.savefig(saving_filename, dpi=100, bbox_inches="tight")
     plt.close(fig)
 
@@ -220,6 +221,7 @@ def calculate_physical_vs_genomic_distance(
     if interloci_csv is not None:
         compute_inter_loci_genomic_dist(table).to_csv(interloci_csv, index=False)
     if plot_file is not None:
+        plot_file = input_file.split(".")[0] + plot_file
         plot_log_distance_graph(result, plot_file)
     return result
 
@@ -233,7 +235,8 @@ def parse_arguments() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output",
-        required=True,
+        required=False,
+        default="binned_physical_vs_genomic_distances.csv",
         help="Output CSV for binned physical-vs-genomic distances.",
     )
     parser.add_argument(
@@ -241,7 +244,9 @@ def parse_arguments() -> argparse.ArgumentParser:
         help="Optional CSV for consecutive-locus genomic distances.",
     )
     parser.add_argument(
-        "--plot", help="Optional output filename for a log-log distance plot."
+        "--plot",
+        default="_physical_vs_genomic_plot.png",
+        help="Optional output filename for a log-log distance plot.",
     )
     parser.add_argument(
         "--gen_dist_bins",
