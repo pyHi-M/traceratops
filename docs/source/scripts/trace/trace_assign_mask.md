@@ -1,6 +1,6 @@
 # trace_assign_mask
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
@@ -14,7 +14,7 @@ Use `trace_assign_mask` to assign specific *labels* to chromatin traces in a tra
 
 `trace_assign_mask` will load a trace file and a number of NUMPY-formatted mask files and assign labels. If a trace falls within a mask, then the mask label will be assigned to the corresponding column of the trace table. If a trace falls *at the same time* within multiple masks, multiple labels will be appended to the corresponding column of the trace table. If a trace falls within no mask, then the label column of the trace table will be kept empty.
 
-## Invoke
+## Examples
 
 ```bash
 $ trace_assign_mask --input trace_file.ecsv --mask_file my_mask.npy --label mymask

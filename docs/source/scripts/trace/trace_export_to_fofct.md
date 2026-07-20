@@ -1,6 +1,6 @@
 # trace_export_to_fofct
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Split chromatin traces using K-means clustering when their radius of gyration exceeds a threshold.
+This script will calculate the radii of gyration of all traces in a tracefile, estimate the median and standard deviation of the distribution to identify outliers which may arise from the merging of two traces. It will then target these outliers and perform a K-means clustering to break the trace. Each time a trace is split, it will be replaced in the tracefile and new identifiers will be provided.
+
+Traces with R_g higher than the `median` + `std_threshold` will be treated as outliers. `std_threshold` is therefore an input argument.
+
+Clusterization will be performed assuming 2 traces by default. This number can be modified using `num_clusters` as input argument.
 """
 
 import argparse

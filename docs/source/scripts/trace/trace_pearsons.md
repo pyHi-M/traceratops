@@ -1,27 +1,11 @@
 # trace_pearsons
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_pearsons.parse_arguments
    :prog: trace_pearsons
-```
-## Description
-
-This script is intended to compare the results from different experiments. These can be different fields of view of a single acquisition or different biological replicates. The script calculates, for each tracefile, the median pairwise distance map. Then it calculates the bin-by-bin Pearson correlation between all tracefiles provided. The result is therefore a matrix of Pearson correlations.
-
-## Usage
-
-```bash
-$ ls *ecsv | trace_pearsons --pipe
-```
-
-
-## Examples
-```bash
-$ ls *ecsv | trace_pearsons [options]
-$ find . -name "*.ecsv" | trace_pearsons [options]
 ```
 
 
@@ -32,6 +16,12 @@ $ find . -name "*.ecsv" | trace_pearsons [options]
 ![trace_correlation_matrix](https://github.com/user-attachments/assets/ae4c19f7-3638-4e56-9901-5a206d0e64d6)
 
 2. `trace_correlation_matrix.npy`: Values of the correlation matrix.
+
+## Examples
+```bash
+$ ls *ecsv | trace_pearsons [options]
+$ find . -name "*.ecsv" | trace_pearsons [options]
+```
 
 
 ## Notes

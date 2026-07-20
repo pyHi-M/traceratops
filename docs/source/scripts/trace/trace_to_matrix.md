@@ -1,22 +1,11 @@
 # trace_to_matrix
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_to_matrix.parse_arguments
    :prog: trace_to_matrix
-```
-
-## Description
-
-`trace_to_matrix` converts a tracefile to a NUMPY array containing the pair-wise distances between barcodes, for each trace in the tracefile. The dimensions of the NUMPY matrix is therefore: N\*N\*N_traces, where N is the number of barcodes and N_traces the number of traces.
-
-
-## Usage
-
-```bash
-trace_to_matrix --input traces.ecsv
 ```
 
 ## Output Files

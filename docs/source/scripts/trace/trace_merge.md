@@ -8,15 +8,6 @@
    :prog: trace_merge
 ```
 
-## Description
-This script merges two or more trace files.
-
-
-## Usage
-
-```
-ls *ecsv | trace_merge
-```
 
 ## Output Files
 

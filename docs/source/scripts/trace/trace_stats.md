@@ -1,21 +1,13 @@
 # trace_stats
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_stats.parse_arguments
    :prog: trace_stats
 ```
-## Description
 
-This script provides general statistics on a trace file.
-
-## Usage
-
-```
-trace_stats.py --input path/to/your/trace_file.ecsv
-```
 
 ## Output Files
 

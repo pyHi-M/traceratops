@@ -1,21 +1,13 @@
 # trace_plot
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_plot.parse_arguments
    :prog: trace_plot
 ```
-## Description
 
-This script converts trace coordinates in a trace file into PDB-formatted files to be visualized using `pymol` or other software for protein visualization.
-
-## Usage
-
-```bash
-$ trace_plot --input path/to/your/trace_file.ecsv
-```
 ## Output Files
 
 For each trace file analyzed, the script generates:

@@ -2,9 +2,17 @@
 
 **Reliability status**: `stable`
 
-## Localization quality filtering
+```{eval-rst}
+.. argparse::
+   :ref: traceratops.trace_filter.parse_arguments
+   :prog: trace_filter
+```
 
-## Description
+## Removal of barcodes by intensity
+
+```bash
+trace_filter --input path/to/your/trace_file.ecsv
+```
 
 `trace_filter` can remove spots by comparing values in a localization table
 against user-provided quality thresholds. Pass the localization table with
@@ -40,11 +48,6 @@ filtered trace table, after all trace filters have run. The same filtered
 localization table is used for the `*_localization_distribution_fluxes` plot, so
 that the spot statistics describe the spots kept in the trace table.
 
-## Usage
-
-```bash
-trace_filter --input path/to/your/trace_file.ecsv
-```
 
 ## Output Files
 
@@ -60,10 +63,4 @@ trace_filter \
   --object_class_min 1 \
   --spot_pixel_percentage_max 0.7 \
   --roundness_max 0.8
-```
-
-```{eval-rst}
-.. argparse::
-   :ref: traceratops.trace_filter.parse_arguments
-   :prog: trace_filter
 ```

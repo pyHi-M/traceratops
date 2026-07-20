@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-uses the core routines of pyHiM to convert a trace file to a matrix in a standalone script
+This script converts a tracefile to a NUMPY array containing the pair-wise distances between barcodes, for each trace in the tracefile.
+The dimensions of the NUMPY matrix is therefore: N x N xN_traces, where N is the number of barcodes and N_traces the number of traces.
 """
 
 import argparse

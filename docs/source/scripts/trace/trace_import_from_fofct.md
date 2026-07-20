@@ -1,17 +1,12 @@
 # trace_import_from_fofct
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_import_from_fofct.parse_arguments
    :prog: trace_import_from_fofct
 ```
-## Description
-
-This script will convert FOF-CT trace files to pyHiM formatted ecsv files.
-
-## Usage
 
 ## Output Files
 

@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Analyze chromatin trace files.
+A Python script for analyzing chromatin trace files. The script loads trace files and generates statistical analysis and visualizations of various properties:
+- Number of barcodes detected per trace
+- Number of duplicated barcodes
+- Distribution of localizations in X, Y, Z coordinates
+- Distances between consecutive neighboring barcodes
+- Visual representations of traces
+- Barcode detection efficiency analysis with bootstrapped error estimates
 """
 
 import argparse

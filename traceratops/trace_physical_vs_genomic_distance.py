@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Calculate physical distances as a function of genomic distances from a chromatin trace table."""
+"""
+`trace_physical_vs_genomic_distance.py` summarizes how physical chromatin-trace distances change with genomic separation. It reads a chromatin trace table, computes pairwise distances between all barcode loci in each trace, bins those distances by genomic distance, and writes a CSV table that can also be plotted as a log-log physical-vs-genomic-distance curve.
+
+1. The script loads an input trace table supported by `ChromatinTraceTable` (`.ecsv`, `.dat`, `.4dn`, or `.csv`).
+2. Each trace is converted into a NumPy array with one row per trace, one column per barcode, and X/Y/Z coordinates in the final dimension.
+3. Genomic separation is computed from barcode## Description
+ midpoint positions, using `(Chrom_Start + Chrom_End) / 2`, and is reported in kilobase pairs (kbp).
+4. Physical pairwise distances are computed for:
+   - full 3D Euclidean distance, unless `--no_3d` is used;
+   - projected X-axis distance;
+   - projected Y-axis distance;
+   - projected Z-axis distance.
+5. Physical distances above `--dist_threshold` are replaced by `NaN` before summarization.
+6. Genomic distances are split into `--gen_dist_bins` equally spaced bins, and the median physical distance is reported for each bin and axis.
+
+
+"""
 
 import argparse
 from pathlib import Path

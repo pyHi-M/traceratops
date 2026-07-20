@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-script to plot one or multiple traces in 3D
+This script converts trace coordinates in a trace file into PDB-formatted files to be visualized using `pymol` or other software for protein visualization.
 
 Takes a trace file and either:
     - exports the first N traces to PDB with --number_traces

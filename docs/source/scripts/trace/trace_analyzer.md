@@ -1,32 +1,12 @@
 # trace_analyzer
 
-**Reliability status**: `development`
-
-*Read a trace table and derive several different analysis, including the distribution of number barcodes per trace: total, duplicated, and non-duplicated. It also exports the Rg distribution.*
-
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
    :ref: traceratops.trace_analyzer.parse_arguments
    :prog: trace_analyzer
 ```
-
-## Description
-A Python script for analyzing chromatin trace files. The script loads trace files and generates statistical analysis and visualizations of various properties:
-- Number of barcodes detected per trace
-- Number of duplicated barcodes
-- Distribution of localizations in X, Y, Z coordinates
-- Distances between consecutive neighboring barcodes
-- Visual representations of traces
-- Barcode detection efficiency analysis with bootstrapped error estimates
-
-## Usage
-
-```bash
-trace_analyzer --input path/to/your/trace_file.ecsv
-```
-
-
 
 ## Output Files
 
