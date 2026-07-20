@@ -4,6 +4,8 @@
 
 ## Localization quality filtering
 
+## Description
+
 `trace_filter` can remove spots by comparing values in a localization table
 against user-provided quality thresholds. Pass the localization table with
 `--localization_file`, then add any combination of quality filters.
@@ -38,7 +40,16 @@ filtered trace table, after all trace filters have run. The same filtered
 localization table is used for the `*_localization_distribution_fluxes` plot, so
 that the spot statistics describe the spots kept in the trace table.
 
-Example:
+## Usage
+
+```bash
+trace_filter --input path/to/your/trace_file.ecsv
+```
+
+## Output Files
+
+
+## Example
 
 ```bash
 trace_filter \

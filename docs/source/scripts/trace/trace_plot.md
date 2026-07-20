@@ -7,7 +7,20 @@
    :ref: traceratops.trace_plot.parse_arguments
    :prog: trace_plot
 ```
+## Description
 
+This script converts trace coordinates in a trace file into PDB-formatted files to be visualized using `pymol` or other software for protein visualization.
+
+## Usage
+
+```bash
+$ trace_plot --input path/to/your/trace_file.ecsv
+```
+## Output Files
+
+For each trace file analyzed, the script generates:
+
+1. A folder containing the PDB formatted structures of the selected traces.
 
 ## Examples
 
@@ -29,6 +42,7 @@ $ trace_plot --input Trace_3D_barcode_KDtree_ROI:1.ecsv --number_traces 100 --ou
 ```
 
 this exports the first 100 traces to the folder `first_100_PDBs/`.
+
 
 ### Export one selected trace
 
@@ -76,6 +90,11 @@ This also assumes your PDBs are in folder `/home/user/data/outputs/PDBs`, if the
 The first line will load the functions from a python script in traceratops. The second command will load 100 structures from the PDB file and represent them in a grid. The third line will color code each barcode with a different color. The final line will make the structures spin.
 
 If you want to colorcode your barcodes using a user defined code, see next section.
+
+Example display in pymol:
+
+![](../../_static/Example_pymol.png)
+
 
 ## Format for json dict
 

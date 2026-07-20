@@ -23,21 +23,10 @@ A Python script for analyzing chromatin trace files. The script loads trace file
 ## Usage
 
 ```bash
-# Analyze a single trace file
 trace_analyzer --input path/to/your/trace_file.ecsv
-
-# Analyze multiple trace files using pipe
-find /path/to/traces -name "*.ecsv" | trace_analyzer --pipe
-
-# Specify a different root folder
-trace_analyzer --rootFolder /custom/data/folder --input trace_file.ecsv
-
-# Generate SVG output instead of PNG
-trace_analyzer --input trace_file.ecsv --format svg
-
-# Generate XYZ plots in addition to statistics
-trace_analyzer --input trace_file.ecsv --plotXYZ
 ```
+
+
 
 ## Output Files
 
@@ -58,3 +47,23 @@ For each trace file analyzed, the script generates:
 2. `[tracefile]_first_neighbor_distances.[format]`: Top plots represent the histogram of distances between next and previous neighbour for each barcode in the trace, for all traces, in XY and in XYZ. Bottom plots show histograms of distances between consecutive genomic barcodes in X, Y and Z.
 
 ![](../../_static/merged_traces_filtered_split_first_neighbor_distances.png)
+
+
+## Examples
+
+```bash
+# Analyze a single trace file
+trace_analyzer --input path/to/your/trace_file.ecsv
+
+# Analyze multiple trace files using pipe
+find /path/to/traces -name "*.ecsv" | trace_analyzer --pipe
+
+# Specify a different root folder
+trace_analyzer --rootFolder /custom/data/folder --input trace_file.ecsv
+
+# Generate SVG output instead of PNG
+trace_analyzer --input trace_file.ecsv --format svg
+
+# Generate XYZ plots in addition to statistics
+trace_analyzer --input trace_file.ecsv --plotXYZ
+```

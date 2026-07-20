@@ -7,8 +7,16 @@
    :ref: traceratops.trace_import_from_fofct.parse_arguments
    :prog: trace_import_from_fofct
 ```
+## Description
 
-## Usage Example:
+This script will convert FOF-CT trace files to pyHiM formatted ecsv files.
+
+## Usage
+
+## Output Files
+
+
+## Example
 To convert a CSV file back to the ECSV format using the specified BED and JSON files, you would run:
 
 ```

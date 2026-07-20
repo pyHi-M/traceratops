@@ -10,11 +10,12 @@
    :prog: trace_physical_vs_genomic_distance
 ```
 
-## What the script computes
+## Description
 
 1. The script loads an input trace table supported by `ChromatinTraceTable` (`.ecsv`, `.dat`, `.4dn`, or `.csv`).
 2. Each trace is converted into a NumPy array with one row per trace, one column per barcode, and X/Y/Z coordinates in the final dimension.
-3. Genomic separation is computed from barcode midpoint positions, using `(Chrom_Start + Chrom_End) / 2`, and is reported in kilobase pairs (kbp).
+3. Genomic separation is computed from barcode## Description
+ midpoint positions, using `(Chrom_Start + Chrom_End) / 2`, and is reported in kilobase pairs (kbp).
 4. Physical pairwise distances are computed for:
    - full 3D Euclidean distance, unless `--no_3d` is used;
    - projected X-axis distance;
@@ -23,9 +24,11 @@
 5. Physical distances above `--dist_threshold` are replaced by `NaN` before summarization.
 6. Genomic distances are split into `--gen_dist_bins` equally spaced bins, and the median physical distance is reported for each bin and axis.
 
-## Output CSV columns
+## Output Files
 
-The main output CSV contains one row per genomic-distance bin and axis:
+For each trace file analyzed, the script generates:
+
+1. A CSV file containing one row per genomic-distance bin and axis:
 
 - `genomic distance (kbp)`: midpoint of the genomic-distance bin.
 - `log10 genomic dist (kbp)`: log10-transformed bin midpoint.
@@ -37,7 +40,13 @@ The main output CSV contains one row per genomic-distance bin and axis:
 
 If `--interloci_output` is supplied, the script also writes a CSV containing genomic distances between consecutive barcode loci.
 
-## Plot and power-law fit
+
+2. `[tracefile]_physical_vs_genomic_plot.png`: a figure with 4 panels with the physical versus genomic distance plot, with a power law fit and confidence intervals.
+
+[](../../_static/merged_traces_filtered_physical_vs_genomic_plot.png)
+
+
+### Plot and power-law fit
 
 When `--plot` is provided, the script saves a stacked log-log plot with one panel per calculated axis. The x-axis is shared and shown only on the bottom panel, while a single shared y-axis label spans the panels to avoid label overlap.
 

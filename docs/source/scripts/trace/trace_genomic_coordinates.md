@@ -8,8 +8,18 @@
    :prog: trace_genomic_coordinates
 ```
 
+## Description
 
-## Usage example
+This script will add genomic coordinates to a trace file from a BED file.
+
+When the BED file contains only 4 columns, the script will just refill the `Chr`, `Start` and `End` fields of the trace table.
+
+When an additional column is provided, the name of the barcode in the trace file will be replace to that in the fifth column.
+
+
+## Output Files
+
+## Example
 
 ```sh
 trace_genomic_coordinates --input trace_file.ecsv --bed bed_file.bed --output output_file.ecsv
