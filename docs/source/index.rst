@@ -21,6 +21,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Merge Multi-ROI<tutorials/tutorial_merge_multi_roi.ipynb>
    Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
    Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
+   Quality control & Filters : localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
    Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
    Split Traces<tutorials/tutorial_split_traces.ipynb>
    Assign Masks & Split Labels<tutorials/tutorial_assign_masks_split_labels.ipynb>
