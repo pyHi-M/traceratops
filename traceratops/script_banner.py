@@ -18,7 +18,6 @@ _SCRIPT_DESCRIPTIONS = {
     "trace_analyzer.py": "Analyze chromatin trace files.",
     "trace_assign_mask.py": "Assign mask labels to traces using numpy masks.",
     "trace_filter.py": "Filter chromatin trace files.",
-    "trace_filter_advanced.py": "Apply advanced filtering to chromatin trace files.",
     "trace_genomic_coordinates.py": "Assign genomic coordinates to a chromatin trace table.",
     "trace_import_from_fofct.py": "Convert a FOF-CT CSV file to a pyHiM trace table in ECSV format.",
     "trace_merge.py": "This script will merge trace tables provided as inputs.",
