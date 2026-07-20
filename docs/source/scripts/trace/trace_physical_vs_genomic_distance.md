@@ -17,7 +17,8 @@ For each trace file analyzed, the script generates:
 2. `[interloci_output].csv`: Optional CSV file containing genomic distances between consecutive barcode loci. This file is written only when `--interloci_output` is provided.
 
 3. `[tracefile]_physical_vs_genomic_plot.png`: Figure with the physical-versus-genomic distance plot, power-law fit, and confidence intervals. The suffix comes from `--plot` (default: `_physical_vs_genomic_plot.png`).
-[](../../_static/merged_traces_filtered_physical_vs_genomic_plot.png)
+
+![](../../_static/merged_traces_filtered_physical_vs_genomic_plot.png)
 
 ## Examples
 
