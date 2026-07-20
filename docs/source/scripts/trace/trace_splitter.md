@@ -12,7 +12,7 @@
 
 For each trace file analyzed, the script generates:
 
-1. `[tracefile]_split.ecsv`: The main output is a new trace file containing the original un-split traces + the split traces.
+1. `[tracefile]_split.ecsv`: Trace table containing the original un-split traces plus the split traces, with updated `Trace_ID` values. When `--output` is provided for a single input, that exact path is used instead.
 
 ## Examples
 

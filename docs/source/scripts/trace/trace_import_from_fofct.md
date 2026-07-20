@@ -10,8 +10,9 @@
 
 ## Output Files
 
-- An ECSV trace table converted from the input FOF-CT CSV file.
-- With `--output_file`, the table is written to that path; otherwise the input CSV filename is reused with an `.ecsv` extension.
+For each trace file analyzed, the script generates:
+
+1. `[input].ecsv`: ECSV trace table converted from the input FOF-CT CSV file. When `--output_file` is provided for a single input, that exact path is used instead.
 
 ## Examples
 To convert a CSV file back to the ECSV format using the specified BED and JSON files, you would run:

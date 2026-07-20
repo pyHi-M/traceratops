@@ -10,9 +10,9 @@
 
 ## Output Files
 
-The script produces as output the merged trace file:
+The script generates:
 
-1. `merged_traces.ecsv`: this is the default name for the output tracefile if non is provided as argument.
+1. `merged_traces.ecsv`: Merged trace table containing the input trace tables. This is the default filename when no output filename is provided.
 
 ## Examples
 

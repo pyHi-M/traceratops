@@ -10,8 +10,9 @@
 
 ## Output Files
 
-- A FOF-CT-compatible CSV file.
-- With `--output_file`, the CSV is written to that path; otherwise a default name is derived from the input ECSV file.
+For each trace file analyzed, the script generates:
+
+1. `[tracefile]_FOFCT.csv`: FOF-CT-compatible CSV file derived from the input ECSV trace table. When `--output_file` is provided for a single input, that exact path is used instead.
 
 ## Examples
 

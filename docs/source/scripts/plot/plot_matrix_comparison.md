@@ -10,7 +10,11 @@
 
 ## Output Files
 
-- A matrix-comparison figure saved as the filename selected with `--output` and `--output_format` (default root: `output`).
+The script generates:
+
+1. `[output]_scatter_plot.[format]`: Scatter plot comparing the values from the two input matrices and reporting the Pearson correlation.
+
+2. `[output]_violin_plot.[format]`: Violin plot comparing the distributions of values from the two input matrices.
 
 ## Examples
 

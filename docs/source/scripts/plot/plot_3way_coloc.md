@@ -10,8 +10,9 @@
 
 ## Output Files
 
-- One heatmap image per input three-way co-localization matrix.
-- The output is written next to each input `.npy` file using the selected `--output_format`.
+For each input matrix, the script generates:
+
+1. `[matrixfile]_anchor_[anchor]_replot.[format]`: Heatmap replot of the three-way co-localization matrix. The anchor value is extracted from the input filename.
 
 ## Examples
 

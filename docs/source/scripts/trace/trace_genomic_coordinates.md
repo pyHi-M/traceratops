@@ -10,8 +10,9 @@
 
 ## Output Files
 
-- An updated ECSV trace table containing genomic coordinate columns populated from the BED file.
-- With `--output`, the table is written to that path; otherwise the input stem is reused with a genomic-coordinate suffix.
+For each trace file analyzed, the script generates:
+
+1. `[tracefile]_imputed.ecsv`: Updated ECSV trace table with genomic coordinate columns populated from the BED file. When `--output` is provided for a single input, that exact path is used instead.
 
 ## Examples
 

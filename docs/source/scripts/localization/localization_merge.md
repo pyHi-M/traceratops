@@ -10,8 +10,11 @@
 
 ## Output Files
 
-- A merged localization table in ECSV format.
-- By default the file is written as `merged_localizations.ecsv` in the current directory; `--output_folder` and `--output_file` can change the destination.
+The script generates:
+
+1. `merged_localizations.ecsv`: Merged localization table in ECSV format. This is the default filename when `--output_file` is omitted.
+
+2. `[output_folder]/[output_file]`: Merged localization table written to the destination selected with `--output_folder` and `--output_file`.
 
 ## Examples
 

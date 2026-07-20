@@ -10,7 +10,9 @@
 
 ## Output Files
 
-The output is on the terminal. An example is provided below:
+The script does not write output files. It reports trace statistics in the terminal:
+
+1. `terminal output`: Summary containing the number of unique ROIs, chromatin traces, and barcodes in the input trace table.
 
 ```bash
 Statistics for merged_traces.ecsv:

@@ -10,10 +10,9 @@
 
 ## Output Files
 
-A PNG image with a plot showing colocalization frequencies between the anchor barcode
-and all other barcodes, including error bars derived from bootstrapping
-The output filename will be modified to include the anchor barcode number
-(e.g., "colocalization_plot_anchor_42.png")
+For each anchor barcode, the script generates:
+
+1. `[output]_anchor_[anchor].[format]`: 4M co-localization frequency plot for the selected anchor barcode, including error bars derived from bootstrapping. The output root comes from `--output` (default: `colocalization_plot.png`).
 
 ## Examples
 

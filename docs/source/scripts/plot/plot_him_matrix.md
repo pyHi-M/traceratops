@@ -10,8 +10,13 @@
 
 ## Output Files
 
-- Matrix visualization images written to the output folder selected with `--output` (default: `plots`).
-- The plotted matrix values are also saved in NPY format.
+The script generates:
+
+1. `[output]/Fig_[matrixfile]_[mode][_norm][_Tthreshold]_[c_min]-[c_max].[format]`: Matrix visualization for the selected mode (`proximity`, `median`, or `KDE`). The `_norm` component is included when normalization removes NaN values, and `_Tthreshold` is included when a non-default proximity threshold is used.
+
+2. `[output]/Fig_[matrixfile]_[mode][_norm][_Tthreshold]_[c_min]-[c_max].npy`: NPY file containing the plotted matrix values.
+
+3. `[output]/Fig_[matrixfile]_nan[_norm]_[c_min]-[c_max].[format]`: NaN-percentage matrix plot. This file is written when `--mode proximity` is used.
 
 ## Examples
 

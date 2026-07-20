@@ -12,7 +12,7 @@
 
 For each trace file analyzed, the script generates:
 
-1. A folder containing the PDB formatted structures of the selected traces.
+1. `[output]/[Trace_ID].pdb`: PDB-formatted structure for each selected trace. The output folder comes from `--output` (default: `PDBs`), and each file is named from the exported `Trace_ID`.
 
 ## Examples
 

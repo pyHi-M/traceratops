@@ -10,8 +10,11 @@
 
 ## Output Files
 
-- Copies matching files into the folder selected with `--copy-to`.
-- In exact-match mode, and when `--rename` is used, copied files are renamed by inserting the source subdirectory name before the extension.
+The script generates:
+
+1. `[copy-to]/[filename]`: Copy of each matched file in the destination folder selected with `--copy-to`.
+
+2. `[copy-to]/[stem]_[subdirectory][extension]`: Renamed copy of each matched file. This naming pattern is used automatically in exact-match mode and when `--rename` is provided.
 
 ## Examples
 

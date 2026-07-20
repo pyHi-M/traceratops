@@ -10,8 +10,15 @@
 
 ## Output Files
 
-- Bootstrapping result matrices in `.npy` format.
-- Statistical comparison figures written to the output folder selected with `--outputFolder` (default: `plots`).
+The script generates:
+
+1. `[outputFolder]/Fig_[matrixfile]bootstrapping_median.npy`: Bootstrapped median matrix values.
+
+2. `[outputFolder]/Fig_[matrixfile]bootstrapping_median.[format]`: Heatmap of the bootstrapped median matrix.
+
+3. `[outputFolder]/Fig_[matrixfile]bootstrapping_std_median.npy`: Standard-error matrix values from bootstrapping.
+
+4. `[outputFolder]/Fig_[matrixfile]bootstrapping_std_median.[format]`: Heatmap of the standard-error matrix.
 
 ## Examples
 

@@ -10,8 +10,11 @@
 
 ## Output Files
 
-- A labeled trace table named from the input trace file and label, for example `[tracefile]_[label].ecsv`.
-- A mask-assignment plot named `[tracefile]_[label]_mask_plot.[format]`.
+For each trace file analyzed, the script generates:
+
+1. `[tracefile]_[label].ecsv`: Trace table with the selected mask label assigned to traces that fall within the provided NUMPY mask file.
+
+2. `[tracefile]_[label]_mask_plot.[format]`: Diagnostic plot showing the mask assignment result.
 
 ## Examples
 

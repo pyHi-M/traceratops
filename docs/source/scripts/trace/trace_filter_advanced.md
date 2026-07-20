@@ -10,8 +10,15 @@
 
 ## Output Files
 
-- A filtered trace table saved in the output folder selected with `--output` (default folder/tag: `filtered`).
-- Diagnostic plots such as trace statistics, pairwise-distance statistics, and duplicated-barcode statistics, using `--output_format`.
+For each trace file analyzed, the script generates:
+
+1. `[output]/[tracefile]_[output].ecsv`: Filtered trace table saved in the folder selected with `--output` (default folder/tag: `filtered`).
+
+2. `[output]/trace_stat_[tag].[format]`: Trace-statistics diagnostic plot written during advanced filtering.
+
+3. `[output]/pairwise_distance_stat.[format]`: Pairwise-distance threshold diagnostic plot written when pairwise-distance statistics are saved.
+
+4. `[output]/duplicated_bc_pwd_stat.[format]`: Diagnostic plot for duplicated-barcode pairwise-distance statistics.
 
 ## Examples
 

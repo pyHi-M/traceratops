@@ -10,10 +10,13 @@
 
 ## Output Files
 
-- A PNG image with a heatmap showing three-way co-localization frequencies between the
-  anchor barcode and all possible pairs of other barcodes
-- The output filename will include the anchor barcode number
-  (e.g., "threeway_coloc_plot_anchor_42.png")
+For each trace file analyzed, the script generates:
+
+1. `[output]_anchor_[anchor].npy`: Mean three-way co-localization matrix for the selected anchor barcode.
+
+2. `[output]_anchor_[anchor].[format]`: Heatmap of three-way co-localization frequencies between the anchor barcode and all possible pairs of other barcodes.
+
+3. `[output]_anchor_[anchor]_sem.[format]`: Heatmap of the standard error of the mean (SEM) for the bootstrapped three-way co-localization frequencies.
 
 ## Examples
 

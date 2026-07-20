@@ -10,8 +10,11 @@
 
 ## Output Files
 
-- A localization quality-control plot.
-- By default the plot is named `localization_distribution_fluxes.<format>`; `--output_file` can select a custom output root or filename.
+The script generates:
+
+1. `localization_distribution_fluxes.[format]`: Localization quality-control plot generated when `--output_file` is omitted.
+
+2. `[output_file].[format]`: Localization quality-control plot generated at the custom output root or filename selected with `--output_file`.
 
 ## Examples
 
