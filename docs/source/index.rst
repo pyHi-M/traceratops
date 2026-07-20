@@ -18,16 +18,17 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 
    Getting started with notebooks<tutorials/start_with_ipynb>
    Using the --pipe argument<tutorials/using_pipe>
-   01 - Merge Multi-ROI<tutorials/tutorial_01_merge_multi_roi.ipynb>
-   02 - Quality Control<tutorials/tutorial_02_quality_control.ipynb>
-   03 - Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
-   04 - Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
-   05 - Split Traces<tutorials/tutorial_05_split_traces.ipynb>
-   06 - Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
-   07 - Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
-   08 - Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
-   09 - Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
-
+   Merge Multi-ROI<tutorials/tutorial_01_merge_multi_roi.ipynb>
+   Quality Control<tutorials/tutorial_02_quality_control.ipynb>
+   Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
+   Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
+   Split Traces<tutorials/tutorial_05_split_traces.ipynb>
+   Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
+   Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
+   Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
+   Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
+   Physical vs genomic Distance<tutorials/tutorial_10_physical_vs_genomic_distances.ipynb>
+   
 .. toctree::
    :maxdepth: 1
    :caption: Scripts
