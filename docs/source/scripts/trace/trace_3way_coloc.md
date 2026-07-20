@@ -1,6 +1,6 @@
 # trace_3way_coloc
 
-**Reliability status**: `development`
+**Reliability status**: `stable`
 
 ```{eval-rst}
 .. argparse::
@@ -8,14 +8,18 @@
    :prog: trace_3way_coloc
 ```
 
-## Usage
+## Output Files
 
-```bash
-trace_3way_coloc --input TRACE_FILE.ecsv --anchor BARCODE_NUMBER [options]
-cat file_list.txt | trace_3way_coloc --pipe --anchor BARCODE_NUMBER [options]
-```
+For each trace file analyzed, the script generates:
+
+1. `[output]_anchor_[anchor].npy`: Mean three-way co-localization matrix for the selected anchor barcode.
+
+2. `[output]_anchor_[anchor].[format]`: Heatmap of three-way co-localization frequencies between the anchor barcode and all possible pairs of other barcodes.
+
+3. `[output]_anchor_[anchor]_sem.[format]`: Heatmap of the standard error of the mean (SEM) for the bootstrapped three-way co-localization frequencies.
 
 ## Examples
+
 
 1. Analyze a single trace file with default parameters:
    ```bash
@@ -26,13 +30,6 @@ cat file_list.txt | trace_3way_coloc --pipe --anchor BARCODE_NUMBER [options]
    ```bash
    trace_3way_coloc --input traces.ecsv --anchor 42 --cutoff 0.25 --bootstrapping_cycles 100
    ```
-
-## Output
-
-- A PNG image with a heatmap showing three-way co-localization frequencies between the
-  anchor barcode and all possible pairs of other barcodes
-- The output filename will include the anchor barcode number
-  (e.g., "threeway_coloc_plot_anchor_42.png")
 
 ## Notes
 

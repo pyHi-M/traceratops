@@ -8,8 +8,17 @@
    :prog: plot_him_matrix
 ```
 
+## Output Files
 
-## Example
+The script generates:
+
+1. `[output]/Fig_[matrixfile]_[mode][_norm][_Tthreshold]_[c_min]-[c_max].[format]`: Matrix visualization for the selected mode (`proximity`, `median`, or `KDE`). The `_norm` component is included when normalization removes NaN values, and `_Tthreshold` is included when a non-default proximity threshold is used.
+
+2. `[output]/Fig_[matrixfile]_[mode][_norm][_Tthreshold]_[c_min]-[c_max].npy`: NPY file containing the plotted matrix values.
+
+3. `[output]/Fig_[matrixfile]_nan[_norm]_[c_min]-[c_max].[format]`: NaN-percentage matrix plot. This file is written when `--mode proximity` is used.
+
+## Examples
 
 Here is examples usage of plot_him_matrix:
 
@@ -41,3 +50,7 @@ plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --mode KDE --c_map Sp
     <img src="../../_static/Fig_PWDscMatrix_proximity_norm_0.20-0.59.png" width="45%">
     <img src="../../_static/Fig_PWDscMatrix_KDE_0.21-0.37.png" width="45%">
 </p>
+
+## Notes
+
+- See the command-line reference above for the complete option list.

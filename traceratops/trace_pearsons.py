@@ -3,11 +3,17 @@
 
 """
 Compare multiple chromatin trace tables by computing pairwise distances
-between barcode combinations and quantifying similarity via Pearson correlation.
+between barcode combinations and quantifying similarity via Pearson correlation.These can be different fields of view of a single acquisition or different biological replicates.
 
 This tool is useful for analyzing the structural similarity between different chromatin
 trace datasets, helping to identify patterns and relationships in chromatin organization
 across multiple samples or conditions.
+
+The script calculates, for each tracefile, the median pairwise distance map.
+Then it calculates the bin-by-bin Pearson correlation between all tracefiles provided.
+The result is therefore a matrix of Pearson correlations.
+
+
 """
 
 import argparse
