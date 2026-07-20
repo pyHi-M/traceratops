@@ -3,8 +3,7 @@ traceratops documentation
 
 **Date**: |today| **Version**: |release|
 
-A toolbox for trace analysis, visualization and quality assessment.
-Corresponding to the post-processing of pyHiM data, compatible with the `4DN FISH Omics Format <https://fish-omics-format.readthedocs.io/en/latest/>`_.
+traceratops is an open-source Python toolbox for reproducible post-processing, quality control, analysis, and visualization of reconstructed chromatin tracing datasets. It provides a modular trace-level workflow for harmonizing chromatin trace tables from pyHiM and community-standard formats such as the `4DN FISH Omics Format <https://fish-omics-format.readthedocs.io/en/latest/>`_, assessing trace completeness and barcode detection quality, filtering and annotating curated datasets, generating single-cell and ensemble distance or proximity matrices, analyzing multi-locus spatial interactions, and producing comparative, publication-ready visualizations that support standardized reuse of imaging-based spatial genomics data.
 
 .. toctree::
    :maxdepth: 1
@@ -19,20 +18,24 @@ Corresponding to the post-processing of pyHiM data, compatible with the `4DN FIS
 
    Getting started with notebooks<tutorials/start_with_ipynb>
    Using the --pipe argument<tutorials/using_pipe>
-   01 - Merge Multi-ROI<tutorials/tutorial_01_merge_multi_roi.ipynb>
-   02 - Quality Control<tutorials/tutorial_02_quality_control.ipynb>
-   03 - Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
-   04 - Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
-   05 - Split Traces<tutorials/tutorial_05_split_traces.ipynb>
-   06 - Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
-   07 - Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
-   08 - Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
-   09 - Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
+   Merge Multi-ROI<tutorials/tutorial_merge_multi_roi.ipynb>
+   Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
+   Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
+   Quality control & Filters : localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
+   Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
+   Split Traces<tutorials/tutorial_split_traces.ipynb>
+   Assign Masks & Split Labels<tutorials/tutorial_assign_masks_split_labels.ipynb>
+   Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
+   Multiway Co-localization<tutorials/tutorial_multiway_coloclozation.ipynb>
+   Compare Datasets<tutorials/tutorial_compare_datasets.ipynb>
+   3D Visualization<tutorials/tutorial_pymol.ipynb>
+   Physical vs genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
 
 .. toctree::
    :maxdepth: 1
    :caption: Scripts
 
+   Data formats<scripts/data_formats>
    scripts/localization
    scripts/trace
    scripts/matrix

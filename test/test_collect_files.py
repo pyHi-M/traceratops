@@ -21,7 +21,7 @@ from traceratops.collect_files import (
 
 EXAMPLE = "Trace_3D_barcode_mask-mask0_ROI-13.ecsv"
 VARPART = "13"
-LOC_EXAMPLE = "localizations_3D_barcode.dat"
+LOC_EXAMPLE = "localizations_3D_barcode.ecsv"
 
 
 def _make_tree(tmp_path: Path, layout: dict[str, list[str]]) -> Path:
@@ -249,11 +249,11 @@ class TestDestName:
         p = Path("/some/dir/data.ecsv")
         assert dest_name(p, "013_ROI", rename=True) == "data_013_ROI.ecsv"
 
-    def test_rename_dat(self):
-        p = Path("/x/localizations_3D_barcode.dat")
+    def test_rename_localization_ecsv(self):
+        p = Path("/x/localizations_3D_barcode.ecsv")
         assert (
             dest_name(p, "013_ROI", rename=True)
-            == "localizations_3D_barcode_013_ROI.dat"
+            == "localizations_3D_barcode_013_ROI.ecsv"
         )
 
 
@@ -495,8 +495,8 @@ class TestCollectFilesExactMode:
         copied = collect_files(root, LOC_EXAMPLE, dest)
 
         assert len(copied) == 2
-        assert (dest / "localizations_3D_barcode_013_ROI.dat").exists()
-        assert (dest / "localizations_3D_barcode_014_ROI.dat").exists()
+        assert (dest / "localizations_3D_barcode_013_ROI.ecsv").exists()
+        assert (dest / "localizations_3D_barcode_014_ROI.ecsv").exists()
 
     def test_preserves_content(self, tmp_path: Path):
         root = _make_tree(
@@ -509,7 +509,7 @@ class TestCollectFilesExactMode:
         dest = tmp_path / "output"
         collect_files(root, LOC_EXAMPLE, dest)
 
-        assert (dest / "localizations_3D_barcode_sub_a.dat").read_text() == (
+        assert (dest / "localizations_3D_barcode_sub_a.ecsv").read_text() == (
             "important data"
         )
 
@@ -521,7 +521,7 @@ class TestCollectFilesExactMode:
         )
         dest = tmp_path / "output"
         dest.mkdir()
-        (dest / "localizations_3D_barcode_sub_a.dat").write_text("old")
+        (dest / "localizations_3D_barcode_sub_a.ecsv").write_text("old")
 
         with pytest.raises(FileExistsError, match="collisions"):
             collect_files(root, LOC_EXAMPLE, dest)
@@ -530,7 +530,7 @@ class TestCollectFilesExactMode:
         """Exact match does not match similar but different filenames."""
         root = _make_tree(
             tmp_path,
-            {"sub_a": ["localizations_3D_barcode.dat.bak"]},
+            {"sub_a": ["localizations_3D_barcode.ecsv.bak"]},
         )
         dest = tmp_path / "output"
 
@@ -622,8 +622,8 @@ class TestMain:
             ]
         )
         assert code == 0
-        assert (dest / "localizations_3D_barcode_013_ROI.dat").exists()
-        assert (dest / "localizations_3D_barcode_014_ROI.dat").exists()
+        assert (dest / "localizations_3D_barcode_013_ROI.ecsv").exists()
+        assert (dest / "localizations_3D_barcode_014_ROI.ecsv").exists()
 
     def test_failure_exit_code(self, tmp_path: Path):
         root = _make_tree(

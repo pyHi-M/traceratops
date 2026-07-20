@@ -777,7 +777,13 @@ class ChromatinTraceTable:
                     barcode_data, bins=bins, density=density
                 )
             bin_number = list(bins[:-1])
-            pos = ax1.imshow(np.transpose(matrix), cmap="Reds", aspect="auto")
+            pos = ax1.imshow(
+                np.transpose(matrix),
+                cmap="cubehelix_r",
+                aspect="auto",
+                vmax=1,
+                vmin=np.min(matrix),
+            )
             ax1.set_xticks(np.arange(matrix.shape[0]), sorted_barcodes)
             ax1.tick_params(axis="x", labelsize=8)
             plt.setp(

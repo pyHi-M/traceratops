@@ -418,10 +418,160 @@ def decodes_trace(single_trace):
     return barcodes, X, Y, Z, trace_name
 
 
-def write_xyz_2_pdb(file_name, single_trace, barcode_type=dict()):
+def write_xyz_2_pdb(file_name, single_trace, barcode_type=None):
+    """
+    Write a chromatin trace to a PDB file using pseudoatoms.
+
+    When barcode_type is not provided, each unique barcode is assigned a
+    distinct PDB atom name:
+
+        first barcode  -> B001
+        second barcode -> B002
+        ...
+
+    Parameters
+    ----------
+    file_name : str
+        Output PDB file path.
+
+    single_trace
+        Trace table containing barcode and XYZ-coordinate information.
+
+    barcode_type : dict, optional
+        Dictionary mapping barcode values to PDB atom names. Keys may be
+        strings or values convertible to strings. Atom names must contain
+        at most four characters.
+    """
+    default_atom_name = "XXXX"
+
+    barcodes, X, Y, Z, trace_name = decodes_trace(single_trace)
+
+    barcodes = np.asarray(barcodes)
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float)
+    Z = np.asarray(Z, dtype=float)
+
+    xyz = np.column_stack((X, Y, Z))
+
+    # Recenter coordinates.
+    center_of_mass = np.mean(xyz, axis=0)
+
+    # Convert nanometres to ångströms.
+    unit_conversion = 10.0
+    xyz = unit_conversion * (xyz - center_of_mass)
+
+    n_atoms = xyz.shape[0]
+
+    if n_atoms == 0:
+        raise ValueError("The trace contains no atoms.")
+
+    # Work on a copy so the input dictionary is not modified.
+    barcode_type = {} if barcode_type is None else dict(barcode_type)
+
+    unique_barcodes = list(dict.fromkeys(barcodes))
+
+    if not barcode_type:
+        print(
+            "No barcode_type dictionary provided. "
+            "Assigning one unique atom name per barcode."
+        )
+
+        if len(unique_barcodes) > 999:
+            raise ValueError(
+                "More than 999 unique barcodes were found. "
+                "The B001-B999 naming scheme is insufficient."
+            )
+
+        barcode_type = {
+            str(barcode): f"B{i:03d}"
+            for i, barcode in enumerate(unique_barcodes, start=1)
+        }
+
+    else:
+        # Add a unique name for each barcode missing from the dictionary.
+        used_atom_names = set(barcode_type.values())
+        next_identifier = 1
+
+        for barcode in unique_barcodes:
+            barcode_key = str(barcode)
+
+            if barcode_key not in barcode_type:
+                while f"B{next_identifier:03d}" in used_atom_names:
+                    next_identifier += 1
+
+                if next_identifier > 999:
+                    atom_name = default_atom_name
+                else:
+                    atom_name = f"B{next_identifier:03d}"
+
+                barcode_type[barcode_key] = atom_name
+                used_atom_names.add(atom_name)
+
+                print(
+                    f"Barcode {barcode} was not found in barcode_type; "
+                    f"assigned atom name {atom_name}."
+                )
+
+    # Validate PDB atom names.
+    for barcode, atom_name in barcode_type.items():
+        if len(atom_name) > 4:
+            raise ValueError(
+                f"Atom name {atom_name!r} for barcode {barcode!r} exceeds "
+                "the four-character PDB atom-name limit."
+            )
+
+    # PDB residue names are limited to three characters.
+    residue_name = str(trace_name)[:3]
+
+    with open(file_name, mode="w", encoding="utf-8") as fid:
+        for atom_number, (barcode, coordinates) in enumerate(
+            zip(barcodes, xyz), start=1
+        ):
+            atom_name = barcode_type[str(barcode)]
+            x, y, z = coordinates
+
+            # Columns follow the conventional PDB HETATM layout.
+            line = (
+                f"HETATM"
+                f"{atom_number:5d} "
+                f"{atom_name:>4s}"
+                f" "
+                f"{residue_name:>3s} "
+                f"A"
+                f"{atom_number:4d}"
+                f"    "
+                f"{x:8.3f}"
+                f"{y:8.3f}"
+                f"{z:8.3f}"
+                f"{1.00:6.2f}"
+                f"{0.00:6.2f}"
+                f"          "
+                f"{'X':>2s}"
+                f"\n"
+            )
+            fid.write(line)
+
+        # Connect consecutive atoms to form the polymer.
+        if n_atoms > 1:
+            for atom_number in range(1, n_atoms):
+                fid.write(f"CONECT{atom_number:5d}{atom_number + 1:5d}\n")
+
+        fid.write("END\n")
+
+    print(f"Done writing {file_name} with {n_atoms} atoms.")
+
+    # Returning the mapping is useful for checking the assigned names.
+    return barcode_type
+
+
+def write_xyz_2_pdb_legacy(file_name, single_trace, barcode_type=dict()):
     # writes xyz coordinates to a PDB file with pseudoatoms
     # file_name : string of output file path, e.g. '/foo/bar/test2.pdb'
     # xyz      : n-by-3 numpy array with atom coordinates
+    #
+    # This script HAS BEEN SUPERSEEDED by write_xyz_2_pdb()
+    # Will be removed in a later version of traceratops
+    #
 
     default_atom_name = "xxx"
     barcodes, X, Y, Z, trace_name = decodes_trace(single_trace)

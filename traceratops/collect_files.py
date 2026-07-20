@@ -10,11 +10,11 @@ Two matching modes:
 **Exact match** (no ``--variable-part``)::
 
     collect_files --root data/RUT \\
-        --example-file "localizations_3D_barcode.dat" \\
+        --example-file "localizations_3D_barcode.ecsv" \\
         --copy-to collected/
 
 Files are automatically renamed with the subdirectory name
-(``localizations_3D_barcode_013_ROI.dat``) since they all share the
+(``localizations_3D_barcode_013_ROI.ecsv``) since they all share the
 same name.
 
 **Variable match** (with ``--variable-part``)::
