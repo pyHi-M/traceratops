@@ -8,7 +8,15 @@
    :prog: localization_merge
 ```
 
-## Usage example
+## Output Files
+
+The script generates:
+
+1. `merged_localizations.ecsv`: Merged localization table in ECSV format. This is the default filename when `--output_file` is omitted.
+
+2. `[output_folder]/[output_file]`: Merged localization table written to the destination selected with `--output_folder` and `--output_file`.
+
+## Examples
 
 ```
 $ cat file_list.txt | localization_merge [options]

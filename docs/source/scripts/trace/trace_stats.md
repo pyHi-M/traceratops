@@ -8,10 +8,11 @@
    :prog: trace_stats
 ```
 
-
 ## Output Files
 
-The output is on the terminal. An example is provided below:
+The script does not write output files. It reports trace statistics in the terminal:
+
+1. `terminal output`: Summary containing the number of unique ROIs, chromatin traces, and barcodes in the input trace table.
 
 ```bash
 Statistics for merged_traces.ecsv:
@@ -20,7 +21,7 @@ Statistics for merged_traces.ecsv:
 - Number of unique barcodes: 86
 ```
 
-## Example
+## Examples
 
 ```trace_stats.py --input traces_KC_AB_merged.ecsv```
 
@@ -32,3 +33,7 @@ Statistics for traces_KC_AB_merged.ecsv:
 - Number of unique ROIs: 26
 - Number of unique chromatin traces: 7573
 ```
+
+## Notes
+
+- See the command-line reference above for the complete option list.

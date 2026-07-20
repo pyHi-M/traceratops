@@ -8,11 +8,13 @@
    :prog: trace_assign_mask
 ```
 
-## Note
+## Output Files
 
-Use `trace_assign_mask` to assign specific *labels* to chromatin traces in a trace table.
+For each trace file analyzed, the script generates:
 
-`trace_assign_mask` will load a trace file and a number of NUMPY-formatted mask files and assign labels. If a trace falls within a mask, then the mask label will be assigned to the corresponding column of the trace table. If a trace falls *at the same time* within multiple masks, multiple labels will be appended to the corresponding column of the trace table. If a trace falls within no mask, then the label column of the trace table will be kept empty.
+1. `[tracefile]_[label].ecsv`: Trace table with the selected mask label assigned to traces that fall within the provided NUMPY mask file.
+
+2. `[tracefile]_[label]_mask_plot.[format]`: Diagnostic plot showing the mask assignment result.
 
 ## Examples
 
@@ -31,3 +33,9 @@ $ ls my_traces*.ecsv | trace_assign_mask --mask_file my_mask.npy --pipe  --label
 ```
 
 In this case the `mymask` will be applied to multiple trace files.
+
+## Notes
+
+Use `trace_assign_mask` to assign specific *labels* to chromatin traces in a trace table.
+
+`trace_assign_mask` will load a trace file and a number of NUMPY-formatted mask files and assign labels. If a trace falls within a mask, then the mask label will be assigned to the corresponding column of the trace table. If a trace falls *at the same time* within multiple masks, multiple labels will be appended to the corresponding column of the trace table. If a trace falls within no mask, then the label column of the trace table will be kept empty.

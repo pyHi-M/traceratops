@@ -10,13 +10,19 @@
 
 ## Output Files
 
-## Example
+For each trace file analyzed, the script generates:
+
+1. `[tracefile]_imputed.ecsv`: Updated ECSV trace table with genomic coordinate columns populated from the BED file. When `--output` is provided for a single input, that exact path is used instead.
+
+## Examples
 
 ```sh
 trace_genomic_coordinates --input trace_file.ecsv --bed bed_file.bed --output output_file.ecsv
 ```
 
-## BED file format
+## Notes
+
+### BED file format
 
 ```{warning}
 **No header!**

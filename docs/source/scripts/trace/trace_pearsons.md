@@ -8,21 +8,21 @@
    :prog: trace_pearsons
 ```
 
-
 ## Output Files
 
-1. `trace_correlation_matrix.png`: A Pearson correlation matrix plot comparing all input trace tables.
+The script generates:
+
+1. `trace_correlation_matrix.[format]`: Pearson correlation matrix plot comparing all input trace tables.
 
 ![trace_correlation_matrix](https://github.com/user-attachments/assets/ae4c19f7-3638-4e56-9901-5a206d0e64d6)
 
-2. `trace_correlation_matrix.npy`: Values of the correlation matrix.
+2. `trace_correlation_matrix.npy`: NPY file containing the Pearson correlation matrix values.
 
 ## Examples
 ```bash
 $ ls *ecsv | trace_pearsons [options]
 $ find . -name "*.ecsv" | trace_pearsons [options]
 ```
-
 
 ## Notes
 

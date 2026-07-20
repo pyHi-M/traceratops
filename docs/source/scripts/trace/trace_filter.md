@@ -8,7 +8,36 @@
    :prog: trace_filter
 ```
 
-## Removal of barcodes by intensity
+## Output Files
+
+For each trace file analyzed, the script generates:
+
+1. `[tracefile]_[output_tag]_[label_tag].ecsv`: Filtered trace table. The output tag comes from `--output` (default: `filtered`), and the label tag is appended only when `--keep_label` or `--remove_label` is used.
+
+2. `[localizationfile]_localization_intensities.[format]`: Intensity-distribution plot for the input localization table. This file is written when `--localization_file` and `--intensity_min` are provided.
+
+3. `[tracefile]_filtered_intensities.[format]`: Intensity-distribution plot for localizations kept after intensity filtering. This file is written when `--localization_file` and `--intensity_min` are provided.
+
+4. `[tracefile]_[output_tag]_[label_tag]_localizations.ecsv`: Filtered localization table containing localizations whose `Buid` values remain in the final filtered trace table. This file is written when `--localization_file` is provided.
+
+5. `[tracefile]_[output_tag]_[label_tag]_localization_distribution_fluxes.[format]`: Quality-control plot summarizing the filtered localization table. This file is written when `--localization_file` is provided.
+
+## Examples
+
+```bash
+trace_filter \
+  --input Trace.ecsv \
+  --localization_file Localizations.ecsv \
+  --intensity_min 1000 \
+  --snr_min 5 \
+  --object_class_min 1 \
+  --spot_pixel_percentage_max 0.7 \
+  --roundness_max 0.8
+```
+
+## Notes
+
+### Removal of barcodes by intensity
 
 ```bash
 trace_filter --input path/to/your/trace_file.ecsv
@@ -47,20 +76,3 @@ localizations whose `Buid` values are present as `Spot_ID` values in the final
 filtered trace table, after all trace filters have run. The same filtered
 localization table is used for the `*_localization_distribution_fluxes` plot, so
 that the spot statistics describe the spots kept in the trace table.
-
-
-## Output Files
-
-
-## Example
-
-```bash
-trace_filter \
-  --input Trace.ecsv \
-  --localization_file Localizations.ecsv \
-  --intensity_min 1000 \
-  --snr_min 5 \
-  --object_class_min 1 \
-  --spot_pixel_percentage_max 0.7 \
-  --roundness_max 0.8
-```
