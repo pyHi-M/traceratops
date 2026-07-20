@@ -30,7 +30,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Compare Datasets<tutorials/tutorial_compare_datasets.ipynb>
    3D Visualization<tutorials/tutorial_pymol.ipynb>
    Physical vs genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
-   
+
 .. toctree::
    :maxdepth: 1
    :caption: Scripts
