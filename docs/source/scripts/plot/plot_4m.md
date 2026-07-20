@@ -8,8 +8,14 @@
    :prog: plot_4m
 ```
 
+## Output Files
 
-## Usage
+A PNG image with a plot showing colocalization frequencies between the anchor barcode
+and all other barcodes, including error bars derived from bootstrapping
+The output filename will be modified to include the anchor barcode number
+(e.g., "colocalization_plot_anchor_42.png")
+
+## Examples
 
 ```bash
 plot_4m --input TRACE_FILE.ecsv --anchor BARCODE_NUMBER [options]
@@ -17,7 +23,6 @@ cat file_list.txt | python plot_4m --pipe --anchor BARCODE_NUMBER [options]
 find . -name "*.ecsv" | python plot_4m --pipe --anchor BARCODE_NUMBER [options]
 ```
 
-## Examples
 
 Analyze a single trace file with default parameters:
 
@@ -34,13 +39,6 @@ Process multiple trace files in batch mode:
 Process all ECSV files in a directory:
 
 `find ./data -name "*.ecsv" | plot_4m --pipe --anchor 42`
-
-## Output
-
-A PNG image with a plot showing colocalization frequencies between the anchor barcode
-and all other barcodes, including error bars derived from bootstrapping
-The output filename will be modified to include the anchor barcode number
-(e.g., "colocalization_plot_anchor_42.png")
 
 ## Notes
 

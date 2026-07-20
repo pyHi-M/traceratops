@@ -8,9 +8,18 @@
    :prog: trace_merge
 ```
 
-
 ## Output Files
 
 The script produces as output the merged trace file:
 
 1. `merged_traces.ecsv`: this is the default name for the output tracefile if non is provided as argument.
+
+## Examples
+
+```bash
+trace_merge --help
+```
+
+## Notes
+
+- See the command-line reference above for the complete option list.

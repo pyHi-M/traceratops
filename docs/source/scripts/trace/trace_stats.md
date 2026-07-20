@@ -8,7 +8,6 @@
    :prog: trace_stats
 ```
 
-
 ## Output Files
 
 The output is on the terminal. An example is provided below:
@@ -20,7 +19,7 @@ Statistics for merged_traces.ecsv:
 - Number of unique barcodes: 86
 ```
 
-## Example
+## Examples
 
 ```trace_stats.py --input traces_KC_AB_merged.ecsv```
 
@@ -32,3 +31,7 @@ Statistics for traces_KC_AB_merged.ecsv:
 - Number of unique ROIs: 26
 - Number of unique chromatin traces: 7573
 ```
+
+## Notes
+
+- See the command-line reference above for the complete option list.

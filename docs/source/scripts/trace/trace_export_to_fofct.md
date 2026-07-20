@@ -8,7 +8,36 @@
    :prog: trace_export_to_fofct
 ```
 
-## Example BED file
+## Output Files
+
+- A FOF-CT-compatible CSV file.
+- With `--output_file`, the CSV is written to that path; otherwise a default name is derived from the input ECSV file.
+
+## Examples
+
+```sh
+trace_export_to_fofct --input /path/to/Trace_3D_barcode_KDtree_ROI-5.ecsv --bed_file /path/to/barcode.bed --json_file /path/to/parameters.json --output_file /path/to/output.csv
+```
+
+Example json file:
+```json
+{
+  "genome_assembly": "GRCh38",
+  "experimenter_name": "Dr. Pirulo",
+  "experimenter_contact": "pirulo@gmail.com"
+}
+```
+
+To link the traces to the chromosomes, we use a BED file that contains the barcode information.
+We expect the BED file to have the following columns:
+- chrName
+- startSeq
+- endSeq
+- Barcode_ID
+
+## Notes
+
+### Example BED file
 
 The bed file should have no header.
 
@@ -22,7 +51,6 @@ chr2L	2393892	2405589	21
 ```
 
 
-## Notes
 
 For this first version, we don't consider, from the pyHiM trace table:
 - the "mask_id" column: it's can be linked to the "Cell_ID" column but sometimes it's not the case, two "mask_id" can be linked to the same Cell_ID.
@@ -44,25 +72,3 @@ We need as run arguments:
 - the path to the BED file
 - the path to the JSON file (optional)
 - the path to the output CSV file (optional)
-
-## Example
-
-```sh
-trace_export_to_fofct --input /path/to/Trace_3D_barcode_KDtree_ROI-5.ecsv --bed_file /path/to/barcode.bed --json_file /path/to/parameters.json --output_file /path/to/output.csv
-```
-
-Example json file:
-```json
-{
-  "genome_assembly": "GRCh38",
-  "experimenter_name": "Dr. Pirulo",
-  "experimenter_contact": "pirulo@gmail.com"
-}
-```
-
-To link the traces to the chromosomes, we use a BED file that contains the barcode information.
-We expect the BED file to have the following columns:
-- chrName
-- startSeq
-- endSeq
-- Barcode_ID

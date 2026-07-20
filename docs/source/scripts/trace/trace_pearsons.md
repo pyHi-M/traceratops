@@ -8,7 +8,6 @@
    :prog: trace_pearsons
 ```
 
-
 ## Output Files
 
 1. `trace_correlation_matrix.png`: A Pearson correlation matrix plot comparing all input trace tables.
@@ -22,7 +21,6 @@
 $ ls *ecsv | trace_pearsons [options]
 $ find . -name "*.ecsv" | trace_pearsons [options]
 ```
-
 
 ## Notes
 

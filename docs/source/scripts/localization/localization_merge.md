@@ -8,7 +8,12 @@
    :prog: localization_merge
 ```
 
-## Usage example
+## Output Files
+
+- A merged localization table in ECSV format.
+- By default the file is written as `merged_localizations.ecsv` in the current directory; `--output_folder` and `--output_file` can change the destination.
+
+## Examples
 
 ```
 $ cat file_list.txt | localization_merge [options]

@@ -10,13 +10,18 @@
 
 ## Output Files
 
-## Example
+- An updated ECSV trace table containing genomic coordinate columns populated from the BED file.
+- With `--output`, the table is written to that path; otherwise the input stem is reused with a genomic-coordinate suffix.
+
+## Examples
 
 ```sh
 trace_genomic_coordinates --input trace_file.ecsv --bed bed_file.bed --output output_file.ecsv
 ```
 
-## BED file format
+## Notes
+
+### BED file format
 
 ```{warning}
 **No header!**

@@ -8,7 +8,20 @@
    :prog: collect_files
 ```
 
-## Why ?
+## Output Files
+
+- Copies matching files into the folder selected with `--copy-to`.
+- In exact-match mode, and when `--rename` is used, copied files are renamed by inserting the source subdirectory name before the extension.
+
+## Examples
+
+```bash
+collect_files --help
+```
+
+## Notes
+
+### Why ?
 
 When merging data from multiple ROIs, you need to collect one file per subdirectory
 into a single folder. Two problems arise:
@@ -20,7 +33,8 @@ into a single folder. Two problems arise:
 
 `collect_files` solves both problems with a single tool using fixed-length pattern matching.
 
-## Two Matching Modes
+
+### Two Matching Modes
 
 ### Exact match (no `--variable-part`)
 
@@ -50,7 +64,6 @@ collect_files --root data/RUT \
 This matches `ROI-14.ecsv`, `ROI-25.ecsv`, etc. but rejects `ROI-021.ecsv`
 (different length) and `_Matrix_uniqueBarcodes.ecsv` (different total length).
 
-## Notes
 
 - Each immediate subdirectory of `--root` is scanned recursively for exactly one match.
 - If a subdirectory has zero or multiple matches, the script stops with a clear error.
@@ -58,7 +71,8 @@ This matches `ROI-14.ecsv`, `ROI-25.ecsv`, etc. but rejects `ROI-021.ecsv`
 - Use `--rename` to insert the subdirectory name in the output filename (automatic in exact mode).
 - Original file metadata (timestamps, permissions) is preserved.
 
-## Replaces
+
+### Replaces
 
 This script replaces the former `localization_cp_files` script and the `find -exec cp`
 pattern previously used for trace files.

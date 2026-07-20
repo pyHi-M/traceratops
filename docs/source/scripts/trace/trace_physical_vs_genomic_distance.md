@@ -8,7 +8,6 @@
    :prog: trace_physical_vs_genomic_distance
 ```
 
-
 ## Output Files
 
 For each trace file analyzed, the script generates:
@@ -46,7 +45,7 @@ The fit is performed by linear regression in log10 space. The plotted fit line i
 - `a`: the scale coefficient.
 - `b`: the power-law exponent.
 
-## Example
+## Examples
 
 ```bash
 trace_physical_vs_genomic_distance.py \
@@ -60,3 +59,7 @@ trace_physical_vs_genomic_distance.py \
 ```
 
 The plot filename is appended to the input stem by default. For the example above, the figure is saved as `traces_KC_AB_merged_physical_vs_genomic_plot.png`.
+
+## Notes
+
+- See the command-line reference above for the complete option list.

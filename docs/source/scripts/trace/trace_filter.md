@@ -8,7 +8,28 @@
    :prog: trace_filter
 ```
 
-## Removal of barcodes by intensity
+## Output Files
+
+- A filtered trace table named from the input trace filename and the selected output tag (default tag: `filtered`).
+- When `--localization_file` is provided, a matching filtered localization table is written next to the filtered trace table.
+- Quality-control plots are written using the selected output format.
+
+## Examples
+
+```bash
+trace_filter \
+  --input Trace.ecsv \
+  --localization_file Localizations.ecsv \
+  --intensity_min 1000 \
+  --snr_min 5 \
+  --object_class_min 1 \
+  --spot_pixel_percentage_max 0.7 \
+  --roundness_max 0.8
+```
+
+## Notes
+
+### Removal of barcodes by intensity
 
 ```bash
 trace_filter --input path/to/your/trace_file.ecsv
@@ -47,20 +68,3 @@ localizations whose `Buid` values are present as `Spot_ID` values in the final
 filtered trace table, after all trace filters have run. The same filtered
 localization table is used for the `*_localization_distribution_fluxes` plot, so
 that the spot statistics describe the spots kept in the trace table.
-
-
-## Output Files
-
-
-## Example
-
-```bash
-trace_filter \
-  --input Trace.ecsv \
-  --localization_file Localizations.ecsv \
-  --intensity_min 1000 \
-  --snr_min 5 \
-  --object_class_min 1 \
-  --spot_pixel_percentage_max 0.7 \
-  --roundness_max 0.8
-```

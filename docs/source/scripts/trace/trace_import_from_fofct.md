@@ -10,8 +10,10 @@
 
 ## Output Files
 
+- An ECSV trace table converted from the input FOF-CT CSV file.
+- With `--output_file`, the table is written to that path; otherwise the input CSV filename is reused with an `.ecsv` extension.
 
-## Example
+## Examples
 To convert a CSV file back to the ECSV format using the specified BED and JSON files, you would run:
 
 ```
@@ -19,3 +21,7 @@ trace_import_from_fofct --input output.csv --bed_file barcode.bed --output_file 
 ```
 
 If the `--output_file` argument is not provided, the script will save the ECSV file with the same name as the input CSV file but with an `.ecsv` extension.
+
+## Notes
+
+- See the command-line reference above for the complete option list.

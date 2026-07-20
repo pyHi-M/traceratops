@@ -44,3 +44,13 @@ For larger datasets, you can combine histogram generation with per-trace paralle
 ```bash
 trace_to_matrix --input traces.ecsv --n_jobs 6 --plot_histograms
 ```
+
+## Examples
+
+```bash
+trace_to_matrix --help
+```
+
+## Notes
+
+- See the command-line reference above for the complete option list.

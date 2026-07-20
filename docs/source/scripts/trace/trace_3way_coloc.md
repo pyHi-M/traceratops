@@ -15,7 +15,6 @@
 - The output filename will include the anchor barcode number
   (e.g., "threeway_coloc_plot_anchor_42.png")
 
-
 ## Examples
 
 
@@ -28,7 +27,6 @@
    ```bash
    trace_3way_coloc --input traces.ecsv --anchor 42 --cutoff 0.25 --bootstrapping_cycles 100
    ```
-
 
 ## Notes
 

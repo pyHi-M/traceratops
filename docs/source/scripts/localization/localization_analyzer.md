@@ -8,23 +8,12 @@
    :prog: localization_analyzer
 ```
 
-## What it does
+## Output Files
 
-`localization_analyzer` loads one localization table and generates a quality-control
-summary plot for the detected barcode localizations. The plot includes:
+- A localization quality-control plot.
+- By default the plot is named `localization_distribution_fluxes.<format>`; `--output_file` can select a custom output root or filename.
 
-- SNR distribution per barcode.
-- SNR versus z-position scatter plot, colored by object class.
-- Number of detections per barcode.
-- Roundness versus skew scatter plot, colored by barcode.
-
-The input table is read with `LocalizationTable.load`, so the script supports the
-same localization formats as the localization table reader. Use `.ecsv` for
-localization tables; legacy `.dat` files still load for now but emit a
-deprecation warning because support will be discontinued in a future traceratops
-release. `.4dn` files are also supported.
-
-## Usage examples
+## Examples
 
 Create the default PNG output, `localization_distribution_fluxes.png`:
 
@@ -51,6 +40,23 @@ localization_analyzer \
 ```
 
 ## Notes
+
+### What it does
+
+`localization_analyzer` loads one localization table and generates a quality-control
+summary plot for the detected barcode localizations. The plot includes:
+
+- SNR distribution per barcode.
+- SNR versus z-position scatter plot, colored by object class.
+- Number of detections per barcode.
+- Roundness versus skew scatter plot, colored by barcode.
+
+The input table is read with `LocalizationTable.load`, so the script supports the
+same localization formats as the localization table reader. Use `.ecsv` for
+localization tables; legacy `.dat` files still load for now but emit a
+deprecation warning because support will be discontinued in a future traceratops
+release. `.4dn` files are also supported.
+
 
 - `--localization_file` is required.
 - `--format` accepts `png` or `svg` and defaults to `png`.

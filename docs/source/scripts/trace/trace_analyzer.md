@@ -28,7 +28,6 @@ For each trace file analyzed, the script generates:
 
 ![](../../_static/merged_traces_filtered_split_first_neighbor_distances.png)
 
-
 ## Examples
 
 ```bash
@@ -47,3 +46,7 @@ trace_analyzer --input trace_file.ecsv --format svg
 # Generate XYZ plots in addition to statistics
 trace_analyzer --input trace_file.ecsv --plotXYZ
 ```
+
+## Notes
+
+- See the command-line reference above for the complete option list.
