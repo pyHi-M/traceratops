@@ -30,6 +30,83 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.script_banner import print_script_banner
 
 
+def _matrix_tick_fontsize(n_barcodes):
+    """Return a readable tick-label size for dense barcode matrices."""
+    if n_barcodes <= 0:
+        return 8
+    return max(4, min(8, int(450 / n_barcodes)))
+
+
+def _anchor_boundary_index(sorted_barcodes, anchor_barcode):
+    """Return the matrix boundary where an omitted anchor barcode would sort."""
+    return np.searchsorted(np.asarray(sorted_barcodes), anchor_barcode) - 0.5
+
+
+def _trace_barcode_arrays(trace_table, anchor_barcode, distance_cutoff):
+    """Return barcode presence and anchor co-localization arrays per trace."""
+    all_barcodes = np.unique(trace_table["Barcode #"])
+    barcodes = np.asarray([b for b in all_barcodes if b != anchor_barcode])
+    trace_groups = trace_table.group_by("Trace_ID").groups
+
+    present = np.zeros((len(trace_groups), len(barcodes)), dtype=bool)
+    colocated = np.zeros((len(trace_groups), len(barcodes)), dtype=bool)
+    barcode_to_idx = {barcode: idx for idx, barcode in enumerate(barcodes)}
+
+    for trace_idx, trace in enumerate(trace_groups):
+        anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
+        if len(anchor_positions) == 0:
+            continue
+
+        anchor_xyz = np.array(
+            [anchor_positions["x"], anchor_positions["y"], anchor_positions["z"]]
+        ).T
+
+        for barcode in np.unique(trace["Barcode #"]):
+            if barcode == anchor_barcode or barcode not in barcode_to_idx:
+                continue
+
+            barcode_idx = barcode_to_idx[barcode]
+            present[trace_idx, barcode_idx] = True
+
+            barcode_positions = trace[trace["Barcode #"] == barcode]
+            barcode_xyz = np.array(
+                [barcode_positions["x"], barcode_positions["y"], barcode_positions["z"]]
+            ).T
+            distances = np.linalg.norm(anchor_xyz[:, None] - barcode_xyz, axis=-1)
+            colocated[trace_idx, barcode_idx] = np.any(distances < distance_cutoff)
+
+    return barcodes, present, colocated
+
+
+def _weighted_pair_counts(present, colocated, weights=None):
+    """Count pair opportunities and co-localizations, preserving bootstrap duplicates."""
+    if weights is None:
+        weights = np.ones(present.shape[0], dtype=int)
+    weights = np.asarray(weights)
+
+    weighted_present = present * weights[:, None]
+    total_counts = present.T @ weighted_present
+
+    colocated_pair = present[:, :, None] & present[:, None, :]
+    colocated_pair &= colocated[:, :, None] & colocated[:, None, :]
+    colocated_counts = np.tensordot(weights, colocated_pair, axes=(0, 0))
+
+    return total_counts, colocated_counts
+
+
+def _pair_frequencies_from_counts(barcodes, total_counts, colocated_counts):
+    """Convert pair count matrices into the public pair-frequency dictionary."""
+    frequencies = {}
+    for i, barcode1 in enumerate(barcodes):
+        for j in range(i + 1, len(barcodes)):
+            barcode2 = barcodes[j]
+            total = total_counts[i, j]
+            frequencies[(barcode1, barcode2)] = (
+                colocated_counts[i, j] / total if total > 0 else 0
+            )
+    return frequencies
+
+
 def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff):
     """
     Computes the frequency of three-way co-localization between an anchor barcode
@@ -49,107 +126,11 @@ def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff
     dict
         Dictionary with (barcode1, barcode2) tuples as keys and co-localization frequencies as values
     """
-    # Dictionary to store co-localization counts: (barcode1, barcode2) -> [co-localized count, total count]
-    threeway_interactions = {}
-
-    # Get all unique barcodes
-    all_barcodes = np.unique(trace_table["Barcode #"])
-    other_barcodes = [b for b in all_barcodes if b != anchor_barcode]
-
-    # Generate all possible pairs of barcodes (excluding the anchor)
-    barcode_pairs = list(itertools.combinations(other_barcodes, 2))
-
-    # Initialize the counts dictionary
-    for pair in barcode_pairs:
-        threeway_interactions[pair] = [0, 0]
-
-    # Group traces by Trace_ID
-    trace_groups = trace_table.group_by("Trace_ID").groups
-
-    # Process each trace separately
-    for trace in trace_groups:
-        # Get positions of the anchor barcode in this trace
-        anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
-
-        # Skip if anchor is not present in this trace
-        if len(anchor_positions) == 0:
-            continue
-
-        # Get the barcodes present in this trace
-        barcodes_in_trace = np.unique(trace["Barcode #"])
-
-        # Generate all pairs of barcodes in this trace (excluding the anchor)
-        pairs_in_trace = [
-            p
-            for p in barcode_pairs
-            if p[0] in barcodes_in_trace and p[1] in barcodes_in_trace
-        ]
-
-        # For each pair, check if they co-localize with the anchor
-        for barcode1, barcode2 in pairs_in_trace:
-            barcode1_positions = trace[trace["Barcode #"] == barcode1]
-            barcode2_positions = trace[trace["Barcode #"] == barcode2]
-
-            # Skip if either barcode is missing in this trace
-            if len(barcode1_positions) == 0 or len(barcode2_positions) == 0:
-                continue
-
-            # Increment the total count for this pair
-            threeway_interactions[(barcode1, barcode2)][1] += 1
-
-            # Check distances between anchor and barcode1
-            distances_anchor_barcode1 = np.linalg.norm(
-                np.array(
-                    [
-                        anchor_positions["x"],
-                        anchor_positions["y"],
-                        anchor_positions["z"],
-                    ]
-                ).T[:, None]
-                - np.array(
-                    [
-                        barcode1_positions["x"],
-                        barcode1_positions["y"],
-                        barcode1_positions["z"],
-                    ]
-                ).T,
-                axis=-1,
-            )
-
-            # Check distances between anchor and barcode2
-            distances_anchor_barcode2 = np.linalg.norm(
-                np.array(
-                    [
-                        anchor_positions["x"],
-                        anchor_positions["y"],
-                        anchor_positions["z"],
-                    ]
-                ).T[:, None]
-                - np.array(
-                    [
-                        barcode2_positions["x"],
-                        barcode2_positions["y"],
-                        barcode2_positions["z"],
-                    ]
-                ).T,
-                axis=-1,
-            )
-
-            # Check if both barcodes co-localize with the anchor
-            anchor_barcode1_coloc = np.any(distances_anchor_barcode1 < distance_cutoff)
-            anchor_barcode2_coloc = np.any(distances_anchor_barcode2 < distance_cutoff)
-
-            # If both barcodes co-localize with the anchor, increment the co-localized count
-            if anchor_barcode1_coloc and anchor_barcode2_coloc:
-                threeway_interactions[(barcode1, barcode2)][0] += 1
-
-    # Compute frequencies
-    threeway_frequencies = {
-        pair: (count[0] / count[1] if count[1] > 0 else 0)
-        for pair, count in threeway_interactions.items()
-    }
-
-    return threeway_frequencies
+    barcodes, present, colocated = _trace_barcode_arrays(
+        trace_table, anchor_barcode, distance_cutoff
+    )
+    total_counts, colocated_counts = _weighted_pair_counts(present, colocated)
+    return _pair_frequencies_from_counts(barcodes, total_counts, colocated_counts)
 
 
 def bootstrap_threeway_colocalization(
@@ -174,34 +155,26 @@ def bootstrap_threeway_colocalization(
     tuple
         (mean_frequencies, sem_frequencies) dictionaries with barcode pairs as keys
     """
-    # Dictionary to store bootstrap samples for each barcode pair
-    pair_samples = {}
+    barcodes, present, colocated = _trace_barcode_arrays(
+        trace_table, anchor_barcode, distance_cutoff
+    )
+    n_traces = present.shape[0]
+    pair_samples = {pair: [] for pair in itertools.combinations(barcodes, 2)}
 
-    # Get all unique trace IDs for bootstrapping
-    trace_ids = np.unique(trace_table["Trace_ID"])
-
-    # Run bootstrap iterations
     for _ in range(n_bootstrap):
-        # Sample traces with replacement
-        sampled_traces = np.random.choice(trace_ids, size=len(trace_ids), replace=True)
-
-        # Create a new table with only the sampled traces
-        sampled_table = trace_table[np.isin(trace_table["Trace_ID"], sampled_traces)]
-
-        # Compute three-way co-localization for this bootstrap sample
-        threeway_frequencies = compute_threeway_colocalization(
-            sampled_table, anchor_barcode, distance_cutoff
+        sampled_trace_indices = np.random.choice(n_traces, size=n_traces, replace=True)
+        weights = np.bincount(sampled_trace_indices, minlength=n_traces)
+        total_counts, colocated_counts = _weighted_pair_counts(
+            present, colocated, weights=weights
+        )
+        threeway_frequencies = _pair_frequencies_from_counts(
+            barcodes, total_counts, colocated_counts
         )
 
-        # Store the results
         for pair, frequency in threeway_frequencies.items():
-            if pair not in pair_samples:
-                pair_samples[pair] = []
             pair_samples[pair].append(frequency)
 
-    # Compute mean and standard error of the mean (SEM) for each pair
     pair_means = {pair: np.mean(samples) for pair, samples in pair_samples.items()}
-
     pair_sems = {
         pair: np.std(samples) / np.sqrt(n_bootstrap)
         for pair, samples in pair_samples.items()
@@ -264,6 +237,12 @@ def plot_threeway_matrix(
     # Create a custom colormap from white to dark blue
     cmap = "RdBu"  # LinearSegmentedColormap.from_list('white_to_blue', ['#FFFFFF', '#0343DF'])
 
+    tick_fontsize = _matrix_tick_fontsize(n_barcodes)
+    label_fontsize = 11
+    title_fontsize = 12
+    colorbar_tick_fontsize = 9
+    colorbar_label_fontsize = 10
+
     # Create the figure and subplots for the mean frequencies
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -283,8 +262,8 @@ def plot_threeway_matrix(
     # Set up the axes with the correct labels
     ax.set_xticks(np.arange(len(sorted_barcodes)))
     ax.set_yticks(np.arange(len(sorted_barcodes)))
-    ax.set_xticklabels(sorted_barcodes, fontsize=10)
-    ax.set_yticklabels(sorted_barcodes, fontsize=10)
+    ax.set_xticklabels(sorted_barcodes, fontsize=tick_fontsize)
+    ax.set_yticklabels(sorted_barcodes, fontsize=tick_fontsize)
 
     # Rotate the tick labels and set their alignment
     plt.setp(ax.get_xticklabels(), rotation=90, ha="right", rotation_mode="anchor")
@@ -294,27 +273,29 @@ def plot_threeway_matrix(
     ax.set_yticks(np.arange(-0.5, len(sorted_barcodes), 1), minor=True)
     ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
 
-    # Add perpendicular lines for the anchor barcode
-    if anchor_barcode in barcode_to_idx:
-        anchor_idx = barcode_to_idx[anchor_barcode]
-
-        # Horizontal line across the anchor barcode row
-        ax.axhline(y=anchor_idx, color="black", linestyle="-", linewidth=2, alpha=0.7)
-
-        # Vertical line across the anchor barcode column
-        ax.axvline(x=anchor_idx, color="black", linestyle="-", linewidth=2, alpha=0.7)
+    # Add perpendicular guide lines where the omitted anchor barcode would sort.
+    # The anchor is excluded from the matrix, so draw on the boundary between
+    # neighboring barcode cells rather than looking for the anchor in the labels.
+    anchor_boundary_idx = _anchor_boundary_index(sorted_barcodes, anchor_barcode)
+    ax.axhline(
+        y=anchor_boundary_idx, color="black", linestyle="-", linewidth=1.5, alpha=0.7
+    )
+    ax.axvline(
+        x=anchor_boundary_idx, color="black", linestyle="-", linewidth=1.5, alpha=0.7
+    )
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Co-localization frequency", fontsize=12)
+    cbar.set_label("Co-localization frequency", fontsize=colorbar_label_fontsize)
+    cbar.ax.tick_params(labelsize=colorbar_tick_fontsize)
 
     # Add title and labels
     ax.set_title(
         f"3-way co-localization with anchor {anchor_barcode}\n(distance cutoff: {distance_cutoff} µm)",
-        fontsize=14,
+        fontsize=title_fontsize,
     )
-    ax.set_xlabel("Barcode #", fontsize=14)
-    ax.set_ylabel("Barcode #", fontsize=14)
+    ax.set_xlabel("Barcode #", fontsize=label_fontsize)
+    ax.set_ylabel("Barcode #", fontsize=label_fontsize)
 
     # Adjust layout and saves npy matrix and image
     plt.tight_layout()
@@ -341,8 +322,8 @@ def plot_threeway_matrix(
     # Set up the axes with the correct labels
     ax.set_xticks(np.arange(len(sorted_barcodes)))
     ax.set_yticks(np.arange(len(sorted_barcodes)))
-    ax.set_xticklabels(sorted_barcodes, fontsize=14)
-    ax.set_yticklabels(sorted_barcodes, fontsize=14)
+    ax.set_xticklabels(sorted_barcodes, fontsize=tick_fontsize)
+    ax.set_yticklabels(sorted_barcodes, fontsize=tick_fontsize)
 
     # Rotate the tick labels and set their alignment
     plt.setp(ax.get_xticklabels(), rotation=90, ha="right", rotation_mode="anchor")
@@ -354,16 +335,17 @@ def plot_threeway_matrix(
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Standard error", fontsize=12)
+    cbar.set_label("Standard error", fontsize=colorbar_label_fontsize)
+    cbar.ax.tick_params(labelsize=colorbar_tick_fontsize)
 
     # Add title and labels
     ax.set_title(
         f"Errors for 3-way co-localization with anchor {anchor_barcode}\n"
         f"(distance cutoff: {distance_cutoff} µm)",
-        fontsize=15,
+        fontsize=title_fontsize,
     )
-    ax.set_xlabel("Barcode #", fontsize=14)
-    ax.set_ylabel("Barcode #", fontsize=14)
+    ax.set_xlabel("Barcode #", fontsize=label_fontsize)
+    ax.set_ylabel("Barcode #", fontsize=label_fontsize)
 
     # Adjust layout and save
     plt.tight_layout()
