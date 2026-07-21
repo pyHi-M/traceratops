@@ -209,15 +209,14 @@ def bootstrap_threeway_colocalization(
         for pair, frequency in frequencies.items():
             samples[pair].append(frequency)
 
-    pair_means = {
-        pair: np.mean(pair_samples) for pair, pair_samples in samples.items()
-    }
+    pair_means = {pair: np.mean(pair_samples) for pair, pair_samples in samples.items()}
     pair_sems = {
         pair: np.std(pair_samples) / np.sqrt(n_bootstrap)
         for pair, pair_samples in samples.items()
     }
 
     return pair_means, pair_sems
+
 
 def plot_threeway_matrix(
     pair_means,
