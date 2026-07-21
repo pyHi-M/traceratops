@@ -5,8 +5,7 @@
 
 1. The script loads an input trace table supported by `ChromatinTraceTable` (`.ecsv`, `.dat`, `.4dn`, or `.csv`).
 2. Each trace is converted into a NumPy array with one row per trace, one column per barcode, and X/Y/Z coordinates in the final dimension.
-3. Genomic separation is computed from barcode## Description
- midpoint positions, using `(Chrom_Start + Chrom_End) / 2`, and is reported in kilobase pairs (kbp).
+3. Genomic separation is computed from barcode## Description midpoint positions, using `(Chrom_Start + Chrom_End) / 2`, and is reported in kilobase pairs (kbp).
 4. Physical pairwise distances are computed for:
    - full 3D Euclidean distance, unless `--no_3d` is used;
    - projected X-axis distance;
