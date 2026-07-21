@@ -87,7 +87,7 @@ def create_dict_args(args):
         run_parameters["outputFolder"] = "plots"
 
     if args.fontsize:
-        run_parameters["fontsize"] = args.fontsize
+        run_parameters["fontsize"] = float(args.fontsize)
     else:
         run_parameters["fontsize"] = 9
 
@@ -147,6 +147,20 @@ def create_dict_args(args):
     return run_parameters
 
 
+def get_adaptive_fontsize(matrix_size, max_fontsize):
+    """Return a tick font size that scales down for large barcode matrices.
+
+    The bootstrapping figure has a fixed size, so drawing one tick label per
+    barcode quickly makes labels overlap as the matrix grows. Keep the requested
+    font size as an upper bound for small matrices, and reduce it approximately
+    inversely with the number of barcodes for larger matrices.
+    """
+    if matrix_size <= 0:
+        return max_fontsize
+
+    return max(1.0, min(float(max_fontsize), 300.0 / float(matrix_size)))
+
+
 def plot_results(
     matrix,
     run_parameters,
@@ -165,7 +179,7 @@ def plot_results(
 
     axisLabel = True
     cmtitle = "distance, um"
-    fontsize = run_parameters["fontsize"]
+    fontsize = get_adaptive_fontsize(matrix.shape[0], run_parameters["fontsize"])
     axis_ticks = True
 
     if c_min == -1:
