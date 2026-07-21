@@ -30,6 +30,18 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.script_banner import print_script_banner
 
 
+def _matrix_tick_fontsize(n_barcodes):
+    """Return a readable tick-label size for dense barcode matrices."""
+    if n_barcodes <= 0:
+        return 8
+    return max(4, min(8, int(450 / n_barcodes)))
+
+
+def _anchor_boundary_index(sorted_barcodes, anchor_barcode):
+    """Return the matrix boundary where an omitted anchor barcode would sort."""
+    return np.searchsorted(np.asarray(sorted_barcodes), anchor_barcode) - 0.5
+
+
 def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff):
     """
     Computes the frequency of three-way co-localization between an anchor barcode
@@ -264,6 +276,12 @@ def plot_threeway_matrix(
     # Create a custom colormap from white to dark blue
     cmap = "RdBu"  # LinearSegmentedColormap.from_list('white_to_blue', ['#FFFFFF', '#0343DF'])
 
+    tick_fontsize = _matrix_tick_fontsize(n_barcodes)
+    label_fontsize = 11
+    title_fontsize = 12
+    colorbar_tick_fontsize = 9
+    colorbar_label_fontsize = 10
+
     # Create the figure and subplots for the mean frequencies
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -283,8 +301,8 @@ def plot_threeway_matrix(
     # Set up the axes with the correct labels
     ax.set_xticks(np.arange(len(sorted_barcodes)))
     ax.set_yticks(np.arange(len(sorted_barcodes)))
-    ax.set_xticklabels(sorted_barcodes, fontsize=10)
-    ax.set_yticklabels(sorted_barcodes, fontsize=10)
+    ax.set_xticklabels(sorted_barcodes, fontsize=tick_fontsize)
+    ax.set_yticklabels(sorted_barcodes, fontsize=tick_fontsize)
 
     # Rotate the tick labels and set their alignment
     plt.setp(ax.get_xticklabels(), rotation=90, ha="right", rotation_mode="anchor")
@@ -294,27 +312,29 @@ def plot_threeway_matrix(
     ax.set_yticks(np.arange(-0.5, len(sorted_barcodes), 1), minor=True)
     ax.grid(which="minor", color="w", linestyle="-", linewidth=1)
 
-    # Add perpendicular lines for the anchor barcode
-    if anchor_barcode in barcode_to_idx:
-        anchor_idx = barcode_to_idx[anchor_barcode]
-
-        # Horizontal line across the anchor barcode row
-        ax.axhline(y=anchor_idx, color="black", linestyle="-", linewidth=2, alpha=0.7)
-
-        # Vertical line across the anchor barcode column
-        ax.axvline(x=anchor_idx, color="black", linestyle="-", linewidth=2, alpha=0.7)
+    # Add perpendicular guide lines where the omitted anchor barcode would sort.
+    # The anchor is excluded from the matrix, so draw on the boundary between
+    # neighboring barcode cells rather than looking for the anchor in the labels.
+    anchor_boundary_idx = _anchor_boundary_index(sorted_barcodes, anchor_barcode)
+    ax.axhline(
+        y=anchor_boundary_idx, color="black", linestyle="-", linewidth=1.5, alpha=0.7
+    )
+    ax.axvline(
+        x=anchor_boundary_idx, color="black", linestyle="-", linewidth=1.5, alpha=0.7
+    )
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Co-localization frequency", fontsize=12)
+    cbar.set_label("Co-localization frequency", fontsize=colorbar_label_fontsize)
+    cbar.ax.tick_params(labelsize=colorbar_tick_fontsize)
 
     # Add title and labels
     ax.set_title(
         f"3-way co-localization with anchor {anchor_barcode}\n(distance cutoff: {distance_cutoff} µm)",
-        fontsize=14,
+        fontsize=title_fontsize,
     )
-    ax.set_xlabel("Barcode #", fontsize=14)
-    ax.set_ylabel("Barcode #", fontsize=14)
+    ax.set_xlabel("Barcode #", fontsize=label_fontsize)
+    ax.set_ylabel("Barcode #", fontsize=label_fontsize)
 
     # Adjust layout and saves npy matrix and image
     plt.tight_layout()
@@ -341,8 +361,8 @@ def plot_threeway_matrix(
     # Set up the axes with the correct labels
     ax.set_xticks(np.arange(len(sorted_barcodes)))
     ax.set_yticks(np.arange(len(sorted_barcodes)))
-    ax.set_xticklabels(sorted_barcodes, fontsize=14)
-    ax.set_yticklabels(sorted_barcodes, fontsize=14)
+    ax.set_xticklabels(sorted_barcodes, fontsize=tick_fontsize)
+    ax.set_yticklabels(sorted_barcodes, fontsize=tick_fontsize)
 
     # Rotate the tick labels and set their alignment
     plt.setp(ax.get_xticklabels(), rotation=90, ha="right", rotation_mode="anchor")
@@ -354,16 +374,17 @@ def plot_threeway_matrix(
 
     # Add colorbar
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Standard error", fontsize=12)
+    cbar.set_label("Standard error", fontsize=colorbar_label_fontsize)
+    cbar.ax.tick_params(labelsize=colorbar_tick_fontsize)
 
     # Add title and labels
     ax.set_title(
         f"Errors for 3-way co-localization with anchor {anchor_barcode}\n"
         f"(distance cutoff: {distance_cutoff} µm)",
-        fontsize=15,
+        fontsize=title_fontsize,
     )
-    ax.set_xlabel("Barcode #", fontsize=14)
-    ax.set_ylabel("Barcode #", fontsize=14)
+    ax.set_xlabel("Barcode #", fontsize=label_fontsize)
+    ax.set_ylabel("Barcode #", fontsize=label_fontsize)
 
     # Adjust layout and save
     plt.tight_layout()
