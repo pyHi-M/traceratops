@@ -12,15 +12,10 @@ import argparse
 import os
 import sys
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 
-from traceratops.core.plotting_functions import (
-    bootstraps_matrix,
-    gets_matrix,
-    plot_2d_matrix_simple,
-)
+from traceratops.core.him_matrix_operations import plot_single_matrix
+from traceratops.core.plotting_functions import bootstraps_matrix, gets_matrix
 from traceratops.script_banner import print_script_banner
 
 
@@ -155,24 +150,6 @@ def get_adaptive_fontsize(matrix_size, max_fontsize):
     return max(4.0, min(float(max_fontsize), 500.0 / float(matrix_size)))
 
 
-def get_adaptive_tick_labels(unique_barcodes, max_tick_labels=25):
-    """Return barcode labels thinned to avoid overlap on dense matrices.
-
-    A fixed-size heatmap cannot display every barcode label legibly once the
-    matrix becomes large. Keep all tick positions to preserve barcode/grid
-    alignment, but label only every Nth barcode when needed.
-    """
-    n_barcodes = len(unique_barcodes)
-    if n_barcodes <= max_tick_labels:
-        return unique_barcodes
-
-    tick_step = int(np.ceil(n_barcodes / max_tick_labels))
-    return [
-        barcode if index % tick_step == 0 else ""
-        for index, barcode in enumerate(unique_barcodes)
-    ]
-
-
 def plot_results(
     matrix,
     run_parameters,
@@ -185,45 +162,29 @@ def plot_results(
     fig_title="bootstrapping_PWD_median",
     cmap="RdBu",
 ):
-    fig1 = plt.figure(constrained_layout=True, figsize=(6, 6))
-    spec1 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig1)
-    f_1 = fig1.add_subplot(spec1[0, 0])  # 16
-
-    axisLabel = True
     cmtitle = "distance, um"
     fontsize = get_adaptive_fontsize(matrix.shape[0], run_parameters["fontsize"])
-    tick_labels = get_adaptive_tick_labels(uniqueBarcodes)
-    axis_ticks = True
 
     if c_min == -1:
         c_min = np.nanmin(matrix)
     if c_max == 0:
         c_max = np.nanmax(matrix)
 
-    plot_2d_matrix_simple(
-        f_1,
-        matrix,
-        tick_labels,
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=cmtitle,
-        fig_title=fig_title,
-        c_min=c_min,
-        c_max=c_max,  # log10(0.05) = -1.3
-        fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        show_title=True,
-        n_cells=n_cells,
-        n_datasets=2,
-    )
     print("Output data: {}.npy".format(outputFileName + fig_title))
     np.save(outputFileName + fig_title, matrix)
 
-    # saves output matrix in NPY format
     outputFileName = outputFileName + fig_title + fileNameEnding
-    plt.savefig(outputFileName + fileNameEnding)
+    plot_single_matrix(
+        matrix,
+        cmap,
+        f"{fig_title} | N = {n_cells} | n = 2",
+        fontsize,
+        uniqueBarcodes,
+        cmtitle,
+        c_min,
+        c_max,
+        outputFileName,
+    )
     print("Output figure: {}".format(outputFileName))
 
 
