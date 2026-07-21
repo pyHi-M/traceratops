@@ -103,17 +103,22 @@ def _trace_barcode_arrays(trace_table, anchor_barcode, distance_cutoff):
 
 
 def _weighted_pair_counts(present, colocated, weights=None):
-    """Return pair denominators and co-localized counts for optional trace weights."""
-    if weights is None:
-        present_values = present.astype(np.int64)
-        colocated_values = colocated.astype(np.int64)
-    else:
-        weights = np.asarray(weights, dtype=np.int64)
-        present_values = present.astype(np.int64) * weights[:, None]
-        colocated_values = colocated.astype(np.int64) * weights[:, None]
+    """Return pair denominators and co-localized counts for optional samples.
 
-    total_counts = present_values.T @ present.astype(np.int64)
-    colocated_counts = colocated_values.T @ colocated.astype(np.int64)
+    When provided, ``weights`` contains the sampled trace indices from a
+    bootstrap draw. Indexing the precomputed arrays keeps duplicate draws as
+    independent traces instead of collapsing them into one binary row.
+    """
+    if weights is not None:
+        trace_indices = np.asarray(weights, dtype=np.int64)
+        present = present[trace_indices]
+        colocated = colocated[trace_indices]
+
+    present_values = present.astype(np.int64)
+    colocated_values = colocated.astype(np.int64)
+
+    total_counts = present_values.T @ present_values
+    colocated_counts = colocated_values.T @ colocated_values
     return total_counts, colocated_counts
 
 
@@ -195,13 +200,12 @@ def bootstrap_threeway_colocalization(
 
     samples = {pair: [] for pair in itertools.combinations(barcodes, 2)}
 
-    # Resampling via trace weights preserves duplicate draws while avoiding the
+    # Resampling via trace indices preserves duplicate draws while avoiding the
     # expensive reconstruction of an Astropy table for every bootstrap cycle.
     for _ in range(n_bootstrap):
         sampled_indices = np.random.randint(0, n_traces, size=n_traces)
-        weights = np.bincount(sampled_indices, minlength=n_traces)
         total_counts, colocated_counts = _weighted_pair_counts(
-            present, colocated, weights=weights
+            present, colocated, weights=sampled_indices
         )
         frequencies = _pair_frequencies_from_counts(
             barcodes, total_counts, colocated_counts
