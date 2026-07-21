@@ -148,17 +148,29 @@ def create_dict_args(args):
 
 
 def get_adaptive_fontsize(matrix_size, max_fontsize):
-    """Return a tick font size that scales down for large barcode matrices.
-
-    The bootstrapping figure has a fixed size, so drawing one tick label per
-    barcode quickly makes labels overlap as the matrix grows. Keep the requested
-    font size as an upper bound for small matrices, and reduce it approximately
-    inversely with the number of barcodes for larger matrices.
-    """
+    """Return a matrix label font size adapted to the barcode count."""
     if matrix_size <= 0:
-        return max_fontsize
+        return float(max_fontsize)
 
-    return max(1.0, min(float(max_fontsize), 300.0 / float(matrix_size)))
+    return max(4.0, min(float(max_fontsize), 500.0 / float(matrix_size)))
+
+
+def get_adaptive_tick_labels(unique_barcodes, max_tick_labels=25):
+    """Return barcode labels thinned to avoid overlap on dense matrices.
+
+    A fixed-size heatmap cannot display every barcode label legibly once the
+    matrix becomes large. Keep all tick positions to preserve barcode/grid
+    alignment, but label only every Nth barcode when needed.
+    """
+    n_barcodes = len(unique_barcodes)
+    if n_barcodes <= max_tick_labels:
+        return unique_barcodes
+
+    tick_step = int(np.ceil(n_barcodes / max_tick_labels))
+    return [
+        barcode if index % tick_step == 0 else ""
+        for index, barcode in enumerate(unique_barcodes)
+    ]
 
 
 def plot_results(
@@ -180,6 +192,7 @@ def plot_results(
     axisLabel = True
     cmtitle = "distance, um"
     fontsize = get_adaptive_fontsize(matrix.shape[0], run_parameters["fontsize"])
+    tick_labels = get_adaptive_tick_labels(uniqueBarcodes)
     axis_ticks = True
 
     if c_min == -1:
@@ -190,7 +203,7 @@ def plot_results(
     plot_2d_matrix_simple(
         f_1,
         matrix,
-        uniqueBarcodes,
+        tick_labels,
         yticks=axisLabel,
         xticks=axisLabel,
         cmtitle=cmtitle,

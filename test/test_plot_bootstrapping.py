@@ -1,4 +1,8 @@
-from traceratops.plot_bootstrapping import create_dict_args, get_adaptive_fontsize
+from traceratops.plot_bootstrapping import (
+    create_dict_args,
+    get_adaptive_fontsize,
+    get_adaptive_tick_labels,
+)
 
 
 class Args:
@@ -10,8 +14,8 @@ class Args:
     cMax = None
     cMin = None
     cMax_std = None
-    cMin_std = None
     output_format = "png"
+    cMin_std = None
     shuffle = None
     cmap = None
     cmap_std = None
@@ -32,8 +36,24 @@ def test_adaptive_fontsize_keeps_requested_size_for_small_matrices():
 
 
 def test_adaptive_fontsize_scales_down_for_large_matrices():
-    assert get_adaptive_fontsize(matrix_size=80, max_fontsize=9) == 3.75
+    assert get_adaptive_fontsize(matrix_size=100, max_fontsize=9) == 5.0
 
 
 def test_adaptive_fontsize_has_readable_lower_bound():
-    assert get_adaptive_fontsize(matrix_size=1000, max_fontsize=9) == 1.0
+    assert get_adaptive_fontsize(matrix_size=1000, max_fontsize=9) == 4.0
+
+
+def test_adaptive_tick_labels_keeps_all_labels_for_small_matrices():
+    barcodes = ["1", "2", "3"]
+
+    assert get_adaptive_tick_labels(barcodes) == barcodes
+
+
+def test_adaptive_tick_labels_thins_labels_for_large_matrices():
+    barcodes = [str(i) for i in range(1, 81)]
+
+    labels = get_adaptive_tick_labels(barcodes)
+
+    assert len(labels) == len(barcodes)
+    assert labels[:8] == ["1", "", "", "", "5", "", "", ""]
+    assert sum(bool(label) for label in labels) == 20
