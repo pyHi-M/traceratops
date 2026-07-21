@@ -42,6 +42,94 @@ def _anchor_boundary_index(sorted_barcodes, anchor_barcode):
     return np.searchsorted(np.asarray(sorted_barcodes), anchor_barcode) - 0.5
 
 
+def _trace_barcode_arrays(trace_table, anchor_barcode, distance_cutoff):
+    """Precompute per-trace barcode presence and anchor co-localization arrays."""
+    all_barcodes = np.sort(np.unique(trace_table["Barcode #"]))
+    other_barcodes = all_barcodes[all_barcodes != anchor_barcode]
+    n_barcodes = len(other_barcodes)
+    barcode_to_idx = {barcode: idx for idx, barcode in enumerate(other_barcodes)}
+
+    trace_groups = trace_table.group_by("Trace_ID").groups
+    n_traces = len(trace_groups)
+    present = np.zeros((n_traces, n_barcodes), dtype=bool)
+    colocated = np.zeros((n_traces, n_barcodes), dtype=bool)
+
+    cutoff_squared = distance_cutoff * distance_cutoff
+
+    for trace_idx, trace in enumerate(trace_groups):
+        trace_barcodes = np.asarray(trace["Barcode #"])
+        anchor_mask = trace_barcodes == anchor_barcode
+
+        # The original denominator only counts traces where the anchor and both
+        # partner barcodes are present.
+        if not np.any(anchor_mask):
+            continue
+
+        unique_barcodes = np.unique(trace_barcodes)
+        partner_barcodes = unique_barcodes[unique_barcodes != anchor_barcode]
+        partner_indices = [
+            barcode_to_idx[b] for b in partner_barcodes if b in barcode_to_idx
+        ]
+        present[trace_idx, partner_indices] = True
+
+        anchor_xyz = np.column_stack(
+            (
+                np.asarray(trace["x"])[anchor_mask],
+                np.asarray(trace["y"])[anchor_mask],
+                np.asarray(trace["z"])[anchor_mask],
+            )
+        )
+
+        for barcode in partner_barcodes:
+            barcode_idx = barcode_to_idx.get(barcode)
+            if barcode_idx is None:
+                continue
+
+            barcode_mask = trace_barcodes == barcode
+            barcode_xyz = np.column_stack(
+                (
+                    np.asarray(trace["x"])[barcode_mask],
+                    np.asarray(trace["y"])[barcode_mask],
+                    np.asarray(trace["z"])[barcode_mask],
+                )
+            )
+            deltas = anchor_xyz[:, None, :] - barcode_xyz[None, :, :]
+            distances_squared = np.einsum("ijk,ijk->ij", deltas, deltas)
+            colocated[trace_idx, barcode_idx] = np.any(
+                distances_squared < cutoff_squared
+            )
+
+    return other_barcodes, present, colocated
+
+
+def _weighted_pair_counts(present, colocated, weights=None):
+    """Return pair denominators and co-localized counts for optional trace weights."""
+    if weights is None:
+        present_values = present.astype(np.int64)
+        colocated_values = colocated.astype(np.int64)
+    else:
+        weights = np.asarray(weights, dtype=np.int64)
+        present_values = present.astype(np.int64) * weights[:, None]
+        colocated_values = colocated.astype(np.int64) * weights[:, None]
+
+    total_counts = present_values.T @ present.astype(np.int64)
+    colocated_counts = colocated_values.T @ colocated.astype(np.int64)
+    return total_counts, colocated_counts
+
+
+def _pair_frequencies_from_counts(barcodes, total_counts, colocated_counts):
+    """Convert pair count matrices into the public dictionary representation."""
+    frequencies = {}
+    for i, barcode1 in enumerate(barcodes):
+        for j in range(i + 1, len(barcodes)):
+            total = total_counts[i, j]
+            barcode2 = barcodes[j]
+            frequencies[(barcode1, barcode2)] = (
+                colocated_counts[i, j] / total if total > 0 else 0
+            )
+    return frequencies
+
+
 def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff):
     """
     Computes the frequency of three-way co-localization between an anchor barcode
@@ -61,107 +149,11 @@ def compute_threeway_colocalization(trace_table, anchor_barcode, distance_cutoff
     dict
         Dictionary with (barcode1, barcode2) tuples as keys and co-localization frequencies as values
     """
-    # Dictionary to store co-localization counts: (barcode1, barcode2) -> [co-localized count, total count]
-    threeway_interactions = {}
-
-    # Get all unique barcodes
-    all_barcodes = np.unique(trace_table["Barcode #"])
-    other_barcodes = [b for b in all_barcodes if b != anchor_barcode]
-
-    # Generate all possible pairs of barcodes (excluding the anchor)
-    barcode_pairs = list(itertools.combinations(other_barcodes, 2))
-
-    # Initialize the counts dictionary
-    for pair in barcode_pairs:
-        threeway_interactions[pair] = [0, 0]
-
-    # Group traces by Trace_ID
-    trace_groups = trace_table.group_by("Trace_ID").groups
-
-    # Process each trace separately
-    for trace in trace_groups:
-        # Get positions of the anchor barcode in this trace
-        anchor_positions = trace[trace["Barcode #"] == anchor_barcode]
-
-        # Skip if anchor is not present in this trace
-        if len(anchor_positions) == 0:
-            continue
-
-        # Get the barcodes present in this trace
-        barcodes_in_trace = np.unique(trace["Barcode #"])
-
-        # Generate all pairs of barcodes in this trace (excluding the anchor)
-        pairs_in_trace = [
-            p
-            for p in barcode_pairs
-            if p[0] in barcodes_in_trace and p[1] in barcodes_in_trace
-        ]
-
-        # For each pair, check if they co-localize with the anchor
-        for barcode1, barcode2 in pairs_in_trace:
-            barcode1_positions = trace[trace["Barcode #"] == barcode1]
-            barcode2_positions = trace[trace["Barcode #"] == barcode2]
-
-            # Skip if either barcode is missing in this trace
-            if len(barcode1_positions) == 0 or len(barcode2_positions) == 0:
-                continue
-
-            # Increment the total count for this pair
-            threeway_interactions[(barcode1, barcode2)][1] += 1
-
-            # Check distances between anchor and barcode1
-            distances_anchor_barcode1 = np.linalg.norm(
-                np.array(
-                    [
-                        anchor_positions["x"],
-                        anchor_positions["y"],
-                        anchor_positions["z"],
-                    ]
-                ).T[:, None]
-                - np.array(
-                    [
-                        barcode1_positions["x"],
-                        barcode1_positions["y"],
-                        barcode1_positions["z"],
-                    ]
-                ).T,
-                axis=-1,
-            )
-
-            # Check distances between anchor and barcode2
-            distances_anchor_barcode2 = np.linalg.norm(
-                np.array(
-                    [
-                        anchor_positions["x"],
-                        anchor_positions["y"],
-                        anchor_positions["z"],
-                    ]
-                ).T[:, None]
-                - np.array(
-                    [
-                        barcode2_positions["x"],
-                        barcode2_positions["y"],
-                        barcode2_positions["z"],
-                    ]
-                ).T,
-                axis=-1,
-            )
-
-            # Check if both barcodes co-localize with the anchor
-            anchor_barcode1_coloc = np.any(distances_anchor_barcode1 < distance_cutoff)
-            anchor_barcode2_coloc = np.any(distances_anchor_barcode2 < distance_cutoff)
-
-            # If both barcodes co-localize with the anchor, increment the co-localized count
-            if anchor_barcode1_coloc and anchor_barcode2_coloc:
-                threeway_interactions[(barcode1, barcode2)][0] += 1
-
-    # Compute frequencies
-    threeway_frequencies = {
-        pair: (count[0] / count[1] if count[1] > 0 else 0)
-        for pair, count in threeway_interactions.items()
-    }
-
-    return threeway_frequencies
+    barcodes, present, colocated = _trace_barcode_arrays(
+        trace_table, anchor_barcode, distance_cutoff
+    )
+    total_counts, colocated_counts = _weighted_pair_counts(present, colocated)
+    return _pair_frequencies_from_counts(barcodes, total_counts, colocated_counts)
 
 
 def bootstrap_threeway_colocalization(
@@ -186,41 +178,46 @@ def bootstrap_threeway_colocalization(
     tuple
         (mean_frequencies, sem_frequencies) dictionaries with barcode pairs as keys
     """
-    # Dictionary to store bootstrap samples for each barcode pair
-    pair_samples = {}
+    barcodes, present, colocated = _trace_barcode_arrays(
+        trace_table, anchor_barcode, distance_cutoff
+    )
+    n_traces = present.shape[0]
+    n_barcodes = len(barcodes)
+    n_pairs = n_barcodes * (n_barcodes - 1) // 2
 
-    # Get all unique trace IDs for bootstrapping
-    trace_ids = np.unique(trace_table["Trace_ID"])
-
-    # Run bootstrap iterations
-    for _ in range(n_bootstrap):
-        # Sample traces with replacement
-        sampled_traces = np.random.choice(trace_ids, size=len(trace_ids), replace=True)
-
-        # Create a new table with only the sampled traces
-        sampled_table = trace_table[np.isin(trace_table["Trace_ID"], sampled_traces)]
-
-        # Compute three-way co-localization for this bootstrap sample
-        threeway_frequencies = compute_threeway_colocalization(
-            sampled_table, anchor_barcode, distance_cutoff
+    if n_bootstrap <= 0 or n_pairs == 0 or n_traces == 0:
+        empty_frequencies = _pair_frequencies_from_counts(
+            barcodes,
+            np.zeros((n_barcodes, n_barcodes), dtype=np.int64),
+            np.zeros((n_barcodes, n_barcodes), dtype=np.int64),
         )
+        return empty_frequencies, empty_frequencies.copy()
 
-        # Store the results
-        for pair, frequency in threeway_frequencies.items():
-            if pair not in pair_samples:
-                pair_samples[pair] = []
-            pair_samples[pair].append(frequency)
+    samples = {pair: [] for pair in itertools.combinations(barcodes, 2)}
 
-    # Compute mean and standard error of the mean (SEM) for each pair
-    pair_means = {pair: np.mean(samples) for pair, samples in pair_samples.items()}
+    # Resampling via trace weights preserves duplicate draws while avoiding the
+    # expensive reconstruction of an Astropy table for every bootstrap cycle.
+    for _ in range(n_bootstrap):
+        sampled_indices = np.random.randint(0, n_traces, size=n_traces)
+        weights = np.bincount(sampled_indices, minlength=n_traces)
+        total_counts, colocated_counts = _weighted_pair_counts(
+            present, colocated, weights=weights
+        )
+        frequencies = _pair_frequencies_from_counts(
+            barcodes, total_counts, colocated_counts
+        )
+        for pair, frequency in frequencies.items():
+            samples[pair].append(frequency)
 
+    pair_means = {
+        pair: np.mean(pair_samples) for pair, pair_samples in samples.items()
+    }
     pair_sems = {
-        pair: np.std(samples) / np.sqrt(n_bootstrap)
-        for pair, samples in pair_samples.items()
+        pair: np.std(pair_samples) / np.sqrt(n_bootstrap)
+        for pair, pair_samples in samples.items()
     }
 
     return pair_means, pair_sems
-
 
 def plot_threeway_matrix(
     pair_means,
