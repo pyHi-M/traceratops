@@ -28,22 +28,50 @@ def parse_arguments():
     # [parsing arguments]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "-T", "--input", help="Filename of single-cell PWD matrices in Numpy"
+        "-T",
+        "--input",
+        dest="input",
+        help="Filename of single-cell PWD matrices in Numpy",
     )
     parser.add_argument(
-        "-U", "--uniqueBarcodes", help="csv file with list of unique barcodes"
+        "-U",
+        "--barcodes",
+        "--uniqueBarcodes",
+        dest="barcodes",
+        help="csv file with list of unique barcodes",
     )
-    parser.add_argument("-O", "--outputFolder", help="Folder for outputs")
+    parser.add_argument(
+        "-O",
+        "--output",
+        "--outputFolder",
+        dest="output",
+        help="Folder for outputs",
+    )
 
     parser.add_argument("--fontsize", help="Size of fonts to be used in matrix")
     parser.add_argument(
         "--axisLabel", help="Use if you want a label in x and y", action="store_true"
     )
-    parser.add_argument("--cMin", help="Colormap min scale. Default: 0")
-    parser.add_argument("--cMax", help="Colormap max scale. Default: automatic")
-    parser.add_argument("--cMin_std", help="Colormap min scale for std map. Default: 0")
     parser.add_argument(
-        "--cMax_std", help="Colormap max scale for std map. Default: automatic"
+        "--c_min", "--cMin", dest="cMin", help="Colormap min scale. Default: 0"
+    )
+    parser.add_argument(
+        "--c_max",
+        "--cMax",
+        dest="cMax",
+        help="Colormap max scale. Default: automatic",
+    )
+    parser.add_argument(
+        "--c_min_std",
+        "--cMin_std",
+        dest="cMin_std",
+        help="Colormap min scale for std map. Default: 0",
+    )
+    parser.add_argument(
+        "--c_max_std",
+        "--cMax_std",
+        dest="cMax_std",
+        help="Colormap max scale for std map. Default: automatic",
     )
     parser.add_argument(
         "--output_format",
@@ -55,7 +83,9 @@ def parse_arguments():
         "--shuffle",
         help="Provide shuffle vector: 0,1,2,3... of the same size or smaller than the original matrix. No spaces! comma-separated!",
     )
-    parser.add_argument("--cmap", help="Colormap. Default: coolwarm")
+    parser.add_argument(
+        "--cmap", "--c_map", dest="cmap", help="Colormap. Default: coolwarm"
+    )
     parser.add_argument("--cmap_std", help="Colormap for std map. Default: coolwarm")
 
     parser.add_argument(
@@ -75,14 +105,14 @@ def create_dict_args(args):
         )
         sys.exit(-1)
 
-    if args.uniqueBarcodes:
-        run_parameters["uniqueBarcodes"] = args.uniqueBarcodes
+    if args.barcodes:
+        run_parameters["uniqueBarcodes"] = args.barcodes
     else:
         print(">> ERROR: you must provide a CSV file with the unique barcodes used")
         sys.exit(-1)
 
-    if args.outputFolder:
-        run_parameters["outputFolder"] = args.outputFolder
+    if args.output:
+        run_parameters["outputFolder"] = args.output
     else:
         run_parameters["outputFolder"] = "plots"
 

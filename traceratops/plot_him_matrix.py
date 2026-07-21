@@ -42,7 +42,9 @@ Outputs:
     )
     parser_required.add_argument(
         "-M",
+        "--input",
         "--matrix",
+        dest="input",
         help="Filename of single-cell PWD matrices in NPY format",
         default=None,
     )
@@ -113,7 +115,9 @@ Outputs:
         type=float,
     )
     parser_visu.add_argument(
+        "--cmap",
         "--c_map",
+        dest="c_map",
         help="Colormap (see: matplotlib > colormaps > diverging)",
         default="coolwarm",
     )
@@ -139,9 +143,9 @@ def check_required_arg(args, parser):
     Check that no required arguments are supplied.
     If it's the case, we make a normal code exit with the print of usage help before.
     """
-    if not args.barcodes or not args.matrix:
+    if not args.barcodes or not args.input:
         print(
-            "Error: No argument provided. You must use '--matrix <file>' and '--barcodes'."
+            "Error: No argument provided. You must use '--input <file>' and '--barcodes'."
         )
         print("Redirecting to `--help` option:\n")
         parser.print_help()
@@ -257,7 +261,7 @@ def main():
     args = parser.parse_args()
     check_required_arg(args, parser)
     create_output_folder(args.output)
-    sc_matrices = load_matrix(args.matrix)
+    sc_matrices = load_matrix(args.input)
     u_barcodes = load_barcodes(args.barcodes)
     if args.shuffle:
         u_barcodes, sc_matrices = new_shuffle_matrix(
@@ -283,7 +287,7 @@ def main():
         plot_nan_matrix(
             nan_matrix,
             u_barcodes,
-            input_filename=args.matrix,
+            input_filename=args.input,
             output_folder=args.output,
             file_format=args.output_format,
             n_cells=n_cells,
@@ -294,7 +298,7 @@ def main():
     plot_path = plot_him_matrix(
         matrix_to_plot,
         u_barcodes,
-        input_filename=args.matrix,
+        input_filename=args.input,
         output_folder=args.output,
         file_format=args.output_format,
         mode=args.mode,

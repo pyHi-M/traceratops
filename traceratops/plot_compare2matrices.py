@@ -23,7 +23,13 @@ from traceratops.script_banner import print_script_banner
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-O", "--outputFolder", help="Folder for outputs")
+    parser.add_argument(
+        "-O",
+        "--output",
+        "--outputFolder",
+        dest="outputFolder",
+        help="Folder for outputs",
+    )
     parser.add_argument(
         "-T1", "--input1", help="Filename of single-cell PWD matrices in Numpy"
     )
@@ -31,7 +37,11 @@ def parse_arguments():
         "-T2", "--input2", help="Filename of single-cell PWD matrices in Numpy"
     )
     parser.add_argument(
-        "-U", "--uniqueBarcodes", help="csv file with list of unique barcodes"
+        "-U",
+        "--barcodes",
+        "--uniqueBarcodes",
+        dest="barcodes",
+        help="csv file with list of unique barcodes",
     )
 
     parser.add_argument("--fontsize", help="Size of fonts to be used in matrix")
@@ -67,7 +77,9 @@ def parse_arguments():
     )
     parser.add_argument("--proximity_threshold", help="proximity threshold in um")
 
-    parser.add_argument("--cMax", help="Colormap max scale. Default: automatic")
+    parser.add_argument(
+        "--c_max", "--cMax", dest="cMax", help="Colormap max scale. Default: automatic"
+    )
     parser.add_argument(
         "--scalingParameter",
         help="Scaling parameter. Default: 1",
@@ -77,8 +89,12 @@ def parse_arguments():
         help="Provide shuffle vector: 0,1,2,3... of the same size or smaller than the original matrix. No spaces! comma-separated!",
     )
 
-    parser.add_argument("--cMin", help="Colormap min cscale. Default: 0")
-    parser.add_argument("--cmap", help="Colormap. Default: coolwarm")
+    parser.add_argument(
+        "--c_min", "--cMin", dest="cMin", help="Colormap min cscale. Default: 0"
+    )
+    parser.add_argument(
+        "--cmap", "--c_map", dest="cmap", help="Colormap. Default: coolwarm"
+    )
     return parser
 
 
@@ -98,8 +114,8 @@ def create_dict_args(args):
             ">> ERROR: you must provide a filename with the single cell PWD matrices in Numpy format"
         )
         sys.exit(-1)
-    if args.uniqueBarcodes:
-        run_parameters["uniqueBarcodes"] = args.uniqueBarcodes
+    if args.barcodes:
+        run_parameters["uniqueBarcodes"] = args.barcodes
     else:
         print(">> ERROR: you must provide a CSV file with the unique barcodes used")
         sys.exit(-1)
