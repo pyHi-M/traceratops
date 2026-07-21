@@ -24,7 +24,7 @@ Here is examples usage of plot_him_matrix:
 
 ### Proximity matrix with all data (including bin with NaN value)
 ```bash
-plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --matrix_norm_mode n_cells
+plot_him_matrix --input PWDscMatrix.npy --barcodes unique_barcodes.ecsv --matrix_norm_mode n_cells
 ```
 
 <p align="center">
@@ -33,17 +33,17 @@ plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --matrix_norm_mode n_
 </p>
 
 
-### Default normalized VS. KDE (c_map: Spectral)
+### Default normalized VS. KDE (cmap: Spectral)
 
 
 ```bash
-plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv
+plot_him_matrix --input PWDscMatrix.npy --barcodes unique_barcodes.ecsv
 ```
 
 **VS.**
 
 ```bash
-plot_him_matrix -M PWDscMatrix.npy -B unique_barcodes.ecsv --mode KDE --c_map Spectral
+plot_him_matrix --input PWDscMatrix.npy --barcodes unique_barcodes.ecsv --mode KDE --cmap Spectral
 ```
 
 <p align="center">
