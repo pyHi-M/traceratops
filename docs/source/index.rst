@@ -23,12 +23,12 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
    Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
    Split Traces<tutorials/tutorial_05_split_traces.ipynb>
-   Assign Masks & Split Labels<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
+   Classify Traces<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
    Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
    Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
    Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
    Physical vs genomic Distance<tutorials/tutorial_10_physical_vs_genomic_distances.ipynb>
-   
+
 .. toctree::
    :maxdepth: 1
    :caption: Scripts
