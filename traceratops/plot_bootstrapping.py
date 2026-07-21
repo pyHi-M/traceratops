@@ -12,15 +12,10 @@ import argparse
 import os
 import sys
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 
-from traceratops.core.plotting_functions import (
-    bootstraps_matrix,
-    gets_matrix,
-    plot_2d_matrix_simple,
-)
+from traceratops.core.him_matrix_operations import plot_single_matrix
+from traceratops.core.plotting_functions import bootstraps_matrix, gets_matrix
 from traceratops.script_banner import print_script_banner
 
 
@@ -87,7 +82,7 @@ def create_dict_args(args):
         run_parameters["outputFolder"] = "plots"
 
     if args.fontsize:
-        run_parameters["fontsize"] = args.fontsize
+        run_parameters["fontsize"] = float(args.fontsize)
     else:
         run_parameters["fontsize"] = 9
 
@@ -147,6 +142,14 @@ def create_dict_args(args):
     return run_parameters
 
 
+def get_adaptive_fontsize(matrix_size, max_fontsize):
+    """Return a matrix label font size adapted to the barcode count."""
+    if matrix_size <= 0:
+        return float(max_fontsize)
+
+    return max(4.0, min(float(max_fontsize), 500.0 / float(matrix_size)))
+
+
 def plot_results(
     matrix,
     run_parameters,
@@ -159,44 +162,29 @@ def plot_results(
     fig_title="bootstrapping_PWD_median",
     cmap="RdBu",
 ):
-    fig1 = plt.figure(constrained_layout=True, figsize=(6, 6))
-    spec1 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig1)
-    f_1 = fig1.add_subplot(spec1[0, 0])  # 16
-
-    axisLabel = True
     cmtitle = "distance, um"
-    fontsize = run_parameters["fontsize"]
-    axis_ticks = True
+    fontsize = get_adaptive_fontsize(matrix.shape[0], run_parameters["fontsize"])
 
     if c_min == -1:
         c_min = np.nanmin(matrix)
     if c_max == 0:
         c_max = np.nanmax(matrix)
 
-    plot_2d_matrix_simple(
-        f_1,
-        matrix,
-        uniqueBarcodes,
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=cmtitle,
-        fig_title=fig_title,
-        c_min=c_min,
-        c_max=c_max,  # log10(0.05) = -1.3
-        fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        show_title=True,
-        n_cells=n_cells,
-        n_datasets=2,
-    )
     print("Output data: {}.npy".format(outputFileName + fig_title))
     np.save(outputFileName + fig_title, matrix)
 
-    # saves output matrix in NPY format
     outputFileName = outputFileName + fig_title + fileNameEnding
-    plt.savefig(outputFileName + fileNameEnding)
+    plot_single_matrix(
+        matrix,
+        cmap,
+        f"{fig_title} | N = {n_cells} | n = 2",
+        fontsize,
+        uniqueBarcodes,
+        cmtitle,
+        c_min,
+        c_max,
+        outputFileName,
+    )
     print("Output figure: {}".format(outputFileName))
 
 
