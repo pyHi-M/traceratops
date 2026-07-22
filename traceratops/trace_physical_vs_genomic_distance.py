@@ -425,9 +425,8 @@ def main() -> None:
     args = parser.parse_args()
     data_output = args.data_output
     plot_output = args.output
-    if (
-        str(plot_output).lower().endswith(".csv")
-        and data_output == parser.get_default("data_output")
+    if str(plot_output).lower().endswith(".csv") and data_output == parser.get_default(
+        "data_output"
     ):
         data_output = plot_output
         plot_output = parser.get_default("output")
