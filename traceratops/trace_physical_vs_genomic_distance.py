@@ -285,11 +285,33 @@ def plot_log_distance_graph(
     plt.close(fig)
 
 
+def get_plot_output_file(
+    input_file: Union[str, Path], output_file: Union[str, Path], output_format: str
+) -> str:
+    """Return the plot output path with the requested file extension.
+
+    Relative suffix-style names such as ``_physical_vs_genomic_plot`` are
+    appended to the input stem for compatibility with the former ``--plot``
+    behavior. Other values are treated as direct output paths.
+    """
+    output_path = Path(output_file)
+    output_path = output_path.with_suffix(f".{output_format}")
+
+    if (
+        not output_path.is_absolute()
+        and output_path.parent == Path(".")
+        and output_path.name.startswith("_")
+    ):
+        return str(Path(input_file).with_suffix("")) + output_path.name
+    return str(output_path)
+
+
 def calculate_physical_vs_genomic_distance(
     input_file: Union[str, Path],
     output_csv: Union[str, Path],
     interloci_csv: Optional[Union[str, Path]] = None,
     plot_file: Optional[Union[str, Path]] = None,
+    output_format: str = "png",
     gen_dist_bins: int = 50,
     dist_threshold: float = np.inf,
     experiment: Optional[str] = None,
@@ -334,7 +356,7 @@ def calculate_physical_vs_genomic_distance(
     if interloci_csv is not None:
         compute_inter_loci_genomic_dist(table).to_csv(interloci_csv, index=False)
     if plot_file is not None:
-        plot_file = input_file.split(".")[0] + plot_file
+        plot_file = get_plot_output_file(input_file, plot_file, output_format)
         plot_log_distance_graph(result, plot_file)
     return result
 
@@ -347,8 +369,7 @@ def parse_arguments() -> argparse.ArgumentParser:
         help="Input chromatin trace table (.ecsv, .dat, .4dn, or .csv).",
     )
     parser.add_argument(
-        "--output",
-        required=False,
+        "--data_output",
         default="binned_physical_vs_genomic_distances.csv",
         help="Output CSV for binned physical-vs-genomic distances.",
     )
@@ -357,9 +378,21 @@ def parse_arguments() -> argparse.ArgumentParser:
         help="Optional CSV for consecutive-locus genomic distances.",
     )
     parser.add_argument(
+        "-O",
+        "--output",
+        default="_physical_vs_genomic_plot",
+        help="Output filename for the log-log distance plot.",
+    )
+    parser.add_argument(
         "--plot",
-        default="_physical_vs_genomic_plot.png",
-        help="Optional output filename for a log-log distance plot.",
+        dest="output",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--output_format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Output image format. Default = png.",
     )
     parser.add_argument(
         "--gen_dist_bins",
@@ -388,19 +421,30 @@ def parse_arguments() -> argparse.ArgumentParser:
 
 def main() -> None:
     print_script_banner(__file__, __doc__)
-    args = parse_arguments().parse_args()
+    parser = parse_arguments()
+    args = parser.parse_args()
+    data_output = args.data_output
+    plot_output = args.output
+    if (
+        str(plot_output).lower().endswith(".csv")
+        and data_output == parser.get_default("data_output")
+    ):
+        data_output = plot_output
+        plot_output = parser.get_default("output")
+
     calculate_physical_vs_genomic_distance(
         input_file=args.input,
-        output_csv=args.output,
+        output_csv=data_output,
         interloci_csv=args.interloci_output,
-        plot_file=args.plot,
+        plot_file=plot_output,
+        output_format=args.output_format,
         gen_dist_bins=args.gen_dist_bins,
         dist_threshold=args.dist_threshold,
         experiment=args.experiment,
         include_3d=not args.no_3d,
         show_progress=not args.quiet,
     )
-    print(f"Saved physical-vs-genomic distance table to {args.output}")
+    print(f"Saved physical-vs-genomic distance table to {data_output}")
 
 
 if __name__ == "__main__":

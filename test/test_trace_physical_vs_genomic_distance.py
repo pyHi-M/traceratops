@@ -9,6 +9,8 @@ from traceratops.trace_physical_vs_genomic_distance import (
     compute_genomic_dist_map,
     extract_traces_numpy,
     fit_power_law,
+    get_plot_output_file,
+    parse_arguments,
 )
 
 
@@ -80,3 +82,30 @@ def test_fit_power_law_recovers_exponent_and_coefficient():
     np.testing.assert_allclose(fit["exponent"], 0.5, rtol=1e-12)
     assert np.all(fit["lower_log"] <= fit["y_fit_log"])
     assert np.all(fit["upper_log"] >= fit["y_fit_log"])
+
+
+def test_plot_output_file_uses_requested_format_and_input_stem(tmp_path):
+    input_file = tmp_path / "traces.ecsv"
+
+    plot_file = get_plot_output_file(input_file, "_physical_vs_genomic_plot", "svg")
+
+    assert plot_file == str(tmp_path / "traces_physical_vs_genomic_plot.svg")
+
+
+def test_parse_arguments_uses_output_and_output_format_for_plot():
+    args = parse_arguments().parse_args(
+        [
+            "--input",
+            "traces.ecsv",
+            "--output",
+            "plot_name",
+            "--output_format",
+            "pdf",
+            "--data_output",
+            "distances.csv",
+        ]
+    )
+
+    assert args.output == "plot_name"
+    assert args.output_format == "pdf"
+    assert args.data_output == "distances.csv"
