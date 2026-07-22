@@ -141,16 +141,18 @@ def compute_physical_vs_genomic_distance(
         records.append(
             {
                 "genomic distance (kbp)": midpoint,
-                "log10 genomic dist (kbp)": (
+                "log10 genomic distance (kbp)": (
                     np.log10(midpoint) if midpoint > 0 else np.nan
                 ),
                 "median euclidean distance (nm)": median_distance,
-                "log10 median dist (nm)": (
+                "log10 median distance (nm)": (
                     np.log10(median_distance) if median_distance > 0 else np.nan
                 ),
                 "n_data": np.count_nonzero(~np.isnan(values)),
                 "experiment": (
-                    f"exp_{experiment}" if experiment is not None else "exp_None"
+                    f"exp_{experiment}"
+                    if experiment is not None
+                    else "Fitting parameters:"
                 ),
                 "axis": axis,
             }
@@ -239,8 +241,8 @@ def plot_log_distance_graph(
         df = dist_df.loc[dist_df["axis"] == axis_name]
         sns.scatterplot(
             data=df,
-            x="log10 genomic dist (kbp)",
-            y="log10 median dist (nm)",
+            x="log10 genomic distance (kbp)",
+            y="log10 median distance (nm)",
             hue="experiment",
             palette=palette,
             s=16,
@@ -278,8 +280,8 @@ def plot_log_distance_graph(
             ax.set_xlabel("")
             ax.tick_params(labelbottom=False)
         else:
-            ax.set_xlabel("log10 genomic dist (kbp)", fontsize=10)
-    fig.supylabel("log10 median dist (nm)", fontsize=10)
+            ax.set_xlabel("log10 genomic distance (kbp)", fontsize=10)
+    fig.supylabel("log10 median distance (nm)", fontsize=10)
     print(f"> Exporting figure to: {saving_filename}")
     plt.savefig(saving_filename, dpi=150, bbox_inches="tight")
     plt.close(fig)
