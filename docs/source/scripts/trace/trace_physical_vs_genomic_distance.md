@@ -12,11 +12,11 @@
 
 For each trace file analyzed, the script generates:
 
-1. `[output].csv`: CSV file containing one row per genomic-distance bin and axis. The filename comes from `--output`.
+1. `[data_output].csv`: CSV file containing one row per genomic-distance bin and axis. The filename comes from `--data_output`.
 
 2. `[interloci_output].csv`: Optional CSV file containing genomic distances between consecutive barcode loci. This file is written only when `--interloci_output` is provided.
 
-3. `[tracefile]_physical_vs_genomic_plot.png`: Figure with the physical-versus-genomic distance plot, power-law fit, and confidence intervals. The suffix comes from `--plot` (default: `_physical_vs_genomic_plot.png`).
+3. `[output].[output_format]`: Figure with the physical-versus-genomic distance plot, power-law fit, and confidence intervals. The plot path comes from `--output`/`-O` (default: `_physical_vs_genomic_plot`) and the image extension comes from `--output_format` (default: `png`). Suffix-style relative output names that start with `_` are appended to the input trace-file stem.
 
 ![](../../_static/merged_traces_filtered_physical_vs_genomic_plot.png)
 
@@ -25,21 +25,22 @@ For each trace file analyzed, the script generates:
 ```bash
 trace_physical_vs_genomic_distance.py \
   --input traces_KC_AB_merged.ecsv \
-  --output binned_physical_vs_genomic_distances.csv \
+  --data_output binned_physical_vs_genomic_distances.csv \
   --interloci_output interloci_genomic_distances.csv \
-  --plot _physical_vs_genomic_plot.png \
+  --output _physical_vs_genomic_plot \
+  --output_format svg \
   --gen_dist_bins 50 \
   --dist_threshold 1000 \
   --experiment KC_AB
 ```
 
-The plot filename is appended to the input stem by default. For the example above, the figure is saved as `traces_KC_AB_merged_physical_vs_genomic_plot.png`.
+The plot filename is appended to the input stem by default. For the example above, the figure is saved as `traces_KC_AB_merged_physical_vs_genomic_plot.svg`.
 
 ## Notes
 
 ### Plot and power-law fit
 
-When `--plot` is provided, the script saves a stacked log-log plot with one panel per calculated axis. The x-axis is shared and shown only on the bottom panel, while a single shared y-axis label spans the panels to avoid label overlap.
+The script saves a stacked log-log plot with one panel per calculated axis. The x-axis is shared and shown only on the bottom panel, while a single shared y-axis label spans the panels to avoid label overlap.
 
 For every axis panel and experiment, the script fits the binned median distances to a power-law model:
 
