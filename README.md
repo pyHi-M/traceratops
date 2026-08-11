@@ -2,7 +2,9 @@
 
 *A toolbox for trace analysis, visualization, and quality assessment for chromatin-trace data.*
 
-traceratops provides the post-processing layer for [pyHiM](https://github.com/pyHi-M/pyHiM) multiplexed DNA-FISH workflows. It focuses on the trace and localization tables produced after image processing, and helps users clean, merge, inspect, transform, and visualize those data in formats compatible with the [4DN FISH Omics Format](https://fish-omics-format.readthedocs.io/en/latest/).
+Raw chromatin tracing experiments consist of hundreds to thousands of images that need to be analyzed to extract and decode spot localizations for each genomic loci, for example using [pyHiM](https://github.com/pyHi-M/pyHiM). This analysis produces trace tables containing the genomic identities and 3D localizations of each localized spot for each chromatin trace (trace table). 
+
+`traceratops` is a software package providing multiple tools for the post-processing of trace tables. These tools help users clean, merge, inspect, transform, and visualize chromatin tracing data in formats compatible with the [4DN FISH Omics Format](https://fish-omics-format.readthedocs.io/en/latest/).
 
 ## Documentation
 
