@@ -1,4 +1,4 @@
-traceratops documentation
+*traceratops documentation
 =========================
 
 **Date**: |today| **Version**: |release|
@@ -21,15 +21,15 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Merge Multi-ROI<tutorials/tutorial_merge_multi_roi.ipynb>
    Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
    Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
-   Quality control & Filters : localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
+   Quality Control & Filters : Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
    Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
    Split Traces<tutorials/tutorial_split_traces.ipynb>
-   Assign Masks & Split Labels<tutorials/tutorial_assign_masks_split_labels.ipynb>
+   Classify Traces<tutorials/tutorial_assign_masks_split_labels.ipynb>
    Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
-   Multiway Co-localization<tutorials/tutorial_multiway_coloclozation.ipynb>
+   Multiway Co-localization<tutorials/tutorial_multiway_colocalization.ipynb>
    Compare Datasets<tutorials/tutorial_compare_datasets.ipynb>
    3D Visualization<tutorials/tutorial_pymol.ipynb>
-   Physical vs genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
+   Physical vs Genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
 
 .. toctree::
    :maxdepth: 1
