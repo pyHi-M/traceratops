@@ -1,4 +1,4 @@
-traceratops documentation
+*traceratops documentation
 =========================
 
 **Date**: |today| **Version**: |release|
@@ -28,7 +28,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
    Multiway Co-localization<tutorials/tutorial_multiway_colocalization.ipynb>
    Compare Datasets<tutorials/tutorial_compare_datasets.ipynb>
-   3D Visualization<tutorialxs/tutorial_pymol.ipynb>
+   3D Visualization<tutorials/tutorial_pymol.ipynb>
    Physical vs Genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
 
 .. toctree::
