@@ -1,4 +1,4 @@
-*traceratops documentation
+traceratops documentation
 =========================
 
 **Date**: |today| **Version**: |release|
@@ -38,7 +38,6 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Data formats<scripts/data_formats>
    scripts/localization
    scripts/trace
-   scripts/matrix
    scripts/plot
 
 
