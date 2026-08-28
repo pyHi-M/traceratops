@@ -22,7 +22,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
    Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
    Quality Control & Filters : Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
-   Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
+   Filter Duplicates<tutorials/tutorial_filter_duplicate_barcode.ipynb>
    Split Traces<tutorials/tutorial_split_traces.ipynb>
    Classify Traces<tutorials/tutorial_assign_masks_split_labels.ipynb>
    Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
