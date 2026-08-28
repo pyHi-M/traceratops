@@ -1297,7 +1297,11 @@ class ChromatinTraceTable:
             data_traces = data_roi.group_by("Trace_ID")
             color_dict_traces = build_color_dict(data_traces, key="Trace_ID")
             colors_traces = [color_dict_traces[str(x)] for x in data_traces["Trace_ID"]]
-            cmap_traces = plt.cm.get_cmap("hsv", np.max(colors_traces))
+            try:
+                cmap_traces = plt.cm.get_cmap("hsv", np.max(colors_traces))
+            except:
+                cmap_traces = plt.get_cmap("hsv", len(data_traces["Trace_ID"]))
+
             number_traces = len(colors_traces)
 
             print(f"$ Plotting {number_traces} traces...")
