@@ -1299,7 +1299,7 @@ class ChromatinTraceTable:
             colors_traces = [color_dict_traces[str(x)] for x in data_traces["Trace_ID"]]
             try:
                 cmap_traces = plt.cm.get_cmap("hsv", np.max(colors_traces))
-            except:
+            except AttributeError:
                 cmap_traces = plt.get_cmap("hsv", len(data_traces["Trace_ID"]))
 
             number_traces = len(colors_traces)
