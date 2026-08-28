@@ -1,4 +1,4 @@
-traceratops documentation
+*traceratops documentation
 =========================
 
 **Date**: |today| **Version**: |release|
@@ -18,16 +18,18 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 
    Getting started with notebooks<tutorials/start_with_ipynb>
    Using the --pipe argument<tutorials/using_pipe>
-   Merge Multi-ROI<tutorials/tutorial_01_merge_multi_roi.ipynb>
-   Quality Control<tutorials/tutorial_02_quality_control.ipynb>
-   Filter Thresholds<tutorials/tutorial_03_filter_thresholds.ipynb>
-   Filter Duplicates<tutorials/tutorial_04_filter_duplicates.ipynb>
-   Split Traces<tutorials/tutorial_05_split_traces.ipynb>
-   Classify Traces<tutorials/tutorial_06_assign_masks_split_labels.ipynb>
-   Matrix Visualization<tutorials/tutorial_07_matrix_visualization.ipynb>
-   Multiway Co-localization<tutorials/tutorial_08_multiway_coloc.ipynb>
-   Compare Datasets<tutorials/tutorial_09_compare_datasets.ipynb>
-   Physical vs genomic Distance<tutorials/tutorial_10_physical_vs_genomic_distances.ipynb>
+   Merge Multi-ROI<tutorials/tutorial_merge_multi_roi.ipynb>
+   Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
+   Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
+   Quality Control & Filters : Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
+   Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
+   Split Traces<tutorials/tutorial_split_traces.ipynb>
+   Classify Traces<tutorials/tutorial_assign_masks_split_labels.ipynb>
+   Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
+   Multiway Co-localization<tutorials/tutorial_multiway_colocalization.ipynb>
+   Compare Datasets<tutorials/tutorial_compare_datasets.ipynb>
+   3D Visualization<tutorials/tutorial_pymol.ipynb>
+   Physical vs Genomic Distance<tutorials/tutorial_physical_vs_genomic_distances.ipynb>
 
 .. toctree::
    :maxdepth: 1
@@ -36,6 +38,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Data formats<scripts/data_formats>
    scripts/localization
    scripts/trace
+   scripts/matrix
    scripts/plot
 
 
