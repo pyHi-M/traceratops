@@ -73,7 +73,7 @@ def create_dict_args(args):
             raise ValueError("--number_traces must be at least 1")
         p["number_traces"] = args.number_traces
     else:
-        p["number_traces"] = 2
+        p["number_traces"] = 10
 
     if args.selected_trace:
         p["selected_trace"] = args.selected_trace
@@ -126,6 +126,9 @@ def runtime(
     trace_files = [] if trace_files is None else trace_files
     barcode_type = {} if barcode_type is None else barcode_type
 
+    print(
+        f"$ Will retrieve {number_traces} traces using the criterium: {select_traces}"
+    )
     if len(trace_files) > 0:
         print(
             "\n{} trace files to process= {}".format(
