@@ -5,6 +5,7 @@
 - To Matrix ([trace_to_matrix](trace/trace_to_matrix.md))
 - Stats ([trace_stats](trace/trace_stats.md))
 - Splitter ([trace_splitter](trace/trace_splitter.md))
+- Sorter ([trace_sorter](trace/trace_sorter.md))
 - Plot ([trace_plot](trace/trace_plot.md))
 - Pearsons ([trace_pearsons](trace/trace_pearsons.md))
 - Impute Genomic Coordinates ([trace_genomic_coordinates](trace/trace_genomic_coordinates.md))
@@ -25,6 +26,7 @@ trace/trace_merge
 trace/trace_to_matrix
 trace/trace_stats
 trace/trace_splitter
+trace/trace_sorter
 trace/trace_plot
 trace/trace_pearsons
 trace/trace_genomic_coordinates
