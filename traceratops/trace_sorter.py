@@ -24,9 +24,7 @@ def parse_arguments():
     input_group.add_argument(
         "--pipe", action="store_true", help="Read trace filenames from stdin (pipe)."
     )
-    parser.add_argument(
-        "-O", "--output", help="Path to the sorted output trace file."
-    )
+    parser.add_argument("-O", "--output", help="Path to the sorted output trace file.")
     parser.add_argument(
         "--sort_by",
         required=True,
@@ -78,10 +76,10 @@ def sort_trace_table(trace_table, sort_by, ascending=False):
     else:
         raise ValueError(f"Unknown sorting criterion: {sort_by}")
 
-    ordered_ids = sorted(
-        trace_ids, key=values.__getitem__, reverse=not ascending
+    ordered_ids = sorted(trace_ids, key=values.__getitem__, reverse=not ascending)
+    ordered_indices = np.concatenate(
+        [indices_by_id[trace_id] for trace_id in ordered_ids]
     )
-    ordered_indices = np.concatenate([indices_by_id[trace_id] for trace_id in ordered_ids])
     trace_table.data = data[ordered_indices]
     return trace_table
 

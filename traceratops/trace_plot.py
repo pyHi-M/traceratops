@@ -126,7 +126,9 @@ def runtime(
     trace_files = [] if trace_files is None else trace_files
     barcode_type = {} if barcode_type is None else barcode_type
 
-    print(f"$ Will retrieve {number_traces} traces using the criterium: {select_traces}")
+    print(
+        f"$ Will retrieve {number_traces} traces using the criterium: {select_traces}"
+    )
     if len(trace_files) > 0:
         print(
             "\n{} trace files to process= {}".format(
