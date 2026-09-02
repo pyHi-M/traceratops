@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from astropy.table import Table
 
 from traceratops import trace_splitter
@@ -51,6 +52,9 @@ def test_default_radius_filter_only_splits_large_outlier(monkeypatch):
 
 def test_hdbscan_parameters_and_noise_preservation(monkeypatch):
     table = _table({"orig": [0, 1, 9, 10, 100]})
+    table.data["x"] = table.data["x"].astype(np.float32)
+    table.data["y"] = table.data["y"].astype(np.float32)
+    table.data["z"] = table.data["z"].astype(np.float32)
     captured = {}
 
     class FakeHDBSCAN:
@@ -58,6 +62,8 @@ def test_hdbscan_parameters_and_noise_preservation(monkeypatch):
             captured.update(kwargs)
 
         def fit_predict(self, coords):
+            captured["coords_dtype"] = coords.dtype
+            captured["coords_contiguous"] = coords.flags.c_contiguous
             return np.array([0, 0, 1, 1, -1])
 
     monkeypatch.setattr(trace_splitter, "HDBSCAN", FakeHDBSCAN)
@@ -82,6 +88,8 @@ def test_hdbscan_parameters_and_noise_preservation(monkeypatch):
         "cluster_selection_method": "leaf",
         "cluster_selection_epsilon": 2.5,
         "allow_single_cluster": True,
+        "coords_dtype": np.dtype(np.float64),
+        "coords_contiguous": True,
     }
     assert list(table.data["Trace_ID"]) == ["one1", "one1", "two2", "two2", "orig"]
 
@@ -103,3 +111,52 @@ def test_hdbscan_epsilon_is_estimated_when_omitted(monkeypatch):
         table, split_all=True, clustering_method="hdbscan"
     )
     assert captured["cluster_selection_epsilon"] == 3.25
+
+
+def test_hdbscan_retries_known_sklearn_epsilon_failure(monkeypatch, capsys):
+    calls = []
+
+    class FakeHDBSCAN:
+        def __init__(self, **kwargs):
+            calls.append(kwargs)
+
+        def fit_predict(self, coords):
+            if len(calls) == 1:
+                raise TypeError(
+                    "only 0-dimensional arrays can be converted to Python scalars"
+                )
+            return np.array([0, 0, 1, 1])
+
+    monkeypatch.setattr(trace_splitter, "HDBSCAN", FakeHDBSCAN)
+    parameters = {
+        "min_cluster_size": 2,
+        "min_samples": 2,
+        "metric": "euclidean",
+        "cluster_selection_method": "eom",
+        "cluster_selection_epsilon": 0.884,
+        "allow_single_cluster": True,
+    }
+
+    labels = trace_splitter._fit_hdbscan(np.zeros((4, 3)), parameters)
+
+    assert list(labels) == [0, 0, 1, 1]
+    assert calls[0]["cluster_selection_epsilon"] == 0.884
+    assert calls[1]["cluster_selection_epsilon"] == 0.0
+    assert "retrying this trace" in capsys.readouterr().out
+
+
+def test_hdbscan_does_not_hide_unrelated_type_error(monkeypatch):
+    class FakeHDBSCAN:
+        def __init__(self, **kwargs):
+            pass
+
+        def fit_predict(self, coords):
+            raise TypeError("unrelated failure")
+
+    monkeypatch.setattr(trace_splitter, "HDBSCAN", FakeHDBSCAN)
+    parameters = {
+        "cluster_selection_epsilon": 1.0,
+    }
+
+    with pytest.raises(TypeError, match="unrelated failure"):
+        trace_splitter._fit_hdbscan(np.zeros((4, 3)), parameters)

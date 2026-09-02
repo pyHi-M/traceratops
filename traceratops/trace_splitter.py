@@ -8,6 +8,7 @@ epsilon can either be supplied or estimated from the input traces.
 """
 
 import argparse
+import inspect
 import os
 import select
 import sys
@@ -108,6 +109,19 @@ def compute_radius_of_gyration(coords):
     return np.sqrt(np.mean(np.sum((coords - center_of_mass) ** 2, axis=1)))
 
 
+def _coordinates(trace):
+    """Return coordinates in the dtype expected by HDBSCAN's Cython routines.
+
+    ECSV files commonly store coordinates as float32.  Some scikit-learn
+    HDBSCAN tree paths fail on float32 input when a non-zero cluster selection
+    epsilon is combined with ``allow_single_cluster``.  Converting at this
+    boundary also guarantees a C-contiguous matrix for both clusterers.
+    """
+    return np.ascontiguousarray(
+        np.column_stack((trace["x"], trace["y"], trace["z"])), dtype=np.float64
+    )
+
+
 def _otsu_threshold(values, bins=256):
     """Compute an Otsu threshold without requiring an image-processing package."""
     values = np.asarray(values, dtype=float)
@@ -132,10 +146,48 @@ def estimate_hdbscan_epsilon(groups):
     """Estimate epsilon as the median per-trace Otsu pair-distance threshold."""
     thresholds = []
     for trace in groups:
-        coords = np.column_stack((trace["x"], trace["y"], trace["z"]))
+        coords = _coordinates(trace)
         if len(coords) > 1:
             thresholds.append(_otsu_threshold(pdist(coords)))
     return float(np.median(thresholds)) if thresholds else 0.0
+
+
+def _create_hdbscan(**parameters):
+    """Create HDBSCAN while remaining compatible with scikit-learn 1.3+.
+
+    Recent scikit-learn releases expose ``copy`` and warn when it is omitted;
+    older supported releases do not accept it.
+    """
+    if "copy" in inspect.signature(HDBSCAN).parameters:
+        parameters["copy"] = True
+    return HDBSCAN(**parameters)
+
+
+def _fit_hdbscan(coords, parameters):
+    """Fit HDBSCAN, working around an upstream epsilon-tree conversion bug."""
+    try:
+        return _create_hdbscan(**parameters).fit_predict(coords)
+    except TypeError as error:
+        scalar_conversion_error = (
+            "only 0-dimensional arrays can be converted to Python scalars"
+        )
+        if (
+            scalar_conversion_error not in str(error)
+            or parameters["cluster_selection_epsilon"] == 0
+        ):
+            raise
+
+        # Some scikit-learn/NumPy combinations fail inside epsilon_search for
+        # particular condensed trees. HDBSCAN itself remains usable without
+        # epsilon-based merging, so retry only this known upstream failure.
+        print(
+            "! Warning: scikit-learn HDBSCAN failed while applying "
+            "cluster_selection_epsilon; retrying this trace without "
+            "epsilon-based cluster merging."
+        )
+        fallback_parameters = parameters.copy()
+        fallback_parameters["cluster_selection_epsilon"] = 0.0
+        return _create_hdbscan(**fallback_parameters).fit_predict(coords)
 
 
 def split_large_traces(
@@ -158,10 +210,7 @@ def split_large_traces(
     """
     grouped = trace_table.data.group_by("Trace_ID")
     groups = list(grouped.groups)
-    rg_values = [
-        compute_radius_of_gyration(np.column_stack((t["x"], t["y"], t["z"])))
-        for t in groups
-    ]
+    rg_values = [compute_radius_of_gyration(_coordinates(t)) for t in groups]
     mean_rg, std_rg = np.mean(rg_values), np.std(rg_values)
     rg_threshold = mean_rg + std_threshold * std_rg
     print(
@@ -177,7 +226,7 @@ def split_large_traces(
     num_splits = 0
     for trace, rg in zip(groups, rg_values):
         original_id = trace["Trace_ID"][0]
-        coords = np.column_stack((trace["x"], trace["y"], trace["z"]))
+        coords = _coordinates(trace)
         if not (split_all or rg > rg_threshold):
             continue
         if clustering_method == "kmeans":
@@ -189,14 +238,15 @@ def split_large_traces(
         else:
             if len(coords) < min_cluster_size:
                 continue
-            labels = HDBSCAN(
-                min_cluster_size=min_cluster_size,
-                min_samples=min_samples,
-                metric="euclidean",
-                cluster_selection_method=cluster_selection_method,
-                cluster_selection_epsilon=epsilon,
-                allow_single_cluster=allow_single_cluster,
-            ).fit_predict(coords)
+            hdbscan_parameters = {
+                "min_cluster_size": min_cluster_size,
+                "min_samples": min_samples,
+                "metric": "euclidean",
+                "cluster_selection_method": cluster_selection_method,
+                "cluster_selection_epsilon": epsilon,
+                "allow_single_cluster": allow_single_cluster,
+            }
+            labels = _fit_hdbscan(coords, hdbscan_parameters)
 
         cluster_labels = np.unique(labels[labels >= 0])
         number_of_parts = len(cluster_labels) + int(np.any(labels == -1))

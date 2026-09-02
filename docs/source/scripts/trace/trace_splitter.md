@@ -55,6 +55,14 @@ HDBSCAN labels some detections as noise. Noise detections are retained under
 their original `Trace_ID`; trace_splitter never discards input rows. Traces with
 fewer detections than `--min-cluster-size` are left unchanged.
 
+Coordinates read from ECSV are converted to a contiguous 64-bit floating-point
+array before clustering. This is intentional: scikit-learn's compiled HDBSCAN
+tree traversal can fail for 32-bit ECSV coordinates when a non-zero selection
+epsilon is used together with `--allow-single-cluster`. If a compatible input
+still encounters scikit-learn's known scalar-conversion failure in its epsilon
+tree traversal, trace_splitter reports a warning and retries that trace with
+epsilon-based merging disabled. Other HDBSCAN errors are not suppressed.
+
 ## Notes
 
 - See the command-line reference above for the complete option list.
