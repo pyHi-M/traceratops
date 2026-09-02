@@ -24,7 +24,7 @@ _SCRIPT_DESCRIPTIONS = {
     "trace_pearsons.py": "Compare chromatin trace tables by computing pairwise distances.",
     "trace_plot.py": "Plot one or multiple traces in 3D.",
     "trace_split_labels.py": "Split a trace file into two files based on the presence of a label.",
-    "trace_splitter.py": "Split chromatin traces using K-means clustering when radius of gyration exceeds a threshold.",
+    "trace_splitter.py": "Split selected or all chromatin traces using K-means or HDBSCAN clustering.",
     "trace_stats.py": "Compute basic statistics for chromatin trace files.",
     "trace_to_matrix.py": "Convert a trace file to a matrix using pyHiM core routines.",
 }

@@ -1,188 +1,304 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-This script will calculate the radii of gyration of all traces in a tracefile, estimate the median and standard deviation of the distribution to identify outliers which may arise from the merging of two traces. It will then target these outliers and perform a K-means clustering to break the trace. Each time a trace is split, it will be replaced in the tracefile and new identifiers will be provided.
+"""Split unusually large traces, or every trace, into spatial clusters.
 
-Traces with R_g higher than the `median` + `std_threshold` will be treated as outliers. `std_threshold` is therefore an input argument.
-
-Clusterization will be performed assuming 2 traces by default. This number can be modified using `num_clusters` as input argument.
+By default, traces whose radius of gyration is greater than the population mean
+plus one standard deviation are split with K-means.  ``--split-all`` disables
+that size filter.  HDBSCAN can be selected as an alternative and its distance
+epsilon can either be supplied or estimated from the input traces.
 """
 
 import argparse
+import inspect
 import os
 import select
 import sys
 import uuid
 
 import numpy as np
-from sklearn.cluster import KMeans
+from scipy.spatial.distance import pdist
+from sklearn.cluster import HDBSCAN, KMeans
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.script_banner import print_script_banner
 
 
 def parse_arguments():
-    """Parses command-line arguments."""
+    """Return the command-line argument parser."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", help="Path to the input trace file.")
     parser.add_argument(
-        "--output",
-        help="Path to save the modified trace file. Default: appends '_split'.",
+        "--output", help="Path to save the modified trace file (default: *_split.ecsv)."
     )
     parser.add_argument(
         "--std_threshold",
         type=float,
         default=1.0,
-        help="Std deviation threshold for large traces (default: 1.0).",
+        help="Standard deviations above mean Rg used to select traces (default: 1.0).",
+    )
+    parser.add_argument(
+        "--split-all",
+        action="store_true",
+        help="Cluster every trace instead of selecting traces by radius of gyration.",
+    )
+    parser.add_argument(
+        "--clustering-method",
+        choices=("kmeans", "hdbscan"),
+        default="kmeans",
+        help="Clustering algorithm (default: kmeans).",
     )
     parser.add_argument(
         "--num_clusters",
         type=int,
         default=2,
-        help="Number of clusters for K-means (default: 2).",
+        help="Number of K-means clusters (default: 2).",
     )
-
     parser.add_argument(
-        "--pipe", help="inputs Trace file list from stdin (pipe)", action="store_true"
+        "--min-cluster-size",
+        type=int,
+        default=3,
+        help="Minimum HDBSCAN cluster size (default: 3).",
     )
-
+    parser.add_argument(
+        "--min-samples",
+        type=int,
+        default=3,
+        help="HDBSCAN core-point neighborhood size (default: 3).",
+    )
+    parser.add_argument(
+        "--cluster-selection-method",
+        choices=("eom", "leaf"),
+        default="eom",
+        help="HDBSCAN cluster selection method (default: eom).",
+    )
+    parser.add_argument(
+        "--cluster-selection-epsilon",
+        type=float,
+        help="HDBSCAN distance threshold (default: median per-trace Otsu estimate).",
+    )
+    parser.add_argument(
+        "--allow-single-cluster",
+        action="store_true",
+        help="Allow HDBSCAN to return a single cluster.",
+    )
+    parser.add_argument(
+        "--pipe", help="Input trace-file list from stdin.", action="store_true"
+    )
     return parser
 
 
 def create_dict_args(args):
-    p = dict()
-
-    p["trace_files"] = []
+    p = {"trace_files": [], "pipe": args.pipe}
     if args.pipe:
-        p["pipe"] = True
-        if select.select(
-            [
-                sys.stdin,
-            ],
-            [],
-            [],
-            0.0,
-        )[0]:
+        if select.select([sys.stdin], [], [], 0.0)[0]:
             p["trace_files"] = [line.rstrip("\n") for line in sys.stdin]
         else:
             print("Nothing in stdin")
     else:
-        p["pipe"] = False
         p["trace_files"] = [args.input]
-
     return p
 
 
 def generate_unique_id():
-    """Generates a unique identifier for a trace."""
+    """Generate a unique trace identifier."""
     return str(uuid.uuid4())
 
 
 def compute_radius_of_gyration(coords):
-    """Computes the radius of gyration (Rg) for a given trace."""
+    """Compute the radius of gyration for a trace."""
     center_of_mass = np.mean(coords, axis=0)
     return np.sqrt(np.mean(np.sum((coords - center_of_mass) ** 2, axis=1)))
 
 
-def split_large_traces(trace_table, std_threshold, num_clusters):
+def _coordinates(trace):
+    """Return coordinates in the dtype expected by HDBSCAN's Cython routines.
+
+    ECSV files commonly store coordinates as float32.  Some scikit-learn
+    HDBSCAN tree paths fail on float32 input when a non-zero cluster selection
+    epsilon is combined with ``allow_single_cluster``.  Converting at this
+    boundary also guarantees a C-contiguous matrix for both clusterers.
     """
-    Identifies traces with large Rg and applies K-means clustering to split them.
+    return np.ascontiguousarray(
+        np.column_stack((trace["x"], trace["y"], trace["z"])), dtype=np.float64
+    )
 
-    Parameters:
-    ----------
-    trace_table : ChromatinTraceTable
-        Input chromatin trace table.
-    std_threshold : float
-        Number of standard deviations above mean Rg to classify as large.
-    num_clusters : int
-        Number of clusters for K-means.
 
-    Returns:
-    -------
-    None (modifies trace_table in place)
+def _otsu_threshold(values, bins=256):
+    """Compute an Otsu threshold without requiring an image-processing package."""
+    values = np.asarray(values, dtype=float)
+    if values.size == 0 or np.all(values == values[0]):
+        return float(values[0]) if values.size else 0.0
+    counts, edges = np.histogram(values, bins=min(bins, max(2, values.size)))
+    centers = (edges[:-1] + edges[1:]) / 2
+    weights_left = np.cumsum(counts)
+    weights_right = counts.sum() - weights_left
+    means_left = np.cumsum(counts * centers) / np.maximum(weights_left, 1)
+    reverse_sum = np.cumsum((counts * centers)[::-1])[::-1]
+    means_right = reverse_sum / np.maximum(weights_right + counts, 1)
+    variance = (
+        weights_left[:-1]
+        * weights_right[:-1]
+        * (means_left[:-1] - means_right[1:]) ** 2
+    )
+    return float(centers[np.argmax(variance)])
+
+
+def estimate_hdbscan_epsilon(groups):
+    """Estimate epsilon as the median per-trace Otsu pair-distance threshold."""
+    thresholds = []
+    for trace in groups:
+        coords = _coordinates(trace)
+        if len(coords) > 1:
+            thresholds.append(_otsu_threshold(pdist(coords)))
+    return float(np.median(thresholds)) if thresholds else 0.0
+
+
+def _create_hdbscan(**parameters):
+    """Create HDBSCAN while remaining compatible with scikit-learn 1.3+.
+
+    Recent scikit-learn releases expose ``copy`` and warn when it is omitted;
+    older supported releases do not accept it.
     """
-    trace_table_by_id = trace_table.data.group_by("Trace_ID")
-    rg_values = [
-        compute_radius_of_gyration(np.vstack((trace["x"], trace["y"], trace["z"])).T)
-        for trace in trace_table_by_id.groups
-    ]
+    if "copy" in inspect.signature(HDBSCAN).parameters:
+        parameters["copy"] = True
+    return HDBSCAN(**parameters)
 
+
+def _fit_hdbscan(coords, parameters):
+    """Fit HDBSCAN, working around an upstream epsilon-tree conversion bug."""
+    try:
+        return _create_hdbscan(**parameters).fit_predict(coords)
+    except TypeError as error:
+        scalar_conversion_error = (
+            "only 0-dimensional arrays can be converted to Python scalars"
+        )
+        if (
+            scalar_conversion_error not in str(error)
+            or parameters["cluster_selection_epsilon"] == 0
+        ):
+            raise
+
+        # Some scikit-learn/NumPy combinations fail inside epsilon_search for
+        # particular condensed trees. HDBSCAN itself remains usable without
+        # epsilon-based merging, so retry only this known upstream failure.
+        print(
+            "! Warning: scikit-learn HDBSCAN failed while applying "
+            "cluster_selection_epsilon; retrying this trace without "
+            "epsilon-based cluster merging."
+        )
+        fallback_parameters = parameters.copy()
+        fallback_parameters["cluster_selection_epsilon"] = 0.0
+        return _create_hdbscan(**fallback_parameters).fit_predict(coords)
+
+
+def split_large_traces(
+    trace_table,
+    std_threshold=1.0,
+    num_clusters=2,
+    split_all=False,
+    clustering_method="kmeans",
+    min_cluster_size=3,
+    min_samples=3,
+    cluster_selection_method="eom",
+    cluster_selection_epsilon=None,
+    allow_single_cluster=False,
+):
+    """Split selected traces in place with K-means or HDBSCAN.
+
+    HDBSCAN noise points (label ``-1``) retain their original trace ID, so no
+    detections are discarded.  A trace is counted as split only when the
+    clustering creates at least two resulting trace IDs.
+    """
+    grouped = trace_table.data.group_by("Trace_ID")
+    groups = list(grouped.groups)
+    rg_values = [compute_radius_of_gyration(_coordinates(t)) for t in groups]
     mean_rg, std_rg = np.mean(rg_values), np.std(rg_values)
     rg_threshold = mean_rg + std_threshold * std_rg
-
     print(
         f"$ Mean Rg: {mean_rg:.3f}, Std Rg: {std_rg:.3f}, Threshold: {rg_threshold:.3f}"
     )
 
-    new_trace_table = trace_table.data.copy()
+    epsilon = cluster_selection_epsilon
+    if clustering_method == "hdbscan" and epsilon is None:
+        epsilon = estimate_hdbscan_epsilon(groups)
+        print(f"$ Estimated HDBSCAN cluster selection epsilon: {epsilon:.3f}")
+
+    new_data = trace_table.data.copy()
     num_splits = 0
+    for trace, rg in zip(groups, rg_values):
+        original_id = trace["Trace_ID"][0]
+        coords = _coordinates(trace)
+        if not (split_all or rg > rg_threshold):
+            continue
+        if clustering_method == "kmeans":
+            if len(coords) <= num_clusters:
+                continue
+            labels = KMeans(
+                n_clusters=num_clusters, random_state=42, n_init=10
+            ).fit_predict(coords)
+        else:
+            if len(coords) < min_cluster_size:
+                continue
+            hdbscan_parameters = {
+                "min_cluster_size": min_cluster_size,
+                "min_samples": min_samples,
+                "metric": "euclidean",
+                "cluster_selection_method": cluster_selection_method,
+                "cluster_selection_epsilon": epsilon,
+                "allow_single_cluster": allow_single_cluster,
+            }
+            labels = _fit_hdbscan(coords, hdbscan_parameters)
 
-    for sub_trace_table in trace_table_by_id.groups:
-        original_trace_id = sub_trace_table["Trace_ID"][0]
-        coords = np.vstack(
-            (sub_trace_table["x"], sub_trace_table["y"], sub_trace_table["z"])
-        ).T
-        rg = compute_radius_of_gyration(coords)
+        cluster_labels = np.unique(labels[labels >= 0])
+        number_of_parts = len(cluster_labels) + int(np.any(labels == -1))
+        if number_of_parts < 2:
+            continue
 
-        if rg > rg_threshold and len(coords) > num_clusters:
-            # print(
-            #     f"$ Splitting trace {original_trace_id} (Rg={rg:.3f}) into {num_clusters} clusters."
-            # )
-            kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
-            labels = kmeans.fit_predict(coords)
+        original_indices = np.flatnonzero(trace_table.data["Trace_ID"] == original_id)
+        for label in cluster_labels:
+            new_id = generate_unique_id()
+            cluster_indices = original_indices[np.flatnonzero(labels == label)]
+            new_data["Trace_ID"][cluster_indices] = new_id
+        num_splits += 1
 
-            for cluster_label in np.unique(labels):
-                new_trace_id = generate_unique_id()
-                original_indices = np.where(
-                    trace_table.data["Trace_ID"] == original_trace_id
-                )[0]
-                cluster_indices = original_indices[np.where(labels == cluster_label)[0]]
-                new_trace_table["Trace_ID"][cluster_indices] = new_trace_id
-
-            num_splits += 1
-
-    print(f"$ Number of traces split: {num_splits}/{len(trace_table_by_id.groups)}")
-    trace_table.data = new_trace_table
+    print(f"$ Number of traces split: {num_splits}/{len(groups)}")
+    trace_table.data = new_data
 
 
 def main():
     print_script_banner(__file__, __doc__)
-    """Main function to handle input, processing, and output."""
-    parser = parse_arguments()
-    args = parser.parse_args()
-    p = create_dict_args(args)
-
-    trace_files = p["trace_files"]
-    if len(trace_files) > 0:
-        print(
-            "\n{} trace files to process= {}".format(
-                len(trace_files), "\n".join(map(str, trace_files))
-            )
-        )
-
-        # iterates over traces in folder
-        for trace_file in trace_files:
-
-            output_filename = (
-                args.output
-                if args.output
-                else f"{os.path.splitext(trace_file)[0]}_split.ecsv"
-            )
-
-            trace_table = ChromatinTraceTable()
-            trace_table.load(trace_file)
-
-            print(
-                f"Applying K-means clustering with {args.num_clusters} clusters on traces with Rg > mean + {args.std_threshold} * std_dev..."
-            )
-            split_large_traces(trace_table, args.std_threshold, args.num_clusters)
-            trace_table.save(output_filename)
-            # print(f"Saved modified trace table: {output_filename}")
-
-    else:
+    args = parse_arguments().parse_args()
+    trace_files = create_dict_args(args)["trace_files"]
+    if not trace_files or trace_files == [None]:
         print(
             "! Error: did not find any trace file to analyze. Please provide one using --input or --pipe."
         )
+        return
+    print(
+        f"\n{len(trace_files)} trace files to process= {' '.join(map(str, trace_files))}"
+    )
+    for trace_file in trace_files:
+        output = args.output or f"{os.path.splitext(trace_file)[0]}_split.ecsv"
+        trace_table = ChromatinTraceTable()
+        trace_table.load(trace_file)
+        selection = (
+            "all traces"
+            if args.split_all
+            else f"traces with Rg > mean + {args.std_threshold} * std_dev"
+        )
+        print(f"Applying {args.clustering_method} clustering on {selection}...")
+        split_large_traces(
+            trace_table,
+            args.std_threshold,
+            args.num_clusters,
+            args.split_all,
+            args.clustering_method,
+            args.min_cluster_size,
+            args.min_samples,
+            args.cluster_selection_method,
+            args.cluster_selection_epsilon,
+            args.allow_single_cluster,
+        )
+        trace_table.save(output)
 
 
 if __name__ == "__main__":
