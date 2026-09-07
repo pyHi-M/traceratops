@@ -334,7 +334,7 @@ def plot_matrix_difference(
     f_1 = fig1.add_subplot(spec1[0, 0])  # 16
 
     if "none" in normalize:  # sets default operation
-        mode = "maximum"
+        mode = "none"
     else:
         mode = normalize
 
