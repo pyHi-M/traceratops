@@ -106,6 +106,14 @@ def parse_arguments():
         help="Removes both spots with same UID and barcodes repeated in a single trace.",
         action="store_true",
     )
+
+    psr_opt.add_argument(
+        "--number_duplicates_to_keep",
+        help="Number of localizations with the same barcode to keep in each trace. Default = 1.",
+        default=1,
+        type=int,
+    )
+
     psr_opt.add_argument(
         "--remove_barcode",
         help="Comma-separated list of barcode IDs to remove (e.g., ``1,2,3``)",
@@ -228,16 +236,16 @@ def check_file_number(trace_files):
 
 
 def filter_duplicate(
-    remove_duplicate_spots, trace, trace_file, localizations_file, localizations_data
+    remove_duplicate_spots, n_allowed_duplicates, trace, trace_file, localizations_file, localizations_data
 ):
     if remove_duplicate_spots:
         if localizations_file:
-            trace.remove_duplicates_loc(localization_table=localizations_data)
+            trace.remove_duplicates_loc(localization_table=localizations_data, n_allowed_duplicates=n_allowed_duplicates)
         else:
             # remove duplicated UID spots
             trace.remove_duplicates()
         # removes barcodes in traces where they are repeated
-        trace.filter_repeated_barcodes(trace_file)
+        trace.filter_repeated_barcodes(trace_file, n_allowed_duplicates=n_allowed_duplicates)
     return trace
 
 
@@ -285,6 +293,7 @@ def runtime(
     coord_limits=dict(),
     tag="filtered",
     remove_duplicate_spots=False,
+    n_allowed_duplicates=1,
     remove_barcode=None,
     label_to_keep="",
     label_to_remove="",
@@ -341,6 +350,7 @@ def runtime(
         print("\n$ Filtering duplicated barcodes")
         trace = filter_duplicate(
             remove_duplicate_spots,
+            n_allowed_duplicates,
             trace,
             trace_file,
             localizations_file,
@@ -435,6 +445,7 @@ def main():
         coord_limits=args_coord_to_dict(args),
         tag=args.output,
         remove_duplicate_spots=args.clean_spots,
+        n_allowed_duplicates=args.number_duplicates_to_keep,
         remove_barcode=args.remove_barcode,
         label_to_keep=args.keep_label,
         label_to_remove=args.remove_label,
@@ -443,6 +454,7 @@ def main():
         quality_filters=args_quality_filters_to_dict(args),
         output_format=args.output_format,
     )
+
 
     print(f"Processed <{n_traces_processed}> trace file(s)\n")
     print("=" * 9 + "Finished execution" + "=" * 9)

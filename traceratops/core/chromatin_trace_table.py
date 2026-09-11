@@ -885,14 +885,18 @@ class ChromatinTraceTable:
 
         self.data = trace_table_new
 
-    def filter_repeated_barcodes(self, trace_file="mock"):
+    def filter_repeated_barcodes(self, trace_file="mock", n_allowed_duplicates=1):
         """
         This function will remove the barcodes that are present more than once in a trace.
         All other barcodes are kept.
 
         Parameters
         ----------
+        trace_table : ASTROPY table
+            trace table.
 
+        n_allowed_duplicates: int
+            for a given trace, indicates the number of duplicated localizations allowed for each barcode
 
         Returns
         -------
@@ -937,8 +941,12 @@ class ChromatinTraceTable:
                         barcode = row["Barcode #"].data
                         barcode_rep = barcodes.count(barcode)
 
-                        # if a barcode is more than once I will remove both instances
-                        if barcode_rep > 1:
+                        # # if a barcode is more than once I will remove both instances
+                        # if barcode_rep > 1:
+                        #     spots_to_remove.append(row["Spot_ID"])
+
+                        # if a barcode is detected more than n=n_allowed_duplicates, I will remove all instances
+                        if barcode_rep > n_allowed_duplicates:
                             spots_to_remove.append(row["Spot_ID"])
 
             print(f"$ Number of spots to remove: {len(spots_to_remove)}")
@@ -980,7 +988,7 @@ class ChromatinTraceTable:
             print("! Error: you are trying to filter an empty trace table!")
         self.data = trace_table_new
 
-    def remove_duplicates_loc(self, localization_table=None):
+    def remove_duplicates_loc(self, localization_table=None, n_allowed_duplicates=1):
         """
         Removes duplicated barcodes within each trace.
         If a localization_table is provided, keeps only the spot with the highest intensity.
@@ -990,7 +998,10 @@ class ChromatinTraceTable:
         ----------
         localization_table : astropy Table, optional
             Localization table with 'Buid' and an intensity column ('mean_intensity' or 'peak').
-            Used to select spot with highest intensity.
+            Used to select spot with the highest intensity.
+
+        n_allowed_duplicates : int, optional
+            Indicate the number of duplicated barcodes allowed in a trace
 
         Returns
         -------
@@ -1018,8 +1029,11 @@ class ChromatinTraceTable:
             for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
                 for group in barcode_groups:
-                    if len(group) == 1:
-                        continue  # no duplicates
+                    # if len(group) == 1:
+                    #     continue  # no duplicates
+
+                    if len(group) <= n_allowed_duplicates:
+                        continue
 
                     peaks = []
                     for row in group:
@@ -1030,11 +1044,20 @@ class ChromatinTraceTable:
                             peak = -1
                         peaks.append(peak)
 
-                    max_idx = peaks.index(max(peaks))
+                    # Keep the N brightest spots
+                    sorted_indices = np.argsort(peaks)[::-1]
+                    indices_to_keep = set(sorted_indices[:n_allowed_duplicates])
+
                     for idx, row in enumerate(group):
-                        if idx != max_idx:
+                        if idx not in indices_to_keep:
                             global_idx = trace_table.loc_indices[row["Spot_ID"]]
                             rows_to_remove.append(global_idx)
+
+                    # max_idx = peaks.index(max(peaks))
+                    # for idx, row in enumerate(group):
+                    #     if idx != max_idx:
+                    #         global_idx = trace_table.loc_indices[row["Spot_ID"]]
+                    #         rows_to_remove.append(global_idx)
 
         else:
             print(
