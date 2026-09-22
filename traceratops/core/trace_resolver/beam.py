@@ -52,7 +52,11 @@ def beam_search(
     beam = [initial]
     for barcode in ordered_barcodes:
         candidates = np.flatnonzero(barcodes == barcode).tolist()
-        choices = [None] + candidates
+        # One-polymer resolution is duplicate curation: every barcode must
+        # contribute exactly one localization during optimization. Unique
+        # localizations are therefore forced, and repeated barcodes compare
+        # their candidates without an option to reject the whole barcode.
+        choices = candidates if n_polymers == 1 else [None] + candidates
         barcode_states = []
         for state in beam:
             for selected in product(choices, repeat=n_polymers):
@@ -62,7 +66,9 @@ def beam_search(
                 assignments = state.assignments.copy()
                 histories = tuple(list(history) for history in state.histories)
                 counts = list(state.counts)
-                cost = state.score + rejection_cost * (len(candidates) - len(assigned))
+                cost = state.score
+                if n_polymers == 2:
+                    cost += rejection_cost * (len(candidates) - len(assigned))
                 for polymer, index in enumerate(selected):
                     if index is None:
                         continue

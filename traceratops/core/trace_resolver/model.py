@@ -30,6 +30,7 @@ class EmpiricalDistanceModel:
         self.statistics = {}
         self.pooled = DistanceStatistics(0.0, 1.0, 0)
         self.genomic_source = "barcode"
+        self._genomic_sources = set()
         self.fallback_source = "clean_traces"
 
     @staticmethod
@@ -55,12 +56,19 @@ class EmpiricalDistanceModel:
                 np.asarray(table["Chrom_Start"], dtype=float)
                 + np.asarray(table["Chrom_End"], dtype=float)
             ) / 2
-            self.genomic_source = "coordinates"
+            source = "coordinates"
+            self._genomic_sources.add(source)
+            self.genomic_source = source if len(self._genomic_sources) == 1 else "mixed"
             return midpoint
-        self.genomic_source = "barcode"
+        source = "barcode"
+        self._genomic_sources.add(source)
+        self.genomic_source = source if len(self._genomic_sources) == 1 else "mixed"
         return np.asarray(table["Barcode #"], dtype=float)
 
     def fit(self, table):
+        self._genomic_sources = set()
+        self.genomic_source = "barcode"
+        self.fallback_source = "clean_traces"
         observations = {}
         pooled = []
         if len(table):

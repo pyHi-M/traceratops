@@ -96,6 +96,12 @@ separate penalty: their connection is scored at the corresponding larger
 genomic separation. Each inferred polymer can contain at most one localization
 for a barcode, and polymers need not have equal completeness.
 
+For one-polymer cleanup, every uniquely detected barcode is retained regardless
+of its continuity score, and the beam must select one candidate for every
+repeated barcode. Rejection is only applied afterward when competing candidates
+for a repeated barcode are ambiguous. Thus `--rejection-cost` primarily controls
+two-polymer resolution rather than generic filtering of a single polymer.
+
 `--rejection-cost` is the explicit algorithmic cost of leaving a localization
 unassigned. Unassigned beam detections are omitted from the output. Surviving
 `Spot_ID` values are copied exactly; only `Trace_ID` changes after a successful
@@ -112,6 +118,12 @@ Beam mode writes one diagnostics row per input trace to
 `[tracefile]_split_diagnostics.ecsv`, or to `--diagnostics-output`. Diagnostics
 include barcode multiplicity, Rg, inferred polymer count, best and alternative
 scores, raw score gap, unassigned detections, and ambiguous barcode count.
+`requested_n_polymers` records whether classification requested one- or
+two-polymer resolution (zero means no resolution was requested), independently
+of `inferred_n_polymers`. ECSV metadata records whether genomic coordinates or
+barcode indices supplied genomic separation and whether clean traces or the
+nearest-candidate fallback supplied the empirical model. A warning is printed
+when that fallback is required.
 `confidence_score` is the raw gap divided by the sum of the absolute best and
 alternative scores. It is a non-probabilistic ranking diagnostic, **not** an
 estimated probability.

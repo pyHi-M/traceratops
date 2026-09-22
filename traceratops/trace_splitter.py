@@ -314,7 +314,9 @@ def split_large_traces(
     trace_table.data = new_data
 
 
-def _diagnostic_row(trace_id, trace, multiplicity, rg, result=None):
+def _diagnostic_row(
+    trace_id, trace, multiplicity, rg, requested_n_polymers, result=None
+):
     """Build one stable diagnostics record for an input trace."""
     if result is None:
         status = "unchanged"
@@ -344,6 +346,7 @@ def _diagnostic_row(trace_id, trace, multiplicity, rg, result=None):
         "maximum_barcode_multiplicity": multiplicity.maximum_barcode_multiplicity,
         "n_excess_detections": multiplicity.n_excess_detections,
         "radius_of_gyration": rg,
+        "requested_n_polymers": requested_n_polymers,
         "inferred_n_polymers": inferred,
         "best_score": best,
         "alternative_score": alternative,
@@ -382,6 +385,11 @@ def resolve_traces(
         minimum_observations=model_minimum_observations,
         variance_floor=variance_floor,
     ).fit(trace_table.data)
+    if model.fallback_source == "nearest_candidate_pairs":
+        print(
+            "! Warning: no clean traces were available for the empirical "
+            "distance model; using nearest candidate pairs as a weak fallback."
+        )
     resolver = TraceResolver(
         model,
         history_mode=history_mode,
@@ -402,12 +410,14 @@ def resolve_traces(
         classification = classify_trace(multiplicity, thresholds)
         if classification == TraceClassification.UNCHANGED:
             output_groups.append(trace.copy())
-            diagnostics.append(_diagnostic_row(trace_id, trace, multiplicity, rg))
+            diagnostics.append(_diagnostic_row(trace_id, trace, multiplicity, rg, 0))
             continue
 
         n_polymers = 2 if classification == TraceClassification.RESOLVE_TWO else 1
         result = resolver.resolve(trace, n_polymers)
-        diagnostics.append(_diagnostic_row(trace_id, trace, multiplicity, rg, result))
+        diagnostics.append(
+            _diagnostic_row(trace_id, trace, multiplicity, rg, n_polymers, result)
+        )
         if result.status == "removed_ambiguous":
             continue
         if n_polymers == 1:
@@ -436,6 +446,8 @@ def resolve_traces(
         f"distance_score={distance_score}",
         f"rejection_cost={rejection_cost}",
     ]
+    diagnostic_table.meta["genomic_source"] = model.genomic_source
+    diagnostic_table.meta["fallback_source"] = model.fallback_source
     return diagnostic_table
 
 

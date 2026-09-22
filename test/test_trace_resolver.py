@@ -77,6 +77,25 @@ def test_one_polymer_cleanup_keeps_compatible_duplicate(duplicate_count):
     assert result.n_unassigned == duplicate_count - 1
 
 
+def test_one_polymer_cleanup_forces_unique_barcode_with_poor_geometry():
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0, 0),
+            (2, 5, 0, 0),
+            # This unique localization has an intentionally extreme residual.
+            (3, 100, 0, 0),
+        ]
+    )
+    result = TraceResolver(
+        _linear_model(), rejection_cost=0, minimum_confidence=0
+    ).resolve(trace, n_polymers=1)
+
+    assert result.status == "cleaned"
+    assert result.assignments[3] == 0
+    assert list(trace[result.assignments == 0]["Barcode #"]) == [1, 2, 3]
+
+
 def test_overlapping_traces_resolve_from_barcode_continuity():
     rows = []
     for barcode in range(1, 7):
@@ -119,7 +138,9 @@ def test_spatially_separated_traces_resolve():
     ]
 
 
-def test_split_table_preserves_spot_ids_and_writes_complete_diagnostics(monkeypatch):
+def test_split_table_preserves_spot_ids_and_writes_complete_diagnostics(
+    monkeypatch, capsys
+):
     rows = []
     for barcode in range(1, 5):
         rows.append((barcode, float(barcode), 0.0, 0.0))
@@ -141,6 +162,11 @@ def test_split_table_preserves_spot_ids_and_writes_complete_diagnostics(monkeypa
     assert set(table.data["Spot_ID"]) == set(original["Spot_ID"])
     assert set(table.data["Trace_ID"]) == {"polymer-one", "polymer-two"}
     assert diagnostics[0]["status"] == "split"
+    assert diagnostics[0]["requested_n_polymers"] == 2
+    assert diagnostics[0]["inferred_n_polymers"] == 2
+    assert diagnostics.meta["genomic_source"] == "barcode"
+    assert diagnostics.meta["fallback_source"] == "nearest_candidate_pairs"
+    assert "using nearest candidate pairs" in capsys.readouterr().out
     expected = {
         "input_trace_id",
         "status",
@@ -150,6 +176,7 @@ def test_split_table_preserves_spot_ids_and_writes_complete_diagnostics(monkeypa
         "maximum_barcode_multiplicity",
         "n_excess_detections",
         "radius_of_gyration",
+        "requested_n_polymers",
         "inferred_n_polymers",
         "best_score",
         "alternative_score",
