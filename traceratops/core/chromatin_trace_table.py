@@ -903,6 +903,9 @@ class ChromatinTraceTable:
         updated trace table is kept in self.data
 
         """
+        if not isinstance(n_allowed_duplicates,int) or n_allowed_duplicates < 1:
+            raise ValueError("n_allowed_duplicates must be a positive integer")
+
         trace_table = self.data
         trace_table_new = trace_table.copy()
         print("\n$ Removing spots with repeated barcodes...")
@@ -1007,6 +1010,9 @@ class ChromatinTraceTable:
         -------
         Updates self.data with filtered trace table.
         """
+        if not isinstance(n_allowed_duplicates, int) or n_allowed_duplicates < 1:
+            raise ValueError("n_allowed_duplicates must be a positive integer")
+
         trace_table = self.data
         trace_table_new = trace_table.copy()
         print("\n$ Removing duplicated barcodes within traces...")
@@ -1015,22 +1021,18 @@ class ChromatinTraceTable:
             print("! Error: you are trying to filter an empty trace table!")
             return
 
-        trace_table_indexed = trace_table.group_by("Trace_ID")
-        trace_table.add_index("Spot_ID")  # Add index for faster lookup
+        trace_table_new["_row_idx"] = np.arange(len(trace_table_new))  # unambiguous row identity
+        trace_table_indexed = trace_table_new.group_by("Trace_ID")
         rows_to_remove = []
 
         if localization_table is not None:
             print("$ Using intensity to resolve duplicates...")
             localization_table.add_index("Buid")
-            intensity_column = self._get_localization_intensity_column(
-                localization_table
-            )
+            intensity_column = self._get_localization_intensity_column(localization_table)
 
             for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
                 for group in barcode_groups:
-                    # if len(group) == 1:
-                    #     continue  # no duplicates
 
                     if len(group) <= n_allowed_duplicates:
                         continue
@@ -1045,13 +1047,13 @@ class ChromatinTraceTable:
                         peaks.append(peak)
 
                     # Keep the N brightest spots
-                    sorted_indices = np.argsort(peaks)[::-1]
+                    peaks_array = np.asarray(peaks, dtype=float)
+                    sorted_indices = np.argsort(-peaks_array, kind="stable")
                     indices_to_keep = set(sorted_indices[:n_allowed_duplicates])
 
                     for idx, row in enumerate(group):
                         if idx not in indices_to_keep:
-                            global_idx = trace_table.loc_indices[row["Spot_ID"]]
-                            rows_to_remove.append(global_idx)
+                            rows_to_remove.append(row["_row_idx"])
 
                     # max_idx = peaks.index(max(peaks))
                     # for idx, row in enumerate(group):
@@ -1060,21 +1062,17 @@ class ChromatinTraceTable:
                     #         rows_to_remove.append(global_idx)
 
         else:
-            print(
-                "$ No localization table provided. Removing all instances of duplicated barcodes."
-            )
-
+            print("$ No localization table provided. Removing all instances of duplicated barcodes.")
             for trace in trace_table_indexed.groups:
                 barcode_groups = trace.group_by("Barcode #").groups
                 for group in barcode_groups:
-                    if len(group) <= 1:
+                    if len(group) <= n_allowed_duplicates:
                         continue
                     for row in group:
-                        global_idx = trace_table.loc_indices[row["Spot_ID"]]
-                        rows_to_remove.append(global_idx)
+                        rows_to_remove.append(row["_row_idx"])
 
         trace_table_new.remove_rows(rows_to_remove)
-
+        trace_table_new.remove_column("_row_idx")
         print(f"$ Number of rows to remove: {len(rows_to_remove)}")
 
         if len(trace_table_new) > 0:
@@ -1082,10 +1080,7 @@ class ChromatinTraceTable:
         else:
             number_traces_left = 0
 
-        print(
-            f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {number_traces_left}"
-        )
-
+        print(f"$ After filtering, I see \n spots: {len(trace_table_new)} \n traces: {number_traces_left}")
         self.data = trace_table_new
 
     def remove_duplicates(self):

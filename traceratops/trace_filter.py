@@ -70,6 +70,11 @@ def check_required_arg(args, parser):
         parser.print_help()
         sys.exit(0)
 
+def positive_int(value):
+    ivalue = int(value)
+    if ivalue < 1:
+        raise argparse.ArgumentTypeError(f"{value} is not a positive integer")
+    return ivalue
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=True, description=__doc__)
@@ -109,9 +114,9 @@ def parse_arguments():
 
     psr_opt.add_argument(
         "--number_duplicates_to_keep",
-        help="Number of localizations with the same barcode to keep in each trace. Default = 1.",
+        help="Number of localizations with the same barcode to keep in each trace. Default = 1. If >1, implies --clean_spots",
         default=1,
-        type=int,
+        type=positive_int,
     )
 
     psr_opt.add_argument(
@@ -239,11 +244,9 @@ def filter_duplicate(
     remove_duplicate_spots, n_allowed_duplicates, trace, trace_file, localizations_file, localizations_data
 ):
     if remove_duplicate_spots:
+        trace.remove_duplicates()
         if localizations_file:
             trace.remove_duplicates_loc(localization_table=localizations_data, n_allowed_duplicates=n_allowed_duplicates)
-        else:
-            # remove duplicated UID spots
-            trace.remove_duplicates()
         # removes barcodes in traces where they are repeated
         trace.filter_repeated_barcodes(trace_file, n_allowed_duplicates=n_allowed_duplicates)
     return trace
@@ -312,6 +315,19 @@ def runtime(
             "\n{} trace files to process= {}".format(
                 len(trace_files), "\n".join(map(str, trace_files))
             )
+        )
+
+    # checks regarding n_allowed_duplicates option
+    if n_allowed_duplicates > 1 and not remove_duplicate_spots:
+        print(
+            "! Warning: --number_duplicates_to_keep was set without --clean_spots; enabling --clean_spots automatically.")
+        remove_duplicate_spots = True
+
+    if n_allowed_duplicates > 1 and not localizations_file:
+        raise ValueError(
+            "n_allowed_duplicates > 1 requires --localization_file to rank "
+            "candidates by intensity; without it there is no way to choose "
+            "which detections to keep."
         )
 
     quality_filters = quality_filters or {}

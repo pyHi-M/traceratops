@@ -37,6 +37,28 @@ trace_filter \
 
 ## Notes
 
+### Keeping more than one detection per barcode
+
+By default, `--clean_spots` removes every spot whose barcode appears more
+than once within a trace (e.g. useful when this indicates ambiguous or
+noisy detections). Use `--number_duplicates_to_keep N` (default: `1`) to
+instead keep, for each duplicated barcode, the `N` detections with the
+highest localization intensity — for example `N=2` when a locus has two
+alleles and both real detections should be kept.
+
+```bash
+trace_filter --input Trace.ecsv --localization_file Localizations.ecsv \
+  --clean_spots --number_duplicates_to_keep 2
+```
+
+- Requires `--localization_file`: brightness is read from that table, so
+  without it there is no basis for choosing which detections to keep.
+- Implies `--clean_spots`: setting `--number_duplicates_to_keep` above `1`
+  without `--clean_spots` enables it automatically and prints a warning.
+- A barcode with more duplicates than can be resolved this way (e.g. 3
+  detections when only 2 are wanted, and no localization table is given)
+  has all of its instances removed rather than an arbitrary subset kept.
+
 ### Removal of barcodes by intensity
 
 ```bash
