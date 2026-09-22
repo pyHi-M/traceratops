@@ -369,7 +369,11 @@ class LocalizationTable:
         positions = np.arange(len(unique_barcodes))
 
         # Collect SNR values for each barcode
-        snr_by_barcode = [snr[barcode_id == bc] for bc in unique_barcodes]
+        #snr_by_barcode = [snr[barcode_id == bc] for bc in unique_barcodes]
+        snr_by_barcode = [
+            np.asarray(snr[barcode_id == bc], dtype=float) for bc in unique_barcodes
+        ]
+        snr_by_barcode = [vals[np.isfinite(vals)] for vals in snr_by_barcode]
 
         # Draw violin plot
         parts = ax[0].violinplot(
@@ -380,6 +384,12 @@ class LocalizationTable:
             showmedians=True,
             showextrema=True,
         )
+
+        # finite_snr = np.asarray(snr, dtype=float)
+        # finite_snr = finite_snr[np.isfinite(finite_snr)]
+        # y_hi = np.nanpercentile(finite_snr, 99)
+        # pad = 0.1 * y_hi
+        # ax[0].set_ylim(-pad, y_hi + pad)
 
         ax[0].set_xlabel("barcode_id", fontsize=axes_label_size)
         ax[0].set_ylabel("snr", fontsize=axes_label_size)
