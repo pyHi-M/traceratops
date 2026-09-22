@@ -423,7 +423,7 @@ class LocalizationTable:
         unique_barcodes, counts = np.unique(barcode_id, return_counts=True)
         positions = np.arange(len(unique_barcodes))
 
-        ax[2].bar(unique_barcodes, counts, width=0.8)
+        ax[2].bar(positions, counts, width=0.8)
         ax[2].set_xlabel("barcode_id", fontsize=axes_label_size)
         ax[2].set_ylabel("Number of detections", fontsize=axes_label_size)
         ax[2].set_xticks(positions)
