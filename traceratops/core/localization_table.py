@@ -366,6 +366,7 @@ class LocalizationTable:
 
         # Sort barcode identities
         unique_barcodes = np.sort(np.unique(barcode_id))
+        positions = np.arange(len(unique_barcodes))
 
         # Collect SNR values for each barcode
         snr_by_barcode = [snr[barcode_id == bc] for bc in unique_barcodes]
@@ -373,7 +374,7 @@ class LocalizationTable:
         # Draw violin plot
         parts = ax[0].violinplot(
             snr_by_barcode,
-            positions=unique_barcodes,
+            positions=positions,
             widths=0.8,
             showmeans=False,
             showmedians=True,
@@ -382,7 +383,8 @@ class LocalizationTable:
 
         ax[0].set_xlabel("barcode_id", fontsize=axes_label_size)
         ax[0].set_ylabel("snr", fontsize=axes_label_size)
-        ax[0].set_xticks(unique_barcodes)
+        ax[0].set_xticks(positions)
+        ax[0].set_xticklabels(unique_barcodes)
 
         # panel 2
         for body in parts["bodies"]:
@@ -419,11 +421,13 @@ class LocalizationTable:
 
         # panel 3
         unique_barcodes, counts = np.unique(barcode_id, return_counts=True)
+        positions = np.arange(len(unique_barcodes))
 
         ax[2].bar(unique_barcodes, counts, width=0.8)
         ax[2].set_xlabel("barcode_id", fontsize=axes_label_size)
         ax[2].set_ylabel("Number of detections", fontsize=axes_label_size)
-        ax[2].set_xticks(unique_barcodes)
+        ax[2].set_xticks(positions)
+        ax[2].set_xticklabels(unique_barcodes)
 
         # panel 4
         unique_barcodes = np.sort(np.unique(barcode_id))
