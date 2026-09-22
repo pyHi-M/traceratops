@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Split unusually large traces, or every trace, into spatial clusters.
+"""Resolve ambiguous chromatin traces with spatial or barcode-aware methods.
 
 By default, traces whose radius of gyration is greater than the population mean
 plus one standard deviation are split with K-means.  ``--split-all`` disables
 that size filter.  HDBSCAN can be selected as an alternative and its distance
-epsilon can either be supplied or estimated from the input traces.
+epsilon can either be supplied or estimated from the input traces. Beam search
+uses barcode multiplicity, genomic ordering, and empirical spatial continuity
+while allowing detections to remain unassigned.
 """
 
 import argparse
@@ -15,10 +17,19 @@ import sys
 import uuid
 
 import numpy as np
+from astropy.table import Column, Table, vstack
 from scipy.spatial.distance import pdist
 from sklearn.cluster import HDBSCAN, KMeans
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
+from traceratops.core.trace_resolver import (
+    ClassificationThresholds,
+    EmpiricalDistanceModel,
+    TraceClassification,
+    TraceMultiplicity,
+    TraceResolver,
+    classify_trace,
+)
 from traceratops.script_banner import print_script_banner
 
 
@@ -41,10 +52,12 @@ def parse_arguments():
         help="Cluster every trace instead of selecting traces by radius of gyration.",
     )
     parser.add_argument(
+        "--method",
         "--clustering-method",
-        choices=("kmeans", "hdbscan"),
+        dest="clustering_method",
+        choices=("kmeans", "hdbscan", "beam"),
         default="kmeans",
-        help="Clustering algorithm (default: kmeans).",
+        help="Resolution method (default: kmeans). --clustering-method is an alias.",
     )
     parser.add_argument(
         "--num_clusters",
@@ -79,6 +92,43 @@ def parse_arguments():
         "--allow-single-cluster",
         action="store_true",
         help="Allow HDBSCAN to return a single cluster.",
+    )
+    beam = parser.add_argument_group("Barcode-aware beam resolution")
+    beam.add_argument(
+        "--history-mode",
+        choices=("nearest", "multi"),
+        default="multi",
+        help="Polymer history used for transition scoring (default: multi).",
+    )
+    beam.add_argument(
+        "--distance-score",
+        choices=("residual", "likelihood"),
+        default="residual",
+        help="Empirical distance cost (default: residual).",
+    )
+    beam.add_argument("--history-length", type=int, default=3)
+    beam.add_argument("--beam-width", type=int, default=100)
+    beam.add_argument(
+        "--rejection-cost",
+        type=float,
+        default=4.0,
+        help="Cost for leaving one detection unassigned (default: 4.0).",
+    )
+    beam.add_argument("--minimum-polymer-size", type=int, default=2)
+    beam.add_argument(
+        "--minimum-confidence",
+        type=float,
+        default=0.05,
+        help="Minimum non-probabilistic score-gap confidence for a split.",
+    )
+    beam.add_argument("--split-min-repeated-barcodes", type=int, default=3)
+    beam.add_argument("--split-min-repeated-fraction", type=float, default=0.3)
+    beam.add_argument("--candidate-rule", choices=("both", "either"), default="both")
+    beam.add_argument("--model-min-observations", type=int, default=3)
+    beam.add_argument("--variance-floor", type=float, default=1e-6)
+    beam.add_argument(
+        "--diagnostics-output",
+        help="Beam diagnostics ECSV path (default: *_split_diagnostics.ecsv).",
     )
     parser.add_argument(
         "--pipe", help="Input trace-file list from stdin.", action="store_true"
@@ -264,6 +314,143 @@ def split_large_traces(
     trace_table.data = new_data
 
 
+def _diagnostic_row(
+    trace_id, trace, multiplicity, rg, requested_n_polymers, result=None
+):
+    """Build one stable diagnostics record for an input trace."""
+    if result is None:
+        status = "unchanged"
+        inferred = 1
+        best = alternative = gap = confidence = np.nan
+        n_unassigned = n_ambiguous = 0
+    else:
+        status = result.status
+        inferred = result.inferred_n_polymers
+        best = result.best_score
+        alternative = (
+            result.alternative_score if result.alternative_score is not None else np.nan
+        )
+        gap = result.raw_score_gap if result.raw_score_gap is not None else np.nan
+        confidence = (
+            result.confidence_score if result.confidence_score is not None else np.nan
+        )
+        n_unassigned = result.n_unassigned
+        n_ambiguous = result.n_ambiguous_barcodes
+    return {
+        "input_trace_id": str(trace_id),
+        "status": status,
+        "n_input_localizations": len(trace),
+        "n_unique_barcodes": multiplicity.n_unique_barcodes,
+        "n_repeated_barcodes": multiplicity.n_repeated_barcodes,
+        "fraction_repeated_barcodes": multiplicity.fraction_repeated_barcodes,
+        "maximum_barcode_multiplicity": multiplicity.maximum_barcode_multiplicity,
+        "n_excess_detections": multiplicity.n_excess_detections,
+        "radius_of_gyration": rg,
+        "requested_n_polymers": requested_n_polymers,
+        "inferred_n_polymers": inferred,
+        "best_score": best,
+        "alternative_score": alternative,
+        "raw_score_gap": gap,
+        "confidence_score": confidence,
+        "n_unassigned": n_unassigned,
+        "fraction_unassigned": n_unassigned / len(trace) if len(trace) else 0.0,
+        "n_ambiguous_barcodes": n_ambiguous,
+    }
+
+
+def resolve_traces(
+    trace_table,
+    thresholds=None,
+    history_mode="multi",
+    distance_score="residual",
+    history_length=3,
+    beam_width=100,
+    rejection_cost=4.0,
+    minimum_polymer_size=2,
+    minimum_confidence=0.05,
+    model_minimum_observations=3,
+    variance_floor=1e-6,
+):
+    """Resolve barcode duplicates and merged pairs, returning diagnostics.
+
+    Surviving rows retain their original ``Spot_ID`` exactly. A confident split
+    receives new ``Trace_ID`` values; rejected detections are omitted.
+    """
+    required = {"Trace_ID", "Barcode #", "x", "y", "z"}
+    missing = required.difference(trace_table.data.colnames)
+    if missing:
+        raise KeyError(f"Trace table is missing required columns: {sorted(missing)}")
+    thresholds = thresholds or ClassificationThresholds()
+    model = EmpiricalDistanceModel(
+        minimum_observations=model_minimum_observations,
+        variance_floor=variance_floor,
+    ).fit(trace_table.data)
+    if model.fallback_source == "nearest_candidate_pairs":
+        print(
+            "! Warning: no clean traces were available for the empirical "
+            "distance model; using nearest candidate pairs as a weak fallback."
+        )
+    resolver = TraceResolver(
+        model,
+        history_mode=history_mode,
+        distance_score=distance_score,
+        history_length=history_length,
+        beam_width=beam_width,
+        rejection_cost=rejection_cost,
+        minimum_polymer_size=minimum_polymer_size,
+        minimum_confidence=minimum_confidence,
+    )
+
+    output_groups = []
+    diagnostics = []
+    for trace in trace_table.data.group_by("Trace_ID").groups:
+        trace_id = trace["Trace_ID"][0]
+        multiplicity = TraceMultiplicity.from_barcodes(trace["Barcode #"])
+        rg = compute_radius_of_gyration(_coordinates(trace))
+        classification = classify_trace(multiplicity, thresholds)
+        if classification == TraceClassification.UNCHANGED:
+            output_groups.append(trace.copy())
+            diagnostics.append(_diagnostic_row(trace_id, trace, multiplicity, rg, 0))
+            continue
+
+        n_polymers = 2 if classification == TraceClassification.RESOLVE_TWO else 1
+        result = resolver.resolve(trace, n_polymers)
+        diagnostics.append(
+            _diagnostic_row(trace_id, trace, multiplicity, rg, n_polymers, result)
+        )
+        if result.status == "removed_ambiguous":
+            continue
+        if n_polymers == 1:
+            output_groups.append(trace[result.assignments == 0].copy())
+        else:
+            for polymer in range(2):
+                resolved = trace[result.assignments == polymer].copy()
+                if len(resolved):
+                    new_id = generate_unique_id()
+                    resolved.replace_column(
+                        "Trace_ID", Column([new_id] * len(resolved), name="Trace_ID")
+                    )
+                    output_groups.append(resolved)
+
+    if output_groups:
+        output = vstack(output_groups, metadata_conflicts="silent")
+        output.meta = trace_table.data.meta.copy()
+    else:
+        output = trace_table.data[:0].copy()
+    # Spot_ID is copied from source rows and is never generated or transformed.
+    trace_table.data = output
+    diagnostic_table = Table(rows=diagnostics)
+    diagnostic_table.meta["comments"] = [
+        "confidence_score is a normalized score gap, not a probability",
+        f"history_mode={history_mode}",
+        f"distance_score={distance_score}",
+        f"rejection_cost={rejection_cost}",
+    ]
+    diagnostic_table.meta["genomic_source"] = model.genomic_source
+    diagnostic_table.meta["fallback_source"] = model.fallback_source
+    return diagnostic_table
+
+
 def main():
     print_script_banner(__file__, __doc__)
     args = parse_arguments().parse_args()
@@ -280,24 +467,51 @@ def main():
         output = args.output or f"{os.path.splitext(trace_file)[0]}_split.ecsv"
         trace_table = ChromatinTraceTable()
         trace_table.load(trace_file)
-        selection = (
-            "all traces"
-            if args.split_all
-            else f"traces with Rg > mean + {args.std_threshold} * std_dev"
-        )
-        print(f"Applying {args.clustering_method} clustering on {selection}...")
-        split_large_traces(
-            trace_table,
-            args.std_threshold,
-            args.num_clusters,
-            args.split_all,
-            args.clustering_method,
-            args.min_cluster_size,
-            args.min_samples,
-            args.cluster_selection_method,
-            args.cluster_selection_epsilon,
-            args.allow_single_cluster,
-        )
+        if args.clustering_method == "beam":
+            selection = "traces selected by barcode multiplicity"
+        else:
+            selection = (
+                "all traces"
+                if args.split_all
+                else f"traces with Rg > mean + {args.std_threshold} * std_dev"
+            )
+        print(f"Applying {args.clustering_method} resolution on {selection}...")
+        if args.clustering_method == "beam":
+            thresholds = ClassificationThresholds(
+                args.split_min_repeated_barcodes,
+                args.split_min_repeated_fraction,
+                args.candidate_rule,
+            )
+            diagnostics = resolve_traces(
+                trace_table,
+                thresholds=thresholds,
+                history_mode=args.history_mode,
+                distance_score=args.distance_score,
+                history_length=args.history_length,
+                beam_width=args.beam_width,
+                rejection_cost=args.rejection_cost,
+                minimum_polymer_size=args.minimum_polymer_size,
+                minimum_confidence=args.minimum_confidence,
+                model_minimum_observations=args.model_min_observations,
+                variance_floor=args.variance_floor,
+            )
+            diagnostics_output = args.diagnostics_output or (
+                f"{os.path.splitext(trace_file)[0]}_split_diagnostics.ecsv"
+            )
+            diagnostics.write(diagnostics_output, format="ascii.ecsv", overwrite=True)
+        else:
+            split_large_traces(
+                trace_table,
+                args.std_threshold,
+                args.num_clusters,
+                args.split_all,
+                args.clustering_method,
+                args.min_cluster_size,
+                args.min_samples,
+                args.cluster_selection_method,
+                args.cluster_selection_epsilon,
+                args.allow_single_cluster,
+            )
         trace_table.save(output)
 
 
