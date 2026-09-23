@@ -130,6 +130,12 @@ class LikelihoodTraceScores:
 class LikelihoodMultiplicityClassifier:
     """Dataset-fitted maximum-likelihood singlet/doublet classifier.
 
+    The model currently assumes one genuine detection probability ``p`` shared
+    by all barcodes.  In experimental data, stable barcode-specific detection
+    efficiency differences can therefore also contribute to the excess-count
+    heterogeneity statistic; it should not be interpreted as measuring only
+    off-target biology.
+
     Barcode-specific nuisance rates use an L2 penalty
     ``strength * sum((lambda_i - lambda_global)**2)`` where ``lambda_global``
     is the global-model estimate.  This permits strong hotspots while keeping

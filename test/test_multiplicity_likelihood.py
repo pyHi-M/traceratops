@@ -70,6 +70,20 @@ def test_positive_lambda_makes_singlet_repetitions_possible():
     assert np.isfinite(score.log_likelihood_single)
 
 
+def test_zero_off_target_rate_has_finite_fit_scores_and_posteriors():
+    counts = _simulate(10, n_traces=800, p=0.7, pi=0.4, rates=0.0)
+    classifier = LikelihoodMultiplicityClassifier("global").fit(counts)
+    scores = classifier.score(counts)
+
+    assert np.isfinite(classifier.global_off_target_rate)
+    assert classifier.global_off_target_rate < 1e-4
+    assert all(np.isfinite(score.log_likelihood_single) for score in scores)
+    assert all(np.isfinite(score.log_likelihood_doublet) for score in scores)
+    assert all(
+        np.isfinite(score.posterior_doublet_probability) for score in scores
+    )
+
+
 def test_global_fit_recovers_nuisance_and_mixture_parameters():
     classifier = LikelihoodMultiplicityClassifier("global").fit(
         _simulate(4, n_traces=1200, p=0.6, pi=0.7, rates=0.08)
