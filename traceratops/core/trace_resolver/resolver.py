@@ -18,7 +18,7 @@ class TraceResolver:
         distance_score="residual",
         history_length=3,
         beam_width=100,
-        rejection_cost=4.0,
+        rejection_cost=16.0,
         minimum_polymer_size=2,
         minimum_confidence=0.05,
     ):

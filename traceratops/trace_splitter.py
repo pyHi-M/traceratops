@@ -25,9 +25,11 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.trace_resolver import (
     ClassificationThresholds,
     EmpiricalDistanceModel,
+    LikelihoodMultiplicityClassifier,
     TraceClassification,
     TraceMultiplicity,
     TraceResolver,
+    build_multiplicity_matrix,
     classify_trace,
 )
 from traceratops.script_banner import print_script_banner
@@ -112,7 +114,7 @@ def parse_arguments():
         "--rejection-cost",
         type=float,
         default=16.0,
-        help="Cost for leaving one detection unassigned (default: 4.0).",
+        help="Cost for leaving one detection unassigned (default: 16.0).",
     )
     beam.add_argument("--minimum-polymer-size", type=int, default=2)
     beam.add_argument(
@@ -124,6 +126,20 @@ def parse_arguments():
     beam.add_argument("--split-min-repeated-barcodes", type=int, default=3)
     beam.add_argument("--split-min-repeated-fraction", type=float, default=0.3)
     beam.add_argument("--candidate-rule", choices=("both", "either"), default="both")
+    beam.add_argument(
+        "--multiplicity-classifier",
+        choices=("threshold", "likelihood"),
+        default="threshold",
+        help="Multiplicity classifier (default: threshold).",
+    )
+    beam.add_argument("--doublet-posterior-threshold", type=float, default=0.5)
+    beam.add_argument(
+        "--likelihood-off-target-model",
+        choices=("global", "barcode-specific", "auto"),
+        default="auto",
+    )
+    beam.add_argument("--likelihood-heterogeneity-alpha", type=float, default=0.01)
+    beam.add_argument("--likelihood-lambda-regularization", type=float, default=10.0)
     beam.add_argument("--model-min-observations", type=int, default=3)
     beam.add_argument("--variance-floor", type=float, default=1e-6)
     beam.add_argument(
@@ -315,7 +331,15 @@ def split_large_traces(
 
 
 def _diagnostic_row(
-    trace_id, trace, multiplicity, rg, requested_n_polymers, result=None
+    trace_id,
+    trace,
+    multiplicity,
+    rg,
+    requested_n_polymers,
+    result=None,
+    classifier_method="threshold",
+    classifier=None,
+    likelihood_scores=None,
 ):
     """Build one stable diagnostics record for an input trace."""
     if result is None:
@@ -336,7 +360,17 @@ def _diagnostic_row(
         )
         n_unassigned = result.n_unassigned
         n_ambiguous = result.n_ambiguous_barcodes
-    return {
+    likelihood_values = {
+        "log_likelihood_single": np.nan,
+        "log_likelihood_doublet": np.nan,
+        "log_likelihood_ratio": np.nan,
+        "posterior_doublet_probability": np.nan,
+    }
+    if likelihood_scores is not None:
+        likelihood_values = {
+            key: getattr(likelihood_scores, key) for key in likelihood_values
+        }
+    row = {
         "input_trace_id": str(trace_id),
         "status": status,
         "n_input_localizations": len(trace),
@@ -355,7 +389,28 @@ def _diagnostic_row(
         "n_unassigned": n_unassigned,
         "fraction_unassigned": n_unassigned / len(trace) if len(trace) else 0.0,
         "n_ambiguous_barcodes": n_ambiguous,
+        "classifier_method": classifier_method,
+        "classifier_detection_efficiency": (
+            classifier.detection_efficiency if classifier is not None else np.nan
+        ),
+        "classifier_doublet_prior": (
+            classifier.doublet_prior if classifier is not None else np.nan
+        ),
+        "classifier_off_target_model": (
+            classifier.off_target_model if classifier is not None else ""
+        ),
+        "classifier_global_off_target_rate": (
+            classifier.global_off_target_rate if classifier is not None else np.nan
+        ),
+        "classifier_barcode_heterogeneity_pvalue": (
+            classifier.heterogeneity_pvalue if classifier is not None else np.nan
+        ),
+        "classifier_used_barcode_specific_rates": (
+            classifier.used_barcode_specific_rates if classifier is not None else False
+        ),
     }
+    row.update(likelihood_values)
+    return row
 
 
 def resolve_traces(
@@ -365,11 +420,16 @@ def resolve_traces(
     distance_score="residual",
     history_length=3,
     beam_width=100,
-    rejection_cost=4.0,
+    rejection_cost=16.0,
     minimum_polymer_size=2,
     minimum_confidence=0.05,
     model_minimum_observations=3,
     variance_floor=1e-6,
+    multiplicity_classifier="threshold",
+    doublet_posterior_threshold=0.5,
+    likelihood_off_target_model="auto",
+    likelihood_heterogeneity_alpha=0.01,
+    likelihood_lambda_regularization=10.0,
 ):
     """Resolve barcode duplicates and merged pairs, returning diagnostics.
 
@@ -381,6 +441,23 @@ def resolve_traces(
     if missing:
         raise KeyError(f"Trace table is missing required columns: {sorted(missing)}")
     thresholds = thresholds or ClassificationThresholds()
+    likelihood_classifier = None
+    likelihood_by_trace = {}
+    if multiplicity_classifier == "likelihood":
+        trace_ids, barcode_ids, count_matrix = build_multiplicity_matrix(
+            trace_table.data
+        )
+        likelihood_classifier = LikelihoodMultiplicityClassifier(
+            off_target_model=likelihood_off_target_model,
+            heterogeneity_alpha=likelihood_heterogeneity_alpha,
+            lambda_regularization=likelihood_lambda_regularization,
+            posterior_threshold=doublet_posterior_threshold,
+        ).fit(count_matrix, barcode_ids)
+        likelihood_by_trace = dict(
+            zip(trace_ids, likelihood_classifier.score(count_matrix))
+        )
+    elif multiplicity_classifier != "threshold":
+        raise ValueError("multiplicity_classifier must be 'threshold' or 'likelihood'")
     model = EmpiricalDistanceModel(
         minimum_observations=model_minimum_observations,
         variance_floor=variance_floor,
@@ -407,16 +484,42 @@ def resolve_traces(
         trace_id = trace["Trace_ID"][0]
         multiplicity = TraceMultiplicity.from_barcodes(trace["Barcode #"])
         rg = compute_radius_of_gyration(_coordinates(trace))
-        classification = classify_trace(multiplicity, thresholds)
+        likelihood_scores = likelihood_by_trace.get(trace_id)
+        classification = (
+            likelihood_scores.classification
+            if likelihood_scores is not None
+            else classify_trace(multiplicity, thresholds)
+        )
         if classification == TraceClassification.UNCHANGED:
             output_groups.append(trace.copy())
-            diagnostics.append(_diagnostic_row(trace_id, trace, multiplicity, rg, 0))
+            diagnostics.append(
+                _diagnostic_row(
+                    trace_id,
+                    trace,
+                    multiplicity,
+                    rg,
+                    0,
+                    classifier_method=multiplicity_classifier,
+                    classifier=likelihood_classifier,
+                    likelihood_scores=likelihood_scores,
+                )
+            )
             continue
 
         n_polymers = 2 if classification == TraceClassification.RESOLVE_TWO else 1
         result = resolver.resolve(trace, n_polymers)
         diagnostics.append(
-            _diagnostic_row(trace_id, trace, multiplicity, rg, n_polymers, result)
+            _diagnostic_row(
+                trace_id,
+                trace,
+                multiplicity,
+                rg,
+                n_polymers,
+                result,
+                multiplicity_classifier,
+                likelihood_classifier,
+                likelihood_scores,
+            )
         )
         if result.status == "removed_ambiguous":
             continue
@@ -448,6 +551,16 @@ def resolve_traces(
     ]
     diagnostic_table.meta["genomic_source"] = model.genomic_source
     diagnostic_table.meta["fallback_source"] = model.fallback_source
+    if (
+        likelihood_classifier is not None
+        and likelihood_classifier.used_barcode_specific_rates
+    ):
+        diagnostic_table.meta["classifier_barcode_off_target_rates"] = {
+            str(barcode): float(rate)
+            for barcode, rate in zip(
+                likelihood_classifier.barcode_ids, likelihood_classifier.lambdas
+            )
+        }
     return diagnostic_table
 
 
@@ -494,6 +607,11 @@ def main():
                 minimum_confidence=args.minimum_confidence,
                 model_minimum_observations=args.model_min_observations,
                 variance_floor=args.variance_floor,
+                multiplicity_classifier=args.multiplicity_classifier,
+                doublet_posterior_threshold=args.doublet_posterior_threshold,
+                likelihood_off_target_model=args.likelihood_off_target_model,
+                likelihood_heterogeneity_alpha=args.likelihood_heterogeneity_alpha,
+                likelihood_lambda_regularization=args.likelihood_lambda_regularization,
             )
             diagnostics_output = args.diagnostics_output or (
                 f"{os.path.splitext(trace_file)[0]}_split_diagnostics.ecsv"
