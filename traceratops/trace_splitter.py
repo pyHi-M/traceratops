@@ -111,7 +111,7 @@ def parse_arguments():
     beam.add_argument(
         "--rejection-cost",
         type=float,
-        default=4.0,
+        default=16.0,
         help="Cost for leaving one detection unassigned (default: 4.0).",
     )
     beam.add_argument("--minimum-polymer-size", type=int, default=2)
