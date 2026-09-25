@@ -7,9 +7,11 @@ from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.trace_resolver import (
     ClassificationThresholds,
     EmpiricalDistanceModel,
+    LikelihoodMultiplicityClassifier,
     TraceClassification,
     TraceMultiplicity,
     TraceResolver,
+    assess_likelihood_classifier_reliability,
     classify_trace,
 )
 from traceratops.core.trace_resolver.model import DistanceStatistics
@@ -56,6 +58,60 @@ def test_clean_single_trace_is_unchanged_and_preserves_spot_ids():
     assert diagnostics[0]["status"] == "unchanged"
     assert list(trace_table.data["Spot_ID"]) == list(original["Spot_ID"])
     assert list(trace_table.data["Trace_ID"]) == ["merged"] * 3
+
+
+def test_threshold_classifier_has_no_likelihood_reliability_warning(capsys):
+    table = ChromatinTraceTable()
+    table.data = _trace([(1, 0, 0, 0), (2, 1, 0, 0), (3, 2, 0, 0)])
+
+    diagnostics = trace_splitter.resolve_traces(table)
+
+    assert "likelihood multiplicity classification" not in capsys.readouterr().out
+    assert diagnostics[0]["classifier_reliability_level"] == ""
+    assert "classifier_reliability_message" not in diagnostics.meta
+
+
+def test_likelihood_reliability_warning_once_and_diagnostics(monkeypatch, capsys):
+    rows = []
+    for trace_id, offset in (("one", 0.0), ("two", 10.0)):
+        rows.extend(
+            (f"{trace_id}-{barcode}", trace_id, barcode, offset + barcode, 0.0, 0.0)
+            for barcode in range(1, 6)
+        )
+    table = ChromatinTraceTable()
+    table.data = Table(
+        rows=rows, names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z")
+    )
+    original_fit = LikelihoodMultiplicityClassifier.fit
+
+    def fit_in_high_risk_regime(classifier, counts, barcode_ids=None):
+        fitted = original_fit(classifier, counts, barcode_ids)
+        fitted.detection_efficiency = 0.3
+        fitted.doublet_prior = 0.2
+        fitted.reliability_assessment = assess_likelihood_classifier_reliability(
+            len(fitted.barcode_ids), fitted.detection_efficiency, fitted.doublet_prior
+        )
+        return fitted
+
+    monkeypatch.setattr(
+        LikelihoodMultiplicityClassifier, "fit", fit_in_high_risk_regime
+    )
+
+    diagnostics = trace_splitter.resolve_traces(
+        table, multiplicity_classifier="likelihood"
+    )
+
+    warning = "Warning: likelihood multiplicity classification"
+    assert capsys.readouterr().out.count(warning) == 1
+    assert set(diagnostics["classifier_n_barcodes"]) == {5}
+    assert set(diagnostics["classifier_expected_detected_barcodes_per_polymer"]) == {
+        1.5
+    }
+    assert set(diagnostics["classifier_reliability_level"]) == {"high-risk"}
+    assert (
+        "poor singlet/doublet identifiability"
+        in diagnostics.meta["classifier_reliability_message"]
+    )
 
 
 @pytest.mark.parametrize("duplicate_count", [2, 6])
