@@ -107,11 +107,7 @@ def _barcode_log_likelihood(counts, n_polymers, detection_efficiency, lambdas):
             + detected_copies * np.log(p)
             + (n_polymers - detected_copies) * np.log1p(-p)
         )
-        log_poisson = (
-            off_target * np.log(lambdas)
-            - lambdas
-            - gammaln(off_target + 1)
-        )
+        log_poisson = off_target * np.log(lambdas) - lambdas - gammaln(off_target + 1)
         terms.append(np.where(valid, log_binomial + log_poisson, -np.inf))
     return logsumexp(np.stack(terms), axis=0).sum(axis=1)
 
@@ -125,6 +121,73 @@ class LikelihoodTraceScores:
     log_likelihood_ratio: float
     posterior_doublet_probability: float
     classification: TraceClassification
+
+
+# These warning regimes are empirical safeguards from traceratops simulation
+# benchmarks, not mathematical identifiability guarantees. Keep the benchmark
+# thresholds together so future benchmark revisions require one local change.
+LIKELIHOOD_RELIABILITY_THRESHOLDS = {
+    "small_barcode_count": 5,
+    "medium_barcode_count": 10,
+    "very_low_detection_efficiency": 0.35,
+    "low_detection_efficiency": 0.6,
+    "extreme_prior_lower": 0.1,
+    "extreme_prior_upper": 0.9,
+}
+
+
+@dataclass(frozen=True)
+class LikelihoodReliabilityAssessment:
+    """Dataset-level, benchmark-informed likelihood reliability diagnostic."""
+
+    level: str
+    expected_detected_barcodes_per_polymer: float
+    message: str
+
+
+def assess_likelihood_classifier_reliability(
+    n_barcodes, detection_efficiency, doublet_prior
+):
+    """Assess an empirical warning regime without changing classification."""
+    thresholds = LIKELIHOOD_RELIABILITY_THRESHOLDS
+    expected = float(n_barcodes * detection_efficiency)
+    high_risk = (
+        n_barcodes <= thresholds["small_barcode_count"]
+        and detection_efficiency <= thresholds["very_low_detection_efficiency"]
+    )
+    caution = (
+        n_barcodes <= thresholds["small_barcode_count"]
+        and detection_efficiency < thresholds["low_detection_efficiency"]
+    ) or (
+        n_barcodes <= thresholds["medium_barcode_count"]
+        and detection_efficiency <= thresholds["very_low_detection_efficiency"]
+    )
+    extreme_prior = (
+        doublet_prior <= thresholds["extreme_prior_lower"]
+        or doublet_prior >= thresholds["extreme_prior_upper"]
+    )
+    if high_risk or (caution and extreme_prior):
+        level = "high-risk"
+        message = (
+            "likelihood multiplicity classification is being applied in a regime "
+            "where benchmark simulations showed poor singlet/doublet "
+            f"identifiability ({n_barcodes} designed barcodes, fitted p="
+            f"{detection_efficiency:.3f}, fitted doublet fraction="
+            f"{doublet_prior:.3f}). Classification results may be unreliable."
+        )
+    elif caution:
+        level = "caution"
+        message = (
+            "likelihood multiplicity classification is being applied in a "
+            f"low-information regime ({n_barcodes} designed barcodes, fitted "
+            f"detection efficiency p={detection_efficiency:.3f}). Benchmarking "
+            "indicates reduced classification reliability under these conditions. "
+            "Interpret singlet/doublet assignments with caution."
+        )
+    else:
+        level = "ok"
+        message = ""
+    return LikelihoodReliabilityAssessment(level, expected, message)
 
 
 class LikelihoodMultiplicityClassifier:
@@ -175,9 +238,7 @@ class LikelihoodMultiplicityClassifier:
         n_barcodes = counts.shape[1]
         rough_rate = max(float(np.maximum(counts - 2, 0).mean()), 0.01)
         upper_rate = max(5.0, float(counts.max() + 1))
-        bounds = [(-9, 9), (-9, 9)] + [
-            (np.log(1e-8), np.log(upper_rate))
-        ] * n_rates
+        bounds = [(-9, 9), (-9, 9)] + [(np.log(1e-8), np.log(upper_rate))] * n_rates
 
         def objective(parameters):
             p, prior, rates = self._decode(parameters, n_rates)
@@ -240,6 +301,9 @@ class LikelihoodMultiplicityClassifier:
         self.doublet_prior = float(prior)
         self.lambdas = np.repeat(rates, counts.shape[1]) if len(rates) == 1 else rates
         self.used_barcode_specific_rates = use_specific
+        self.reliability_assessment = assess_likelihood_classifier_reliability(
+            len(self.barcode_ids), self.detection_efficiency, self.doublet_prior
+        )
         return self
 
     def score(self, counts, has_repeated_barcodes=None):
@@ -254,7 +318,8 @@ class LikelihoodMultiplicityClassifier:
             matrix, 2, self.detection_efficiency, self.lambdas
         )
         log_odds = (
-            doublet - single
+            doublet
+            - single
             + np.log(self.doublet_prior)
             - np.log1p(-self.doublet_prior)
         )

@@ -1,10 +1,12 @@
 import numpy as np
+import pytest
 from astropy.table import Table
 
 from traceratops import trace_splitter
 from traceratops.core.trace_resolver import (
     LikelihoodMultiplicityClassifier,
     TraceClassification,
+    assess_likelihood_classifier_reliability,
     barcode_heterogeneity_pvalue,
     build_multiplicity_matrix,
 )
@@ -18,10 +20,28 @@ def _simulate(seed, n_traces=500, n_barcodes=20, p=0.65, pi=0.35, rates=0.03):
     return true + rng.poisson(np.broadcast_to(rates, (n_traces, n_barcodes)))
 
 
+@pytest.mark.parametrize(
+    ("n_barcodes", "p", "pi", "expected_level"),
+    [
+        (25, 0.3, 0.95, "ok"),
+        (10, 0.3, 0.2, "caution"),
+        (10, 0.3, 0.95, "high-risk"),
+        (5, 0.3, 0.2, "high-risk"),
+        (5, 0.5, 0.2, "caution"),
+        (5, 0.5, 0.95, "high-risk"),
+        (10, 0.5, 0.95, "ok"),
+    ],
+)
+def test_benchmark_informed_reliability_rules(n_barcodes, p, pi, expected_level):
+    assessment = assess_likelihood_classifier_reliability(n_barcodes, p, pi)
+
+    assert assessment.level == expected_level
+    assert assessment.expected_detected_barcodes_per_polymer == n_barcodes * p
+    assert bool(assessment.message) == (expected_level != "ok")
+
+
 def test_full_multiplicity_matrix_contains_unobserved_barcodes():
-    table = Table(
-        rows=[("a", 1), ("a", 1), ("b", 2)], names=("Trace_ID", "Barcode #")
-    )
+    table = Table(rows=[("a", 1), ("a", 1), ("b", 2)], names=("Trace_ID", "Barcode #"))
     trace_ids, barcodes, counts = build_multiplicity_matrix(table)
 
     assert list(trace_ids) == ["a", "b"]
@@ -79,9 +99,7 @@ def test_zero_off_target_rate_has_finite_fit_scores_and_posteriors():
     assert classifier.global_off_target_rate < 1e-4
     assert all(np.isfinite(score.log_likelihood_single) for score in scores)
     assert all(np.isfinite(score.log_likelihood_doublet) for score in scores)
-    assert all(
-        np.isfinite(score.posterior_doublet_probability) for score in scores
-    )
+    assert all(np.isfinite(score.posterior_doublet_probability) for score in scores)
 
 
 def test_global_fit_recovers_nuisance_and_mixture_parameters():

@@ -390,6 +390,17 @@ def _diagnostic_row(
         "fraction_unassigned": n_unassigned / len(trace) if len(trace) else 0.0,
         "n_ambiguous_barcodes": n_ambiguous,
         "classifier_method": classifier_method,
+        "classifier_n_barcodes": (
+            len(classifier.barcode_ids) if classifier is not None else np.nan
+        ),
+        "classifier_expected_detected_barcodes_per_polymer": (
+            classifier.reliability_assessment.expected_detected_barcodes_per_polymer
+            if classifier is not None
+            else np.nan
+        ),
+        "classifier_reliability_level": (
+            classifier.reliability_assessment.level if classifier is not None else ""
+        ),
         "classifier_detection_efficiency": (
             classifier.detection_efficiency if classifier is not None else np.nan
         ),
@@ -453,6 +464,9 @@ def resolve_traces(
             lambda_regularization=likelihood_lambda_regularization,
             posterior_threshold=doublet_posterior_threshold,
         ).fit(count_matrix, barcode_ids)
+        reliability = likelihood_classifier.reliability_assessment
+        if reliability.level != "ok":
+            print(f"! Warning: {reliability.message}")
         likelihood_by_trace = dict(
             zip(trace_ids, likelihood_classifier.score(count_matrix))
         )
@@ -551,6 +565,10 @@ def resolve_traces(
     ]
     diagnostic_table.meta["genomic_source"] = model.genomic_source
     diagnostic_table.meta["fallback_source"] = model.fallback_source
+    if likelihood_classifier is not None:
+        diagnostic_table.meta["classifier_reliability_message"] = (
+            likelihood_classifier.reliability_assessment.message
+        )
     if (
         likelihood_classifier is not None
         and likelihood_classifier.used_barcode_specific_rates
