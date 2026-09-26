@@ -22,9 +22,9 @@ resolution are separate stages.
 ### 1. Multiplicity classification
 
 A **singlet** contains one underlying polymer; a **doublet** contains two
-polymers merged into one reconstructed trace. For each designed or inferred
-barcode, including barcodes with zero detections, the likelihood classifier
-models
+polymers merged into one reconstructed trace. For each barcode identity
+represented in the dataset, including zero detections of that barcode in
+individual traces, the likelihood classifier models
 
 ```text
 T_i ~ Binomial(m, p)
@@ -57,7 +57,7 @@ default.
 
 Beam search learns an empirical spatial-distance model conditioned on genomic
 separation (or barcode-index separation when genomic coordinates are absent).
-The validated/default settings are:
+The current default settings are:
 
 ```text
 history_mode = multi
@@ -68,6 +68,12 @@ doublet_posterior_threshold = 0.5
 likelihood_off_target_model = global
 minimum_confidence = 0.05
 ```
+
+The benchmark series exercised settings including `history_mode=multi`,
+`distance_score=residual`, and `rejection_cost=16`. The
+`minimum_confidence=0.05` value shown here is the current software default; it
+should not be interpreted as benchmark-validated because the benchmarks
+generally used `minimum_confidence=0`.
 
 `history-mode=multi` scores a candidate against up to `--history-length` prior
 localizations; residual scoring uses squared standardized distance residuals.
@@ -102,12 +108,13 @@ separate penalty.
 Two distinct dataset-level warnings do not alter posterior probabilities or
 classification decisions:
 
-1. **Low-information / identifiability.** With few designed barcodes and low
-   fitted `p`, singlets and doublets contain fundamentally too few informative
-   observations to separate reliably. Simulations found that 5 barcodes around
-   `p=0.3` could approach chance-level balanced accuracy; 10 barcodes at low `p`
-   also lost reliability, especially for strongly imbalanced mixtures. In the
-   tested regimes, 25 or more barcodes were robust across a broad range of
+1. **Low-information / identifiability.** With few barcode identities
+   represented in the dataset and low fitted `p`, singlets and doublets contain
+   fundamentally too few informative observations to separate reliably.
+   Simulations found that 5 represented barcodes around `p=0.3` could approach
+   chance-level balanced accuracy; 10 represented barcodes at low `p` also lost
+   reliability, especially for strongly imbalanced mixtures. In the tested
+   regimes, 25 or more represented barcodes were robust across a broad range of
    doublet fractions.
 2. **`auto` nuisance-model ambiguity.** A dataset may contain ample information
    but genuine barcode-efficiency differences can mimic barcode-specific

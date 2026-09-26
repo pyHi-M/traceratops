@@ -1,8 +1,9 @@
 """Modular barcode-multiplicity classification for trace resolution.
 
-The likelihood classifier models every designed barcode, including barcodes
-which were not observed in a trace.  Its parameters are consequently fitted
-once to a complete trace table rather than separately to individual traces.
+The likelihood classifier models every barcode identity represented somewhere
+in the dataset, including explicit zero counts when that barcode was not
+observed in an individual trace. Its parameters are consequently fitted once
+to a complete trace table rather than separately to individual traces.
 """
 
 from dataclasses import dataclass
@@ -217,7 +218,8 @@ def assess_likelihood_classifier_reliability(
         message = (
             "likelihood multiplicity classification is being applied in a regime "
             "where benchmark simulations showed poor singlet/doublet "
-            f"identifiability ({n_barcodes} designed barcodes, fitted p="
+            f"identifiability ({n_barcodes} barcodes represented in the dataset, "
+            "fitted p="
             f"{detection_efficiency:.3f}, fitted doublet fraction="
             f"{doublet_prior:.3f}). Classification results may be unreliable."
         )
@@ -225,7 +227,8 @@ def assess_likelihood_classifier_reliability(
         level = "caution"
         message = (
             "likelihood multiplicity classification is being applied in a "
-            f"low-information regime ({n_barcodes} designed barcodes, fitted "
+            f"low-information regime ({n_barcodes} barcodes represented in the "
+            "dataset, fitted "
             f"detection efficiency p={detection_efficiency:.3f}). Benchmarking "
             "indicates reduced classification reliability under these conditions. "
             "Interpret singlet/doublet assignments with caution."
