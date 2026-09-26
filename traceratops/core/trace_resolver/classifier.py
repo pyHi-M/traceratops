@@ -135,6 +135,15 @@ LIKELIHOOD_RELIABILITY_THRESHOLDS = {
     "extreme_prior_upper": 0.9,
 }
 
+# This is a separate failure mode from the low-information thresholds above:
+# enough observations may be present, but genuine barcode-to-barcode detection
+# efficiency differences can look like heterogeneous nuisance contamination.
+# Benchmark v6 supports this deliberately conservative safeguard when ``auto``
+# actually selects barcode-specific rates; it does not alter model selection.
+AUTO_NUISANCE_RELIABILITY_THRESHOLDS = {
+    "low_detection_efficiency": 0.35,
+}
+
 
 @dataclass(frozen=True)
 class LikelihoodReliabilityAssessment:
@@ -143,6 +152,43 @@ class LikelihoodReliabilityAssessment:
     level: str
     expected_detected_barcodes_per_polymer: float
     message: str
+
+
+@dataclass(frozen=True)
+class AutoNuisanceReliabilityAssessment:
+    """Dataset-level caution for ambiguity in automatic nuisance selection."""
+
+    level: str
+    message: str
+
+
+def assess_auto_nuisance_reliability(
+    requested_model, selected_barcode_specific, detection_efficiency
+):
+    """Assess benchmark-informed ambiguity without changing fitted results.
+
+    ``auto`` selects barcode-specific rates from excess multiplicity. Because
+    genuine barcode-specific detection efficiencies can create the same
+    pattern, a low-p barcode-specific selection is treated conservatively.
+    """
+    caution = (
+        requested_model == "auto"
+        and selected_barcode_specific
+        and detection_efficiency
+        <= AUTO_NUISANCE_RELIABILITY_THRESHOLDS["low_detection_efficiency"]
+    )
+    if not caution:
+        return AutoNuisanceReliabilityAssessment("ok", "")
+    return AutoNuisanceReliabilityAssessment(
+        "caution",
+        "--likelihood-off-target-model auto selected barcode-specific rates "
+        "at low fitted detection efficiency. Barcode-specific genuine detection "
+        "efficiencies are a possible alternative explanation for the detected "
+        "excess-multiplicity heterogeneity and can reduce multiplicity-"
+        "classification accuracy. Consider using the default global nuisance "
+        "model unless barcode-specific off-target contamination is independently "
+        "supported.",
+    )
 
 
 def assess_likelihood_classifier_reliability(
@@ -207,7 +253,7 @@ class LikelihoodMultiplicityClassifier:
 
     def __init__(
         self,
-        off_target_model="auto",
+        off_target_model="global",
         heterogeneity_alpha=0.01,
         lambda_regularization=10.0,
         posterior_threshold=0.5,
@@ -303,6 +349,13 @@ class LikelihoodMultiplicityClassifier:
         self.used_barcode_specific_rates = use_specific
         self.reliability_assessment = assess_likelihood_classifier_reliability(
             len(self.barcode_ids), self.detection_efficiency, self.doublet_prior
+        )
+        self.auto_nuisance_reliability_assessment = (
+            assess_auto_nuisance_reliability(
+                self.requested_off_target_model,
+                self.used_barcode_specific_rates,
+                self.detection_efficiency,
+            )
         )
         return self
 

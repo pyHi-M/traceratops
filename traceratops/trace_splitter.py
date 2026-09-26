@@ -136,7 +136,11 @@ def parse_arguments():
     beam.add_argument(
         "--likelihood-off-target-model",
         choices=("global", "barcode-specific", "auto"),
-        default="auto",
+        default="global",
+        help=(
+            "Likelihood nuisance-rate model (default: global; auto may confuse "
+            "detection-efficiency heterogeneity with off-target heterogeneity)."
+        ),
     )
     beam.add_argument("--likelihood-heterogeneity-alpha", type=float, default=0.01)
     beam.add_argument("--likelihood-lambda-regularization", type=float, default=10.0)
@@ -401,6 +405,11 @@ def _diagnostic_row(
         "classifier_reliability_level": (
             classifier.reliability_assessment.level if classifier is not None else ""
         ),
+        "classifier_auto_nuisance_reliability_level": (
+            classifier.auto_nuisance_reliability_assessment.level
+            if classifier is not None
+            else ""
+        ),
         "classifier_detection_efficiency": (
             classifier.detection_efficiency if classifier is not None else np.nan
         ),
@@ -438,7 +447,7 @@ def resolve_traces(
     variance_floor=1e-6,
     multiplicity_classifier="threshold",
     doublet_posterior_threshold=0.5,
-    likelihood_off_target_model="auto",
+    likelihood_off_target_model="global",
     likelihood_heterogeneity_alpha=0.01,
     likelihood_lambda_regularization=10.0,
 ):
@@ -467,6 +476,12 @@ def resolve_traces(
         reliability = likelihood_classifier.reliability_assessment
         if reliability.level != "ok":
             print(f"! Warning: {reliability.message}")
+        auto_reliability = (
+            likelihood_classifier.auto_nuisance_reliability_assessment
+        )
+        if auto_reliability.level != "ok":
+            # Dataset-level warning: intentionally outside the per-trace loop.
+            print(f"! Warning: {auto_reliability.message}")
         likelihood_by_trace = dict(
             zip(trace_ids, likelihood_classifier.score(count_matrix))
         )
@@ -568,6 +583,12 @@ def resolve_traces(
     if likelihood_classifier is not None:
         diagnostic_table.meta["classifier_reliability_message"] = (
             likelihood_classifier.reliability_assessment.message
+        )
+        diagnostic_table.meta["classifier_auto_nuisance_reliability_level"] = (
+            likelihood_classifier.auto_nuisance_reliability_assessment.level
+        )
+        diagnostic_table.meta["classifier_auto_nuisance_reliability_message"] = (
+            likelihood_classifier.auto_nuisance_reliability_assessment.message
         )
     if (
         likelihood_classifier is not None

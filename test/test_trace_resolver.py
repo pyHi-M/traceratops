@@ -11,6 +11,7 @@ from traceratops.core.trace_resolver import (
     TraceClassification,
     TraceMultiplicity,
     TraceResolver,
+    assess_auto_nuisance_reliability,
     assess_likelihood_classifier_reliability,
     classify_trace,
 )
@@ -96,7 +97,6 @@ def test_likelihood_reliability_warning_once_and_diagnostics(monkeypatch, capsys
     monkeypatch.setattr(
         LikelihoodMultiplicityClassifier, "fit", fit_in_high_risk_regime
     )
-
     diagnostics = trace_splitter.resolve_traces(
         table, multiplicity_classifier="likelihood"
     )
@@ -104,14 +104,51 @@ def test_likelihood_reliability_warning_once_and_diagnostics(monkeypatch, capsys
     warning = "Warning: likelihood multiplicity classification"
     assert capsys.readouterr().out.count(warning) == 1
     assert set(diagnostics["classifier_n_barcodes"]) == {5}
-    assert set(diagnostics["classifier_expected_detected_barcodes_per_polymer"]) == {
-        1.5
-    }
+    assert set(diagnostics["classifier_expected_detected_barcodes_per_polymer"]) == {1.5}
     assert set(diagnostics["classifier_reliability_level"]) == {"high-risk"}
-    assert (
-        "poor singlet/doublet identifiability"
-        in diagnostics.meta["classifier_reliability_message"]
+    assert "poor singlet/doublet identifiability" in diagnostics.meta["classifier_reliability_message"]
+
+
+@pytest.mark.parametrize(
+    ("requested_model", "warning_count"), [("auto", 1), ("global", 0)]
+)
+def test_auto_nuisance_warning_is_dataset_level(
+    requested_model, warning_count, monkeypatch, capsys
+):
+    rows = []
+    for trace_id in ("one", "two"):
+        rows.extend(
+            (f"{trace_id}-{barcode}", trace_id, barcode, float(barcode), 0.0, 0.0)
+            for barcode in range(1, 6)
+        )
+    table = ChromatinTraceTable()
+    table.data = Table(
+        rows=rows, names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z")
     )
+    original_fit = LikelihoodMultiplicityClassifier.fit
+
+    def fit_with_low_p_specific_selection(classifier, counts, barcode_ids=None):
+        fitted = original_fit(classifier, counts, barcode_ids)
+        fitted.detection_efficiency = 0.3
+        fitted.used_barcode_specific_rates = True
+        fitted.auto_nuisance_reliability_assessment = assess_auto_nuisance_reliability(
+            fitted.requested_off_target_model, True, fitted.detection_efficiency
+        )
+        return fitted
+
+    monkeypatch.setattr(
+        LikelihoodMultiplicityClassifier, "fit", fit_with_low_p_specific_selection
+    )
+    diagnostics = trace_splitter.resolve_traces(
+        table,
+        multiplicity_classifier="likelihood",
+        likelihood_off_target_model=requested_model,
+    )
+
+    output = capsys.readouterr().out
+    assert output.count("auto selected barcode-specific rates") == warning_count
+    expected_level = "caution" if requested_model == "auto" else "ok"
+    assert diagnostics.meta["classifier_auto_nuisance_reliability_level"] == expected_level
 
 
 @pytest.mark.parametrize("duplicate_count", [2, 6])
