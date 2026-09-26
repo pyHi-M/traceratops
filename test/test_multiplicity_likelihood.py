@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 import pytest
 from astropy.table import Table
@@ -6,6 +8,7 @@ from traceratops import trace_splitter
 from traceratops.core.trace_resolver import (
     LikelihoodMultiplicityClassifier,
     TraceClassification,
+    assess_auto_nuisance_reliability,
     assess_likelihood_classifier_reliability,
     barcode_heterogeneity_pvalue,
     build_multiplicity_matrix,
@@ -164,6 +167,14 @@ def test_specific_rates_are_regularized_toward_global_rate():
 def test_cli_exposes_likelihood_selection_and_keeps_threshold_default():
     parser = trace_splitter.parse_arguments()
     assert parser.parse_args([]).multiplicity_classifier == "threshold"
+    assert parser.parse_args([]).likelihood_off_target_model == "global"
+    assert LikelihoodMultiplicityClassifier().requested_off_target_model == "global"
+    assert (
+        inspect.signature(trace_splitter.resolve_traces)
+        .parameters["likelihood_off_target_model"]
+        .default
+        == "global"
+    )
     args = parser.parse_args(
         [
             "--multiplicity-classifier",
@@ -174,3 +185,18 @@ def test_cli_exposes_likelihood_selection_and_keeps_threshold_default():
     )
     assert args.multiplicity_classifier == "likelihood"
     assert args.likelihood_off_target_model == "barcode-specific"
+
+
+@pytest.mark.parametrize(
+    ("requested", "selected", "p", "level"),
+    [
+        ("auto", True, 0.35, "caution"),
+        ("auto", True, 0.36, "ok"),
+        ("auto", False, 0.2, "ok"),
+        ("global", True, 0.2, "ok"),
+    ],
+)
+def test_auto_nuisance_reliability_safeguard(requested, selected, p, level):
+    assessment = assess_auto_nuisance_reliability(requested, selected, p)
+    assert assessment.level == level
+    assert bool(assessment.message) == (level == "caution")

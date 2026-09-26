@@ -1,11 +1,13 @@
 """Barcode-aware reconstruction of chromatin polymers."""
 
 from .classifier import (
+    AutoNuisanceReliabilityAssessment,
     ClassificationThresholds,
     LikelihoodReliabilityAssessment,
     LikelihoodMultiplicityClassifier,
     LikelihoodTraceScores,
     TraceClassification,
+    assess_auto_nuisance_reliability,
     assess_likelihood_classifier_reliability,
     barcode_heterogeneity_pvalue,
     build_multiplicity_matrix,
@@ -16,6 +18,7 @@ from .resolver import TraceResolver
 from .results import ResolutionResult, TraceMultiplicity
 
 __all__ = [
+    "AutoNuisanceReliabilityAssessment",
     "ClassificationThresholds",
     "EmpiricalDistanceModel",
     "LikelihoodMultiplicityClassifier",
@@ -25,6 +28,7 @@ __all__ = [
     "TraceClassification",
     "TraceMultiplicity",
     "TraceResolver",
+    "assess_auto_nuisance_reliability",
     "assess_likelihood_classifier_reliability",
     "classify_trace",
     "barcode_heterogeneity_pvalue",
