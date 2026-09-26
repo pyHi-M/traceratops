@@ -3,8 +3,8 @@
 from .classifier import (
     AutoNuisanceReliabilityAssessment,
     ClassificationThresholds,
-    LikelihoodReliabilityAssessment,
     LikelihoodMultiplicityClassifier,
+    LikelihoodReliabilityAssessment,
     LikelihoodTraceScores,
     TraceClassification,
     assess_auto_nuisance_reliability,

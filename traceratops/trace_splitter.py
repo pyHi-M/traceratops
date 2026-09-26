@@ -476,9 +476,7 @@ def resolve_traces(
         reliability = likelihood_classifier.reliability_assessment
         if reliability.level != "ok":
             print(f"! Warning: {reliability.message}")
-        auto_reliability = (
-            likelihood_classifier.auto_nuisance_reliability_assessment
-        )
+        auto_reliability = likelihood_classifier.auto_nuisance_reliability_assessment
         if auto_reliability.level != "ok":
             # Dataset-level warning: intentionally outside the per-trace loop.
             print(f"! Warning: {auto_reliability.message}")

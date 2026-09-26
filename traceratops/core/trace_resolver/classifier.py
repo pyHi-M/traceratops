@@ -353,12 +353,10 @@ class LikelihoodMultiplicityClassifier:
         self.reliability_assessment = assess_likelihood_classifier_reliability(
             len(self.barcode_ids), self.detection_efficiency, self.doublet_prior
         )
-        self.auto_nuisance_reliability_assessment = (
-            assess_auto_nuisance_reliability(
-                self.requested_off_target_model,
-                self.used_barcode_specific_rates,
-                self.detection_efficiency,
-            )
+        self.auto_nuisance_reliability_assessment = assess_auto_nuisance_reliability(
+            self.requested_off_target_model,
+            self.used_barcode_specific_rates,
+            self.detection_efficiency,
         )
         return self
 

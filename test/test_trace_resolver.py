@@ -104,9 +104,14 @@ def test_likelihood_reliability_warning_once_and_diagnostics(monkeypatch, capsys
     warning = "Warning: likelihood multiplicity classification"
     assert capsys.readouterr().out.count(warning) == 1
     assert set(diagnostics["classifier_n_barcodes"]) == {5}
-    assert set(diagnostics["classifier_expected_detected_barcodes_per_polymer"]) == {1.5}
+    assert set(diagnostics["classifier_expected_detected_barcodes_per_polymer"]) == {
+        1.5
+    }
     assert set(diagnostics["classifier_reliability_level"]) == {"high-risk"}
-    assert "poor singlet/doublet identifiability" in diagnostics.meta["classifier_reliability_message"]
+    assert (
+        "poor singlet/doublet identifiability"
+        in diagnostics.meta["classifier_reliability_message"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -148,7 +153,9 @@ def test_auto_nuisance_warning_is_dataset_level(
     output = capsys.readouterr().out
     assert output.count("auto selected barcode-specific rates") == warning_count
     expected_level = "caution" if requested_model == "auto" else "ok"
-    assert diagnostics.meta["classifier_auto_nuisance_reliability_level"] == expected_level
+    assert (
+        diagnostics.meta["classifier_auto_nuisance_reliability_level"] == expected_level
+    )
 
 
 @pytest.mark.parametrize("duplicate_count", [2, 6])
