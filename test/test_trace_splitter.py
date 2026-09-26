@@ -20,6 +20,17 @@ def test_argument_defaults_preserve_existing_behavior():
     assert args.split_all is False
     assert args.clustering_method == "kmeans"
     assert args.num_clusters == 2
+    assert args.history_mode == "multi"
+    assert args.distance_score == "residual"
+
+
+def test_method_and_legacy_clustering_method_are_aliases():
+    parser = trace_splitter.parse_arguments()
+    assert parser.parse_args(["--method", "beam"]).clustering_method == "beam"
+    assert (
+        parser.parse_args(["--clustering-method", "hdbscan"]).clustering_method
+        == "hdbscan"
+    )
 
 
 def test_split_all_applies_kmeans_to_otherwise_unselected_traces(monkeypatch):
