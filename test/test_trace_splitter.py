@@ -22,6 +22,9 @@ def test_argument_defaults_preserve_existing_behavior():
     assert args.num_clusters == 2
     assert args.history_mode == "multi"
     assert args.distance_score == "residual"
+    assert args.one_polymer_ambiguity_mode == "global"
+    assert args.duplicate_minimum_confidence is None
+    assert args.candidate_diagnostics_output is None
 
 
 def test_method_and_legacy_clustering_method_are_aliases():
@@ -171,3 +174,54 @@ def test_hdbscan_does_not_hide_unrelated_type_error(monkeypatch):
 
     with pytest.raises(TypeError, match="unrelated failure"):
         trace_splitter._fit_hdbscan(np.zeros((4, 3)), parameters)
+
+
+def _duplicate_table():
+    result = ChromatinTraceTable()
+    result.data = Table(
+        rows=[
+            ("original-0", "trace-a", 1, 0.0, 0.0, 0.0),
+            ("genuine-2", "trace-a", 2, 1.0, 0.0, 0.0),
+            ("offtarget-2", "trace-a", 2, 20.0, 0.0, 0.0),
+            ("original-3", "trace-a", 3, 2.0, 0.0, 0.0),
+        ],
+        names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z"),
+    )
+    return result
+
+
+def test_default_and_explicit_global_modes_reproduce_the_same_output():
+    default = _duplicate_table()
+    explicit = _duplicate_table()
+
+    default_diagnostics = trace_splitter.resolve_traces(default)
+    explicit_diagnostics = trace_splitter.resolve_traces(
+        explicit, one_polymer_ambiguity_mode="global"
+    )
+
+    assert default.data.as_array().tolist() == explicit.data.as_array().tolist()
+    np.testing.assert_equal(
+        default_diagnostics.as_array(), explicit_diagnostics.as_array()
+    )
+
+
+def test_candidate_diagnostics_preserve_spot_ids_and_barcode_identity():
+    table = _duplicate_table()
+    candidate_rows = []
+
+    trace_splitter.resolve_traces(
+        table,
+        one_polymer_ambiguity_mode="candidate",
+        duplicate_minimum_confidence=0.0,
+        candidate_diagnostics=candidate_rows,
+        model_minimum_observations=1,
+    )
+
+    assert {row["Spot_ID"] for row in candidate_rows} == {
+        "genuine-2",
+        "offtarget-2",
+    }
+    assert {row["Barcode #"] for row in candidate_rows} == {2}
+    assert {row["Input_Trace_ID"] for row in candidate_rows} == {"trace-a"}
+    assert sorted(row["candidate_rank"] for row in candidate_rows) == [1, 2]
+    assert sum(row["selected_candidate"] for row in candidate_rows) == 1

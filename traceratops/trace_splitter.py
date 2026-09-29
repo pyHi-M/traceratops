@@ -35,6 +35,24 @@ from traceratops.core.trace_resolver import (
 from traceratops.script_banner import print_script_banner
 
 
+CANDIDATE_DIAGNOSTIC_COLUMNS = (
+    "Input_Trace_ID",
+    "Barcode #",
+    "Spot_ID",
+    "candidate_score",
+    "candidate_rank",
+    "best_candidate_score",
+    "second_candidate_score",
+    "candidate_score_gap",
+    "raw_candidate_score_gap",
+    "candidate_confidence",
+    "selected_candidate",
+    "ambiguity_threshold",
+    "decision",
+    "beam_width",
+)
+
+
 def parse_arguments():
     """Return the command-line argument parser."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -123,6 +141,23 @@ def parse_arguments():
         default=0.05,
         help="Minimum non-probabilistic score-gap confidence for a split.",
     )
+    beam.add_argument(
+        "--one-polymer-ambiguity-mode",
+        choices=("global", "candidate"),
+        default="global",
+        help=(
+            "Duplicate ambiguity method for one-polymer cleanup (default: "
+            "global, preserving legacy behavior)."
+        ),
+    )
+    beam.add_argument(
+        "--duplicate-minimum-confidence",
+        type=float,
+        help=(
+            "Candidate-specific normalized score-gap threshold (default in "
+            "candidate mode: --minimum-confidence)."
+        ),
+    )
     beam.add_argument("--split-min-repeated-barcodes", type=int, default=3)
     beam.add_argument("--split-min-repeated-fraction", type=float, default=0.3)
     beam.add_argument("--candidate-rule", choices=("both", "either"), default="both")
@@ -149,6 +184,10 @@ def parse_arguments():
     beam.add_argument(
         "--diagnostics-output",
         help="Beam diagnostics ECSV path (default: *_split_diagnostics.ecsv).",
+    )
+    beam.add_argument(
+        "--candidate-diagnostics-output",
+        help="Optional candidate-level duplicate diagnostics ECSV path.",
     )
     parser.add_argument(
         "--pipe", help="Input trace-file list from stdin.", action="store_true"
@@ -433,6 +472,31 @@ def _diagnostic_row(
     return row
 
 
+def _candidate_diagnostic_table(rows):
+    """Create a stable candidate table, including for an empty result set."""
+    if rows:
+        return Table(rows=rows, names=CANDIDATE_DIAGNOSTIC_COLUMNS)
+    return Table(
+        names=CANDIDATE_DIAGNOSTIC_COLUMNS,
+        dtype=(
+            str,
+            float,
+            str,
+            float,
+            int,
+            float,
+            float,
+            float,
+            float,
+            float,
+            bool,
+            float,
+            str,
+            int,
+        ),
+    )
+
+
 def resolve_traces(
     trace_table,
     thresholds=None,
@@ -450,6 +514,9 @@ def resolve_traces(
     likelihood_off_target_model="global",
     likelihood_heterogeneity_alpha=0.01,
     likelihood_lambda_regularization=10.0,
+    one_polymer_ambiguity_mode="global",
+    duplicate_minimum_confidence=None,
+    candidate_diagnostics=None,
 ):
     """Resolve barcode duplicates and merged pairs, returning diagnostics.
 
@@ -460,6 +527,22 @@ def resolve_traces(
     missing = required.difference(trace_table.data.colnames)
     if missing:
         raise KeyError(f"Trace table is missing required columns: {sorted(missing)}")
+    if one_polymer_ambiguity_mode not in {"global", "candidate"}:
+        raise ValueError(
+            "one_polymer_ambiguity_mode must be 'global' or 'candidate'"
+        )
+    if (
+        one_polymer_ambiguity_mode == "candidate"
+        and "Spot_ID" not in trace_table.data.colnames
+    ):
+        raise KeyError("Candidate ambiguity diagnostics require a Spot_ID column")
+    duplicate_threshold = (
+        minimum_confidence
+        if duplicate_minimum_confidence is None
+        else duplicate_minimum_confidence
+    )
+    if duplicate_threshold < 0:
+        raise ValueError("duplicate_minimum_confidence must be non-negative")
     thresholds = thresholds or ClassificationThresholds()
     likelihood_classifier = None
     likelihood_by_trace = {}
@@ -534,7 +617,32 @@ def resolve_traces(
             continue
 
         n_polymers = 2 if classification == TraceClassification.RESOLVE_TWO else 1
-        result = resolver.resolve(trace, n_polymers)
+        if n_polymers == 1 and one_polymer_ambiguity_mode == "candidate":
+            result, comparisons = resolver.resolve_one_polymer_candidates(
+                trace, duplicate_threshold
+            )
+            if candidate_diagnostics is not None:
+                for comparison in comparisons:
+                    candidate_diagnostics.append(
+                        {
+                            "Input_Trace_ID": str(trace_id),
+                            "Barcode #": comparison.barcode,
+                            "Spot_ID": comparison.spot_id,
+                            "candidate_score": comparison.score,
+                            "candidate_rank": comparison.rank,
+                            "best_candidate_score": comparison.best_score,
+                            "second_candidate_score": comparison.second_score,
+                            "candidate_score_gap": comparison.raw_score_gap,
+                            "raw_candidate_score_gap": comparison.raw_score_gap,
+                            "candidate_confidence": comparison.confidence,
+                            "selected_candidate": comparison.selected,
+                            "ambiguity_threshold": comparison.ambiguity_threshold,
+                            "decision": comparison.decision,
+                            "beam_width": beam_width,
+                        }
+                    )
+        else:
+            result = resolver.resolve(trace, n_polymers)
         diagnostics.append(
             _diagnostic_row(
                 trace_id,
@@ -570,12 +678,27 @@ def resolve_traces(
     # Spot_ID is copied from source rows and is never generated or transformed.
     trace_table.data = output
     diagnostic_table = Table(rows=diagnostics)
-    diagnostic_table.meta["comments"] = [
+    diagnostic_comments = [
         "confidence_score is a normalized score gap, not a probability",
         f"history_mode={history_mode}",
         f"distance_score={distance_score}",
         f"rejection_cost={rejection_cost}",
     ]
+    if one_polymer_ambiguity_mode == "candidate":
+        diagnostic_comments.extend(
+            [
+                "one_polymer_ambiguity_mode=candidate",
+                (
+                    f"duplicate_minimum_confidence={duplicate_threshold}"
+                    + (
+                        " (inherited from minimum_confidence)"
+                        if duplicate_minimum_confidence is None
+                        else ""
+                    )
+                ),
+            ]
+        )
+    diagnostic_table.meta["comments"] = diagnostic_comments
     diagnostic_table.meta["genomic_source"] = model.genomic_source
     diagnostic_table.meta["fallback_source"] = model.fallback_source
     if likelihood_classifier is not None:
@@ -632,6 +755,7 @@ def main():
                 args.split_min_repeated_fraction,
                 args.candidate_rule,
             )
+            candidate_rows = []
             diagnostics = resolve_traces(
                 trace_table,
                 thresholds=thresholds,
@@ -649,11 +773,30 @@ def main():
                 likelihood_off_target_model=args.likelihood_off_target_model,
                 likelihood_heterogeneity_alpha=args.likelihood_heterogeneity_alpha,
                 likelihood_lambda_regularization=args.likelihood_lambda_regularization,
+                one_polymer_ambiguity_mode=args.one_polymer_ambiguity_mode,
+                duplicate_minimum_confidence=args.duplicate_minimum_confidence,
+                candidate_diagnostics=candidate_rows,
             )
             diagnostics_output = args.diagnostics_output or (
                 f"{os.path.splitext(trace_file)[0]}_split_diagnostics.ecsv"
             )
             diagnostics.write(diagnostics_output, format="ascii.ecsv", overwrite=True)
+            if args.candidate_diagnostics_output:
+                candidate_table = _candidate_diagnostic_table(candidate_rows)
+                candidate_table.meta["comments"] = [
+                    "candidate_confidence is a normalized score gap, not a probability",
+                    f"beam_width={args.beam_width}",
+                    (
+                        "duplicate_minimum_confidence inherited from minimum_confidence"
+                        if args.duplicate_minimum_confidence is None
+                        else "duplicate_minimum_confidence set explicitly"
+                    ),
+                ]
+                candidate_table.write(
+                    args.candidate_diagnostics_output,
+                    format="ascii.ecsv",
+                    overwrite=True,
+                )
         else:
             split_large_traces(
                 trace_table,

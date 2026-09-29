@@ -4,7 +4,7 @@ import numpy as np
 
 from .beam import beam_search
 from .model import EmpiricalDistanceModel
-from .results import ResolutionResult
+from .results import CandidateScore, ResolutionResult
 from .scoring import PolymerScorer
 
 
@@ -96,3 +96,95 @@ class TraceResolver:
             n_ambiguous_barcodes=len(ambiguous_barcodes),
             ambiguous_barcodes=ambiguous_barcodes,
         )
+
+    def resolve_one_polymer_candidates(self, trace, minimum_confidence=None):
+        """Resolve duplicates using a fresh constrained search per candidate.
+
+        The ordinary one-polymer result supplies the unchanged trace-level score
+        diagnostics. Each duplicate decision is instead based on the best full
+        trace found while forcing that localization. Other duplicate barcodes
+        remain unconstrained and therefore optimize jointly in every run.
+        """
+        threshold = (
+            self.minimum_confidence
+            if minimum_confidence is None
+            else minimum_confidence
+        )
+        if threshold < 0:
+            raise ValueError("minimum_confidence must be non-negative")
+        global_result = self.resolve(trace, n_polymers=1)
+        positions = self.distance_model.positions(trace)
+        barcodes = np.asarray(trace["Barcode #"])
+        assignments = global_result.assignments.copy()
+        assignments[:] = -1
+        comparisons = []
+        ambiguous = []
+
+        for barcode in sorted(
+            set(barcodes), key=lambda value: np.min(positions[barcodes == value])
+        ):
+            candidates = np.flatnonzero(barcodes == barcode).tolist()
+            if len(candidates) == 1:
+                assignments[candidates[0]] = 0
+                continue
+            scored = []
+            for index in candidates:
+                states = beam_search(
+                    trace,
+                    positions,
+                    self.scorer,
+                    1,
+                    self.beam_width,
+                    self.rejection_cost,
+                    self.minimum_polymer_size,
+                    forced_candidates={barcode: index},
+                )
+                scored.append((float(states[0].score), index))
+            scored.sort(key=lambda item: (item[0], item[1]))
+            best_score, best_index = scored[0]
+            second_score = scored[1][0]
+            gap = second_score - best_score
+            confidence = gap / (abs(best_score) + abs(second_score) + 1e-12)
+            confident = confidence >= threshold
+            if confident:
+                assignments[best_index] = 0
+            else:
+                ambiguous.append(barcode)
+
+            ranks = {index: rank for rank, (_, index) in enumerate(scored, 1)}
+            for score, index in scored:
+                selected = confident and index == best_index
+                decision = (
+                    "ambiguous_remove_all"
+                    if not confident
+                    else "keep" if selected else "reject"
+                )
+                comparisons.append(
+                    CandidateScore(
+                        barcode=barcode,
+                        candidate_index=index,
+                        spot_id=trace["Spot_ID"][index],
+                        score=score,
+                        rank=ranks[index],
+                        best_score=best_score,
+                        second_score=second_score,
+                        raw_score_gap=gap,
+                        confidence=confidence,
+                        selected=selected,
+                        ambiguity_threshold=threshold,
+                        decision=decision,
+                    )
+                )
+
+        result = ResolutionResult(
+            assignments=assignments,
+            status="cleaned",
+            inferred_n_polymers=1,
+            best_score=global_result.best_score,
+            alternative_score=global_result.alternative_score,
+            raw_score_gap=global_result.raw_score_gap,
+            confidence_score=global_result.confidence_score,
+            n_ambiguous_barcodes=len(ambiguous),
+            ambiguous_barcodes=tuple(ambiguous),
+        )
+        return result, tuple(comparisons)

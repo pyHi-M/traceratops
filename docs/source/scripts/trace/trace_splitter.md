@@ -85,6 +85,21 @@ unassigned: `--rejection-cost` controls that tradeoff, and
 solution below `--minimum-confidence` is removed as ambiguous. Confidence is a
 normalized score gap, not a probability.
 
+The default `--one-polymer-ambiguity-mode global` preserves the original
+one-polymer cleanup exactly. Opt-in `candidate` mode runs a complete constrained
+beam search for every localization of each repeated barcode. Each run forces
+that localization while leaving all other repeated barcodes free to optimize.
+It retains the lowest-scoring candidate when its normalized gap from the
+second-best candidate reaches `--duplicate-minimum-confidence`; otherwise it
+removes every candidate for that barcode. The candidate confidence is a score
+gap, not a probability, and is not calibrated. If the candidate threshold is
+omitted it explicitly inherits `--minimum-confidence`.
+
+Candidate mode performs one legacy search plus one search per duplicate
+localization in a trace. Thus, for repeated-barcode multiplicities
+`k1, ..., kr`, its search work scales as `1 + sum(ki)` beam runs. Each remains
+a beam-width approximation rather than an exact combinatorial solution.
+
 The empirical model borrows nearby genomic separations when a separation has
 fewer than `--model-min-observations`; `--variance-floor` avoids degenerate
 scores. If no clean traces exist, a warning announces the weaker
@@ -175,6 +190,24 @@ trace_splitter --input traces.ecsv --method beam \
   --split-min-repeated-fraction 0.3 --candidate-rule both
 ```
 
+Candidate-specific one-polymer ambiguity on an existing simulation:
+
+```console
+trace_splitter --input simulated.ecsv --method beam \
+  --multiplicity-classifier likelihood \
+  --one-polymer-ambiguity-mode candidate \
+  --duplicate-minimum-confidence 0.05
+```
+
+Write one row per duplicate candidate, including its original `Spot_ID`,
+constrained score, rank, score gap, confidence, threshold, and decision:
+
+```console
+trace_splitter --input simulated.ecsv --method beam \
+  --one-polymer-ambiguity-mode candidate \
+  --candidate-diagnostics-output candidate_diagnostics.ecsv
+```
+
 Alternative spatial clustering:
 
 ```console
@@ -196,6 +229,13 @@ per-barcode rates are stored as the
 `classifier_barcode_off_target_rates` metadata mapping rather than table
 columns. Diagnostics also contain spatial best/alternative scores, score gap,
 confidence, and ambiguity counts.
+
+`--candidate-diagnostics-output` optionally writes candidate-level ECSV
+diagnostics in candidate mode. The table records `Input_Trace_ID`, `Barcode #`,
+`Spot_ID`, candidate score and rank, best and second candidate scores, raw score
+gap (as both `candidate_score_gap` and `raw_candidate_score_gap`), candidate
+confidence, selected-candidate flag, ambiguity threshold,
+decision, and beam width. The existing per-trace diagnostics schema is retained.
 
 ## Output files
 
