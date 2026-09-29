@@ -225,3 +225,47 @@ def test_candidate_diagnostics_preserve_spot_ids_and_barcode_identity():
     assert {row["Input_Trace_ID"] for row in candidate_rows} == {"trace-a"}
     assert sorted(row["candidate_rank"] for row in candidate_rows) == [1, 2]
     assert sum(row["selected_candidate"] for row in candidate_rows) == 1
+
+
+def test_candidate_mode_does_not_change_two_polymer_output_or_diagnostics(
+    monkeypatch,
+):
+    rows = []
+    for barcode in range(1, 5):
+        rows.append((f"left-{barcode}", "doublet", barcode, float(barcode), 0.0, 0.0))
+        rows.append(
+            (f"right-{barcode}", "doublet", barcode, float(barcode), 10.0, 0.0)
+        )
+
+    def make_table():
+        result = ChromatinTraceTable()
+        result.data = Table(
+            rows=rows,
+            names=("Spot_ID", "Trace_ID", "Barcode #", "x", "y", "z"),
+        )
+        return result
+
+    identifiers = iter(("global-one", "global-two", "global-one", "global-two"))
+    monkeypatch.setattr(trace_splitter, "generate_unique_id", lambda: next(identifiers))
+    global_table = make_table()
+    candidate_table = make_table()
+    arguments = {
+        "thresholds": trace_splitter.ClassificationThresholds(2, 0.2, "both"),
+        "beam_width": 200,
+        "rejection_cost": 20,
+        "minimum_confidence": 0.001,
+        "model_minimum_observations": 1,
+    }
+
+    global_diagnostics = trace_splitter.resolve_traces(global_table, **arguments)
+    candidate_diagnostics = trace_splitter.resolve_traces(
+        candidate_table, one_polymer_ambiguity_mode="candidate", **arguments
+    )
+
+    np.testing.assert_equal(
+        global_table.data.as_array(), candidate_table.data.as_array()
+    )
+    np.testing.assert_equal(
+        global_diagnostics.as_array(), candidate_diagnostics.as_array()
+    )
+    assert global_diagnostics.meta == candidate_diagnostics.meta

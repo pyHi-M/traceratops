@@ -103,7 +103,9 @@ class TraceResolver:
         The ordinary one-polymer result supplies the unchanged trace-level score
         diagnostics. Each duplicate decision is instead based on the best full
         trace found while forcing that localization. Other duplicate barcodes
-        remain unconstrained and therefore optimize jointly in every run.
+        remain unconstrained and therefore optimize jointly in every run. A
+        final search forces all confident winners together and excludes every
+        ambiguous barcode from the emitted assignment.
         """
         threshold = (
             self.minimum_confidence
@@ -115,17 +117,15 @@ class TraceResolver:
         global_result = self.resolve(trace, n_polymers=1)
         positions = self.distance_model.positions(trace)
         barcodes = np.asarray(trace["Barcode #"])
-        assignments = global_result.assignments.copy()
-        assignments[:] = -1
         comparisons = []
         ambiguous = []
+        confident_winners = {}
 
         for barcode in sorted(
             set(barcodes), key=lambda value: np.min(positions[barcodes == value])
         ):
             candidates = np.flatnonzero(barcodes == barcode).tolist()
             if len(candidates) == 1:
-                assignments[candidates[0]] = 0
                 continue
             scored = []
             for index in candidates:
@@ -147,7 +147,7 @@ class TraceResolver:
             confidence = gap / (abs(best_score) + abs(second_score) + 1e-12)
             confident = confidence >= threshold
             if confident:
-                assignments[best_index] = 0
+                confident_winners[barcode] = best_index
             else:
                 ambiguous.append(barcode)
 
@@ -176,8 +176,24 @@ class TraceResolver:
                     )
                 )
 
+        # Candidate comparisons above deliberately leave other duplicates free.
+        # Finalize with one joint run so the emitted assignment is a beam-search
+        # solution compatible with every confident winner at once. Ambiguous
+        # barcodes are skipped entirely rather than being reintroduced by the
+        # ordinary one-polymer rule that selects one candidate per barcode.
+        joint_states = beam_search(
+            trace,
+            positions,
+            self.scorer,
+            1,
+            self.beam_width,
+            self.rejection_cost,
+            self.minimum_polymer_size,
+            forced_candidates=confident_winners,
+            excluded_barcodes=ambiguous,
+        )
         result = ResolutionResult(
-            assignments=assignments,
+            assignments=joint_states[0].assignments.copy(),
             status="cleaned",
             inferred_n_polymers=1,
             best_score=global_result.best_score,

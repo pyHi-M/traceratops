@@ -590,6 +590,7 @@ def resolve_traces(
 
     output_groups = []
     diagnostics = []
+    candidate_mode_used = False
     for trace in trace_table.data.group_by("Trace_ID").groups:
         trace_id = trace["Trace_ID"][0]
         multiplicity = TraceMultiplicity.from_barcodes(trace["Barcode #"])
@@ -618,6 +619,7 @@ def resolve_traces(
 
         n_polymers = 2 if classification == TraceClassification.RESOLVE_TWO else 1
         if n_polymers == 1 and one_polymer_ambiguity_mode == "candidate":
+            candidate_mode_used = True
             result, comparisons = resolver.resolve_one_polymer_candidates(
                 trace, duplicate_threshold
             )
@@ -684,7 +686,7 @@ def resolve_traces(
         f"distance_score={distance_score}",
         f"rejection_cost={rejection_cost}",
     ]
-    if one_polymer_ambiguity_mode == "candidate":
+    if candidate_mode_used:
         diagnostic_comments.extend(
             [
                 "one_polymer_ambiguity_mode=candidate",

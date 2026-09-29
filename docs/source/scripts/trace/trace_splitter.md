@@ -95,10 +95,13 @@ removes every candidate for that barcode. The candidate confidence is a score
 gap, not a probability, and is not calibrated. If the candidate threshold is
 omitted it explicitly inherits `--minimum-confidence`.
 
-Candidate mode performs one legacy search plus one search per duplicate
-localization in a trace. Thus, for repeated-barcode multiplicities
-`k1, ..., kr`, its search work scales as `1 + sum(ki)` beam runs. Each remains
-a beam-width approximation rather than an exact combinatorial solution.
+After scoring, a final joint search simultaneously forces all confident winners
+and excludes ambiguous barcodes, ensuring that the emitted rows come from one
+jointly optimized beam state. Candidate mode therefore performs one legacy
+search, one search per duplicate localization, and one final consistency
+search. For repeated-barcode multiplicities `k1, ..., kr`, its search work
+scales as `2 + sum(ki)` beam runs. Each remains a beam-width approximation
+rather than an exact combinatorial solution.
 
 The empirical model borrows nearby genomic separations when a separation has
 fewer than `--model-min-observations`; `--variance-floor` avoids degenerate

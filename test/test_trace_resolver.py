@@ -15,7 +15,7 @@ from traceratops.core.trace_resolver import (
     assess_likelihood_classifier_reliability,
     classify_trace,
 )
-from traceratops.core.trace_resolver.beam import beam_search
+from traceratops.core.trace_resolver.beam import BeamState, beam_search
 from traceratops.core.trace_resolver.model import DistanceStatistics
 from traceratops.core.trace_resolver.scoring import PolymerScorer
 
@@ -464,6 +464,85 @@ def test_legacy_one_polymer_resolve_is_unchanged_by_candidate_api():
     assert before.alternative_score == after.alternative_score
     assert before.confidence_score == after.confidence_score
     assert before.ambiguous_barcodes == after.ambiguous_barcodes
+
+
+def test_candidate_cleanup_finalizes_incompatible_winners_jointly(monkeypatch):
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0, 0),
+            (2, 10, 0, 0),
+            (3, 2, 0, 0),
+            (3, 11, 0, 0),
+            (4, 3, 0, 0),
+        ]
+    )
+    calls = []
+
+    def state(score, selected):
+        assignments = np.full(len(trace), -1, dtype=int)
+        assignments[list(selected)] = 0
+        return BeamState(score, assignments, ((),), (len(selected),))
+
+    def approximate_search(
+        trace,
+        positions,
+        scorer,
+        n_polymers,
+        beam_width,
+        rejection_cost,
+        minimum_polymer_size,
+        forced_candidates=None,
+        excluded_barcodes=None,
+    ):
+        forced = dict(forced_candidates or {})
+        excluded = tuple(excluded_barcodes or ())
+        calls.append((forced, excluded))
+        # These narrow-beam conditional optima prefer incompatible companions:
+        # barcode 2 prefers index 1 via index 4, while barcode 3 prefers index 3
+        # via index 2. The last case is their simultaneous constrained run.
+        conditional = {
+            ((2, 1),): state(1.0, {0, 1, 4, 5}),
+            ((2, 2),): state(2.0, {0, 2, 3, 5}),
+            ((3, 3),): state(1.0, {0, 2, 3, 5}),
+            ((3, 4),): state(2.0, {0, 1, 4, 5}),
+            ((2, 1), (3, 3)): state(10.0, {0, 1, 3, 5}),
+        }
+        if forced:
+            return [conditional[tuple(sorted(forced.items()))]]
+        return [state(0.0, {0, 1, 3, 5})]
+
+    monkeypatch.setattr(
+        "traceratops.core.trace_resolver.resolver.beam_search", approximate_search
+    )
+    resolver = TraceResolver(_linear_model(), beam_width=2)
+
+    result, comparisons = resolver.resolve_one_polymer_candidates(trace, 0.1)
+
+    assert [item.candidate_index for item in comparisons if item.selected] == [1, 3]
+    assert calls[-1] == ({2: 1, 3: 3}, ())
+    assert np.array_equal(result.assignments, state(10.0, {0, 1, 3, 5}).assignments)
+
+
+def test_joint_finalization_does_not_reintroduce_ambiguous_barcode():
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0.1, 0),
+            (2, 1, -0.1, 0),
+            (3, 2, 0, 0),
+            (3, 20, 0, 0),
+            (4, 3, 0, 0),
+        ]
+    )
+
+    result, _ = TraceResolver(_linear_model()).resolve_one_polymer_candidates(
+        trace, 0.05
+    )
+
+    assert np.all(result.assignments[np.asarray(trace["Barcode #"]) == 2] == -1)
+    assert np.sum(result.assignments[np.asarray(trace["Barcode #"]) == 3] == 0) == 1
+    assert np.all(result.assignments[np.isin(trace["Barcode #"], [1, 4])] == 0)
 
 
 def test_empirical_model_prefers_genomic_coordinates_and_has_sparse_fallback():
