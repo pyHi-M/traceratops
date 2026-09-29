@@ -15,6 +15,30 @@ def _table(traces):
     return result
 
 
+def _assert_tables_equal(actual, expected):
+    """Compare Astropy tables exactly while treating paired NaNs as equal."""
+    assert actual.colnames == expected.colnames
+    for name in actual.colnames:
+        actual_values = np.asarray(actual[name])
+        expected_values = np.asarray(expected[name])
+        assert actual_values.dtype == expected_values.dtype
+        if np.issubdtype(actual_values.dtype, np.inexact):
+            np.testing.assert_allclose(
+                actual_values,
+                expected_values,
+                rtol=0,
+                atol=0,
+                equal_nan=True,
+                err_msg=f"Column {name!r} differs",
+            )
+        else:
+            np.testing.assert_array_equal(
+                actual_values,
+                expected_values,
+                err_msg=f"Column {name!r} differs",
+            )
+
+
 def test_argument_defaults_preserve_existing_behavior():
     args = trace_splitter.parse_arguments().parse_args([])
     assert args.split_all is False
@@ -199,10 +223,8 @@ def test_default_and_explicit_global_modes_reproduce_the_same_output():
         explicit, one_polymer_ambiguity_mode="global"
     )
 
-    assert default.data.as_array().tolist() == explicit.data.as_array().tolist()
-    np.testing.assert_equal(
-        default_diagnostics.as_array(), explicit_diagnostics.as_array()
-    )
+    _assert_tables_equal(default.data, explicit.data)
+    _assert_tables_equal(default_diagnostics, explicit_diagnostics)
 
 
 def test_candidate_diagnostics_preserve_spot_ids_and_barcode_identity():
@@ -262,10 +284,6 @@ def test_candidate_mode_does_not_change_two_polymer_output_or_diagnostics(
         candidate_table, one_polymer_ambiguity_mode="candidate", **arguments
     )
 
-    np.testing.assert_equal(
-        global_table.data.as_array(), candidate_table.data.as_array()
-    )
-    np.testing.assert_equal(
-        global_diagnostics.as_array(), candidate_diagnostics.as_array()
-    )
+    _assert_tables_equal(global_table.data, candidate_table.data)
+    _assert_tables_equal(global_diagnostics, candidate_diagnostics)
     assert global_diagnostics.meta == candidate_diagnostics.meta
