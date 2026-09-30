@@ -9,7 +9,7 @@ generate simulations.
 
 ```bash
 python scripts/analyze_trace_curator_benchmark.py \
-  --benchmark-root /path/to/benchmark_curator_v1 \
+  --benchmark-root benchmark_curator_v1 \
   --output-dir curator_model_analysis
 ```
 
@@ -35,10 +35,14 @@ afterward solely for evaluation.
 
 All scores increase with anomalousness.
 
-* `spatial_residual` is the trace-splitter-like baseline. For every usable
-  relationship it computes the squared standardized residual from the clean
-  mean and standard deviation at that genomic barcode separation, then takes
-  the mean over context.
+* `trace_splitter_like_residual` is a residual-only baseline inspired by the
+  distance cost used by `trace_splitter`. It is **not** the beam-search resolver.
+  For every usable relationship it computes the squared standardized residual
+  from the clean mean and standard deviation at that exact genomic barcode
+  separation, then takes the mean over context. Missing separation bins are not
+  substituted by default. `--residual-separation-fallback nearest` explicitly
+  enables nearest-bin substitution; the output records the mode and number of
+  fallbacks used.
 * `empirical_separation_*` uses the clean empirical distance distribution for
   the absolute barcode separation.
 * `empirical_barcode_pair_*` uses the clean distribution for that exact
@@ -48,6 +52,10 @@ All scores increase with anomalousness.
 The empirical two-sided probability is
 `min(1, 2 * min((# <= d + 1)/(n + 1), (# >= d + 1)/(n + 1)))`; add-one
 smoothing prevents zero probabilities. Pair anomaly is `-log10(probability)`.
+The exported directional percentile uses the midrank of ties with the same
+finite-sample smoothing: `(# < d + 0.5 * # == d + 0.5)/(n + 1)`. Values below
+0.5 indicate short-distance anomalies and values above 0.5 indicate
+long-distance anomalies.
 Suffixes select mean, median, maximum, second-largest, or the count/fraction of
 relationships outside the empirical 95% or 99% interval. `k1`, `k2`, and `k3`
 select that many nearest detected barcodes independently on each genomic side;
@@ -55,12 +63,21 @@ select that many nearest detected barcodes independently on each genomic side;
 missing score means zero context or insufficient reference support, never
 evidence that a localization is normal.
 
+`count_95` and `count_99` are diagnostics whose scale increases with the number
+of usable relationships. They must not be compared directly between context
+sizes. The corresponding `fraction_95` and `fraction_99` scores are the
+context-size-normalized alternatives.
+
 ## Outputs
 
 * `localization_scores.ecsv`: one row per localization, model, and context,
-  including score status, usable/requested context counts, minimum reference
-  support, nearest-flank diagnostics, condition metadata, and evaluation-only
-  ground truth.
+  including score status, usable/requested context counts, insufficient-pair
+  count, minimum reference support, fallback count/mode, nearest-flank and
+  both-flanks diagnostics, condition metadata, and evaluation-only ground truth.
+* `pairwise_relationship_scores.ecsv`: one row per evaluated empirical
+  relationship and context. It reports distance, reference support, empirical
+  percentile, two-sided tail probability, pair anomaly, and short/long
+  direction. Insufficient references remain explicit rows with missing scores.
 * `reference_model_summary.ecsv`: support for every separation and barcode-pair
   distribution in each evaluation fold.
 * `model_performance.ecsv`: per-condition/per-replicate ROC AUC and PR AUC.

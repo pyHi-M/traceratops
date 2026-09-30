@@ -127,20 +127,31 @@ def select_context(barcodes: Sequence[int], target: int, context: str) -> list[i
     return np.concatenate((left, right)).tolist()
 
 
-def empirical_tail_probability(values: Sequence[float], value: float) -> float:
-    """Return a finite-sample, two-sided empirical tail probability.
+def empirical_distance_diagnostics(
+    values: Sequence[float], value: float
+) -> tuple[float, float]:
+    """Return directional empirical percentile and two-sided tail probability.
 
-    Add-one smoothing is applied separately to ``P(X <= value)`` and
-    ``P(X >= value)``; consequently the result is positive and at most one.
+    The percentile uses the midpoint of ties and add-one smoothing. The tail
+    probability uses add-one-smoothed inclusive lower and upper tails, so it is
+    positive and at most one. Percentiles below/above 0.5 indicate unusually
+    short/long distances, respectively.
     """
     sample = np.sort(np.asarray(values, dtype=float))
     if not len(sample) or not np.isfinite(value):
-        return math.nan
-    lower = (np.searchsorted(sample, value, side="right") + 1) / (len(sample) + 1)
-    upper = (len(sample) - np.searchsorted(sample, value, side="left") + 1) / (
-        len(sample) + 1
-    )
-    return float(min(1.0, 2.0 * min(lower, upper)))
+        return math.nan, math.nan
+    below = np.searchsorted(sample, value, side="left")
+    at_or_below = np.searchsorted(sample, value, side="right")
+    percentile = (below + 0.5 * (at_or_below - below) + 0.5) / (len(sample) + 1)
+    lower = (at_or_below + 1) / (len(sample) + 1)
+    upper = (len(sample) - below + 1) / (len(sample) + 1)
+    tail = min(1.0, 2.0 * min(lower, upper))
+    return float(percentile), float(tail)
+
+
+def empirical_tail_probability(values: Sequence[float], value: float) -> float:
+    """Return the two-sided component of :func:`empirical_distance_diagnostics`."""
+    return empirical_distance_diagnostics(values, value)[1]
 
 
 @dataclass
@@ -165,22 +176,26 @@ class ReferenceModel:
             else None
         )
 
-    def residual_stats(self, separation: int) -> tuple[float, float, int] | None:
-        """Return the requested or nearest well-supported residual bin."""
+    def residual_stats(
+        self, separation: int, fallback_mode: str = "none"
+    ) -> tuple[tuple[float, float, int] | None, bool]:
+        """Return an exact residual bin, optionally using an explicit fallback."""
+        if fallback_mode not in {"none", "nearest"}:
+            raise ValueError("fallback_mode must be 'none' or 'nearest'")
         populated = {
             key: value
             for key, value in self.residual.items()
             if value[2] >= self.minimum_observations
         }
         if not populated:
-            return None
+            return None, False
         separation = abs(int(separation))
-        key = (
-            separation
-            if separation in populated
-            else min(populated, key=lambda candidate: abs(candidate - separation))
-        )
-        return populated[key]
+        if separation in populated:
+            return populated[separation], False
+        if fallback_mode == "none":
+            return None, False
+        key = min(populated, key=lambda candidate: abs(candidate - separation))
+        return populated[key], True
 
 
 def fit_reference(
@@ -239,7 +254,12 @@ def _aggregate(anomalies: np.ndarray) -> dict[str, float]:
     }
 
 
-def score_observations(frame: pd.DataFrame, model: ReferenceModel) -> pd.DataFrame:
+def score_observations(
+    frame: pd.DataFrame,
+    model: ReferenceModel,
+    residual_fallback: str = "none",
+    relationship_rows: list[dict] | None = None,
+) -> pd.DataFrame:
     """Score all localizations using coordinates and barcode identities only."""
     output = []
     feature_columns = ["Trace_ID", "Spot_ID", "Barcode", "x", "y", "z"]
@@ -284,35 +304,106 @@ def score_observations(frame: pd.DataFrame, model: ReferenceModel) -> pd.DataFra
                     **common,
                     "context": context,
                     "n_context_requested": len(selected),
+                    "both_flanks_available": bool(
+                        len(left_values) and len(right_values)
+                    ),
                 }
                 residuals = []
-                residual_supports = []
+                residual_attempted_supports = []
+                residual_fallbacks = 0
                 for j in selected:
-                    stats = model.residual_stats(abs(barcode - int(barcodes[j])))
+                    separation = abs(barcode - int(barcodes[j]))
+                    stats, used_fallback = model.residual_stats(
+                        separation, residual_fallback
+                    )
+                    exact_stats = model.residual.get(separation)
+                    residual_attempted_supports.append(
+                        stats[2]
+                        if used_fallback and stats is not None
+                        else (exact_stats[2] if exact_stats is not None else 0)
+                    )
                     if stats:
                         distance = float(np.linalg.norm(coords[i] - coords[j]))
                         residuals.append(((distance - stats[0]) / stats[1]) ** 2)
-                        residual_supports.append(stats[2])
+                        residual_fallbacks += int(used_fallback)
                 output.append(
                     {
                         **base,
-                        "model": "spatial_residual",
+                        "model": "trace_splitter_like_residual",
                         "score": float(np.mean(residuals)) if residuals else math.nan,
-                        "n_context": len(residuals),
-                        "min_reference_n": min(residual_supports, default=0),
+                        "n_context_used": len(residuals),
+                        "minimum_reference_support": min(
+                            residual_attempted_supports, default=0
+                        ),
+                        "n_insufficient_reference": len(selected) - len(residuals),
+                        "n_reference_fallbacks": residual_fallbacks,
+                        "reference_fallback_mode": residual_fallback,
                         "score_status": "ok" if residuals else "insufficient_reference",
                     }
                 )
                 for strategy in ("separation", "barcode_pair"):
-                    anomalies, supports = [], []
+                    anomalies, attempted_supports = [], []
                     for j in selected:
-                        values = model.values(strategy, barcode, int(barcodes[j]))
-                        if values is None:
-                            continue
+                        other_barcode = int(barcodes[j])
+                        reference_key = (
+                            abs(barcode - other_barcode)
+                            if strategy == "separation"
+                            else tuple(sorted((barcode, other_barcode)))
+                        )
+                        raw_values = getattr(model, strategy).get(reference_key)
+                        attempted_supports.append(
+                            len(raw_values) if raw_values is not None else 0
+                        )
+                        values = model.values(strategy, barcode, other_barcode)
                         distance = float(np.linalg.norm(coords[i] - coords[j]))
-                        tail = empirical_tail_probability(values, distance)
+                        if values is None:
+                            if relationship_rows is not None:
+                                relationship_rows.append(
+                                    {
+                                        **metadata,
+                                        "context": context,
+                                        "reference_strategy": strategy,
+                                        "other_barcode": other_barcode,
+                                        "genomic_separation": abs(
+                                            barcode - other_barcode
+                                        ),
+                                        "distance": distance,
+                                        "empirical_percentile": math.nan,
+                                        "tail_probability": math.nan,
+                                        "pair_anomaly_score": math.nan,
+                                        "anomaly_direction": "insufficient_reference",
+                                        "reference_support": (
+                                            len(raw_values)
+                                            if raw_values is not None
+                                            else 0
+                                        ),
+                                        "relationship_status": "insufficient_reference",
+                                    }
+                                )
+                            continue
+                        percentile, tail = empirical_distance_diagnostics(
+                            values, distance
+                        )
                         anomalies.append(-math.log10(tail))
-                        supports.append(len(values))
+                        if relationship_rows is not None:
+                            relationship_rows.append(
+                                {
+                                    **metadata,
+                                    "context": context,
+                                    "reference_strategy": strategy,
+                                    "other_barcode": other_barcode,
+                                    "genomic_separation": abs(barcode - other_barcode),
+                                    "distance": distance,
+                                    "empirical_percentile": percentile,
+                                    "tail_probability": tail,
+                                    "pair_anomaly_score": -math.log10(tail),
+                                    "anomaly_direction": (
+                                        "short" if percentile < 0.5 else "long"
+                                    ),
+                                    "reference_support": len(values),
+                                    "relationship_status": "ok",
+                                }
+                            )
                     aggregates = (
                         _aggregate(np.asarray(anomalies))
                         if anomalies
@@ -336,8 +427,14 @@ def score_observations(frame: pd.DataFrame, model: ReferenceModel) -> pd.DataFra
                                 **base,
                                 "model": f"empirical_{strategy}_{aggregation}",
                                 "score": score,
-                                "n_context": len(anomalies),
-                                "min_reference_n": min(supports, default=0),
+                                "n_context_used": len(anomalies),
+                                "minimum_reference_support": min(
+                                    attempted_supports, default=0
+                                ),
+                                "n_insufficient_reference": len(selected)
+                                - len(anomalies),
+                                "n_reference_fallbacks": 0,
+                                "reference_fallback_mode": "none",
                                 "score_status": (
                                     "ok"
                                     if np.isfinite(score)
@@ -470,7 +567,7 @@ def plot_outputs(
     shown = summary[
         summary["model"].isin(
             [
-                "spatial_residual",
+                "trace_splitter_like_residual",
                 "empirical_separation_mean",
                 "empirical_barcode_pair_mean",
             ]
@@ -572,10 +669,24 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--benchmark-root", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--minimum-reference-observations", type=int, default=20)
+    parser.add_argument(
+        "--residual-separation-fallback",
+        choices=("none", "nearest"),
+        default="none",
+        help=(
+            "Fallback for missing residual separation bins (default: none; "
+            "nearest is explicit and reported in diagnostics)."
+        ),
+    )
     return parser.parse_args(argv)
 
 
-def run(root: Path, output: Path, minimum_observations: int = 20) -> None:
+def run(
+    root: Path,
+    output: Path,
+    minimum_observations: int = 20,
+    residual_fallback: str = "none",
+) -> None:
     manifest_path = root / "sweep_manifest.yaml"
     if not manifest_path.is_file():
         raise FileNotFoundError(f"Benchmark manifest not found: {manifest_path}")
@@ -594,7 +705,7 @@ def run(root: Path, output: Path, minimum_observations: int = 20) -> None:
     conditions_by_efficiency: dict[float, list[Mapping]] = defaultdict(list)
     for item in conditions:
         conditions_by_efficiency[float(item["detection_efficiency"])].append(item)
-    all_scores, all_calibration, summaries = [], [], []
+    all_scores, all_calibration, summaries, relationships = [], [], [], []
     for efficiency, condition_items in conditions_by_efficiency.items():
         seeds = sorted({int(item["seed"]) for item in condition_items})
         if len(seeds) < 3:
@@ -641,7 +752,11 @@ def run(root: Path, output: Path, minimum_observations: int = 20) -> None:
                 calibration_frame["selected_for_corruption"] = False
                 calibration_frame["injected_displacement_um"] = 0.0
                 calibration_parts.append(
-                    score_observations(calibration_frame, nested_model)
+                    score_observations(
+                        calibration_frame,
+                        nested_model,
+                        residual_fallback=residual_fallback,
+                    )
                 )
             calibration = pd.concat(calibration_parts, ignore_index=True)
             all_calibration.append(calibration.assign(evaluation_seed=evaluation_seed))
@@ -649,7 +764,14 @@ def run(root: Path, output: Path, minimum_observations: int = 20) -> None:
                 if int(item["seed"]) != evaluation_seed:
                     continue
                 observations = load_observations(root / str(item["directory"]), item)
-                all_scores.append(score_observations(observations, model))
+                all_scores.append(
+                    score_observations(
+                        observations,
+                        model,
+                        residual_fallback=residual_fallback,
+                        relationship_rows=relationships,
+                    )
+                )
     scores = pd.concat(all_scores, ignore_index=True)
     calibration_all = pd.concat(all_calibration, ignore_index=True)
     # Each evaluation fold needs its own independently calibrated thresholds.
@@ -663,7 +785,14 @@ def run(root: Path, output: Path, minimum_observations: int = 20) -> None:
         fixed_tables, ignore_index=True
     )
     plot_summary = plot_outputs(scores, fixed, output)
+    relationship_table = pd.DataFrame(relationships).rename(
+        columns={
+            "is_corrupted": "ground_truth_corrupted",
+            "injected_displacement_um": "ground_truth_displacement",
+        }
+    )
     _write(scores, output / "localization_scores.ecsv")
+    _write(relationship_table, output / "pairwise_relationship_scores.ecsv")
     _write(performance, output / "model_performance.ecsv")
     _write(fixed, output / "performance_at_fixed_fpr.ecsv")
     _write(
@@ -678,6 +807,7 @@ def main() -> None:
         args.benchmark_root.resolve(),
         args.output_dir.resolve(),
         args.minimum_reference_observations,
+        args.residual_separation_fallback,
     )
 
 

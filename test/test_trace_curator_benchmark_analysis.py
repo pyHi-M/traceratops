@@ -87,6 +87,23 @@ def test_empirical_tail_probability_known_distribution():
     ) != analysis.empirical_tail_probability([], 3)
 
 
+def test_empirical_percentile_preserves_anomaly_direction():
+    sample = [1, 2, 3, 4, 5]
+    short_percentile, short_tail = analysis.empirical_distance_diagnostics(sample, 0)
+    long_percentile, long_tail = analysis.empirical_distance_diagnostics(sample, 6)
+    assert short_percentile < 0.5 < long_percentile
+    assert short_tail == long_tail
+
+
+def test_residual_reference_requires_exact_bin_unless_fallback_is_explicit():
+    model = analysis.fit_reference(_reference_frame(), minimum_observations=1)
+    model.residual.pop(2)
+    assert model.residual_stats(2) == (None, False)
+    stats, used_fallback = model.residual_stats(2, fallback_mode="nearest")
+    assert stats is not None
+    assert used_fallback
+
+
 def test_context_selection_k_and_all():
     barcodes = [1, 3, 4, 7, 9, 12, 15, 20]
     assert analysis.select_context(barcodes, 9, "k1") == [3, 5]
@@ -101,12 +118,15 @@ def test_missing_genomic_flank_is_recorded_and_available_side_is_used():
     )
     first = result[
         (result.Spot_ID == "e0")
-        & (result.model == "spatial_residual")
+        & (result.model == "trace_splitter_like_residual")
         & (result.context == "k2")
     ].iloc[0]
     assert not first.has_left_flank
     assert first.has_right_flank
-    assert first.n_context == 2
+    assert first.n_context_used == 2
+    assert first.n_context_requested == 2
+    assert first.n_insufficient_reference == 0
+    assert not first.both_flanks_available
 
 
 def test_obvious_outlier_has_larger_multi_relationship_score():
@@ -127,7 +147,8 @@ def test_zero_context_and_insufficient_reference_are_explicit():
     result = analysis.score_observations(single, model)
     assert result.score.isna().all()
     assert (result.score_status == "insufficient_reference").all()
-    assert (result.n_context == 0).all()
+    assert (result.n_context_used == 0).all()
+    assert (result.n_insufficient_reference == 0).all()
 
 
 def test_evaluation_labels_do_not_change_scores():
@@ -155,3 +176,29 @@ def test_scoring_is_deterministic():
     first = analysis.score_observations(_evaluation(), model)
     second = analysis.score_observations(_evaluation(), model)
     pd.testing.assert_frame_equal(first, second)
+
+
+def test_pairwise_output_includes_directional_and_insufficient_diagnostics():
+    model = analysis.fit_reference(_reference_frame(), minimum_observations=1)
+    model.barcode_pair.pop((1, 2))
+    relationships = []
+    analysis.score_observations(
+        _evaluation(xs=(0, 20, 20, 4)), model, relationship_rows=relationships
+    )
+    pairwise = pd.DataFrame(relationships)
+    assert {
+        "empirical_percentile",
+        "tail_probability",
+        "pair_anomaly_score",
+        "anomaly_direction",
+        "reference_support",
+        "relationship_status",
+    }.issubset(pairwise.columns)
+    missing = pairwise[
+        (pairwise.reference_strategy == "barcode_pair")
+        & (pairwise.Barcode == 1)
+        & (pairwise.other_barcode == 2)
+    ]
+    assert (missing.relationship_status == "insufficient_reference").all()
+    assert missing.empirical_percentile.isna().all()
+    assert set(pairwise.anomaly_direction).issuperset({"short", "long"})
