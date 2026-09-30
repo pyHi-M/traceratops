@@ -1,0 +1,157 @@
+import importlib.util
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+SCRIPT = Path(__file__).parents[1] / "scripts" / "analyze_trace_curator_benchmark.py"
+SPEC = importlib.util.spec_from_file_location("curator_analysis", SCRIPT)
+analysis = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = analysis
+SPEC.loader.exec_module(analysis)
+
+
+def _reference_frame(outlier=False):
+    rows = []
+    for trace_number in range(30):
+        for barcode in range(1, 5):
+            x = float(barcode + trace_number / 100)
+            if outlier and trace_number == 0 and barcode == 2:
+                x = 100.0
+            rows.append(
+                (
+                    f"t{trace_number}",
+                    f"s{trace_number}-{barcode}",
+                    barcode,
+                    x,
+                    0.0,
+                    0.0,
+                    False,
+                )
+            )
+    return pd.DataFrame(
+        rows, columns=["Trace_ID", "Spot_ID", "Barcode", "x", "y", "z", "is_corrupted"]
+    )
+
+
+def _evaluation(xs=(1.0, 2.0, 3.0, 4.0), labels=(False,) * 4):
+    frame = pd.DataFrame(
+        {
+            "Trace_ID": ["eval"] * 4,
+            "Spot_ID": [f"e{i}" for i in range(4)],
+            "Barcode": [1, 2, 3, 4],
+            "x": xs,
+            "y": 0.0,
+            "z": 0.0,
+            "is_corrupted": labels,
+            "selected_for_corruption": labels,
+            "injected_displacement_um": [1.0 if value else 0.0 for value in labels],
+            "condition": "toy",
+            "simulation_id": "sim",
+            "replicate": 1,
+            "seed": 1,
+            "detection_efficiency": 1.0,
+            "displacement": 1.0,
+        }
+    )
+    return frame
+
+
+def test_reference_excludes_corrupted_rows():
+    frame = _reference_frame()
+    frame.loc[
+        (frame.Trace_ID == "t0") & (frame.Barcode == 2), ["x", "is_corrupted"]
+    ] = [1000.0, True]
+    model = analysis.fit_reference(frame, minimum_observations=1)
+    assert model.separation[1].max() < 10
+
+
+def test_held_out_observation_does_not_enter_reference():
+    reference = _reference_frame()
+    evaluated = _evaluation(xs=(1, 200, 3, 4), labels=(False, True, False, False))
+    before = analysis.fit_reference(reference, 1).separation[1].copy()
+    analysis.score_observations(evaluated, analysis.fit_reference(reference, 1))
+    np.testing.assert_array_equal(
+        before, analysis.fit_reference(reference, 1).separation[1]
+    )
+    assert before.max() < 10
+
+
+def test_empirical_tail_probability_known_distribution():
+    sample = [1, 2, 3, 4, 5]
+    assert analysis.empirical_tail_probability(sample, 3) == 1.0
+    assert analysis.empirical_tail_probability(sample, 100) == 2 / 6
+    assert analysis.empirical_tail_probability(
+        [], 3
+    ) != analysis.empirical_tail_probability([], 3)
+
+
+def test_context_selection_k_and_all():
+    barcodes = [1, 3, 4, 7, 9, 12, 15, 20]
+    assert analysis.select_context(barcodes, 9, "k1") == [3, 5]
+    assert analysis.select_context(barcodes, 9, "k2") == [3, 2, 5, 6]
+    assert analysis.select_context(barcodes, 9, "k3") == [3, 2, 1, 5, 6, 7]
+    assert analysis.select_context(barcodes, 9, "all") == [0, 1, 2, 3, 5, 6, 7]
+
+
+def test_missing_genomic_flank_is_recorded_and_available_side_is_used():
+    result = analysis.score_observations(
+        _evaluation(), analysis.fit_reference(_reference_frame(), 1)
+    )
+    first = result[
+        (result.Spot_ID == "e0")
+        & (result.model == "spatial_residual")
+        & (result.context == "k2")
+    ].iloc[0]
+    assert not first.has_left_flank
+    assert first.has_right_flank
+    assert first.n_context == 2
+
+
+def test_obvious_outlier_has_larger_multi_relationship_score():
+    model = analysis.fit_reference(_reference_frame(), 1)
+    central = analysis.score_observations(_evaluation(), model)
+    outlier = analysis.score_observations(_evaluation(xs=(1, 100, 3, 4)), model)
+    selector = lambda frame: frame[
+        (frame.Spot_ID == "e1")
+        & (frame.model == "empirical_separation_mean")
+        & (frame.context == "all")
+    ].score.iloc[0]
+    assert selector(outlier) > selector(central)
+
+
+def test_zero_context_and_insufficient_reference_are_explicit():
+    single = _evaluation().iloc[:1].copy()
+    model = analysis.fit_reference(_reference_frame(), minimum_observations=10_000)
+    result = analysis.score_observations(single, model)
+    assert result.score.isna().all()
+    assert (result.score_status == "insufficient_reference").all()
+    assert (result.n_context == 0).all()
+
+
+def test_evaluation_labels_do_not_change_scores():
+    model = analysis.fit_reference(_reference_frame(), 1)
+    clean = _evaluation(labels=(False,) * 4)
+    relabeled = _evaluation(labels=(True,) * 4)
+    one = analysis.score_observations(clean, model).sort_values(
+        ["Spot_ID", "model", "context"]
+    )
+    two = analysis.score_observations(relabeled, model).sort_values(
+        ["Spot_ID", "model", "context"]
+    )
+    np.testing.assert_allclose(one.score, two.score, equal_nan=True)
+
+
+def test_fixed_fpr_threshold_is_conservative_on_toy_data():
+    values = np.arange(100, dtype=float)
+    threshold = analysis.fixed_fpr_threshold(values, 0.05)
+    assert np.mean(values > threshold) == 0.05
+    assert analysis.fixed_fpr_threshold(values, 0.001) == 99
+
+
+def test_scoring_is_deterministic():
+    model = analysis.fit_reference(_reference_frame(), 1)
+    first = analysis.score_observations(_evaluation(), model)
+    second = analysis.score_observations(_evaluation(), model)
+    pd.testing.assert_frame_equal(first, second)
