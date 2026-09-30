@@ -31,6 +31,10 @@ to its operating-point calibration. Coordinates and barcode identity are
 copied into a feature-only table before scoring; corruption fields are attached
 afterward solely for evaluation.
 
+Whenever rows from multiple baselines are concatenated, traces are grouped by
+the globally unique `(simulation_id, Trace_ID)` pair. This prevents repeated
+trace labels from independent simulation replicates from being combined.
+
 ## Scores
 
 All scores increase with anomalousness.

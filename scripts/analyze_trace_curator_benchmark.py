@@ -111,6 +111,13 @@ def clean_reference_rows(frame: pd.DataFrame) -> pd.DataFrame:
     return frame.loc[~frame["is_corrupted"].astype(bool)].copy()
 
 
+def trace_group_key(frame: pd.DataFrame) -> str | list[str]:
+    """Return a trace key that cannot merge independent simulations."""
+    if "simulation_id" in frame.columns:
+        return ["simulation_id", "Trace_ID"]
+    return "Trace_ID"
+
+
 def select_context(barcodes: Sequence[int], target: int, context: str) -> list[int]:
     """Select nearest genomic neighbours on each side of ``target``."""
     if context not in CONTEXTS:
@@ -205,7 +212,7 @@ def fit_reference(
     clean = clean_reference_rows(frame)
     by_sep: dict[int, list[float]] = defaultdict(list)
     by_pair: dict[tuple[int, int], list[float]] = defaultdict(list)
-    for _, trace in clean.groupby("Trace_ID", sort=False):
+    for _, trace in clean.groupby(trace_group_key(clean), sort=False):
         barcodes = trace["Barcode"].to_numpy(dtype=int)
         coords = trace[["x", "y", "z"]].to_numpy(dtype=float)
         for i in range(len(trace)):
@@ -263,10 +270,15 @@ def score_observations(
     """Score all localizations using coordinates and barcode identities only."""
     output = []
     feature_columns = ["Trace_ID", "Spot_ID", "Barcode", "x", "y", "z"]
+    if "simulation_id" in frame.columns:
+        feature_columns.insert(0, "simulation_id")
     # Copy only feature columns before scoring: evaluation labels cannot affect scores.
     features = frame[feature_columns]
-    diagnostics = frame.drop(columns=["x", "y", "z"]).set_index("Spot_ID")
-    for _, trace in features.groupby("Trace_ID", sort=False):
+    diagnostic_key = (
+        ["simulation_id", "Spot_ID"] if "simulation_id" in frame.columns else "Spot_ID"
+    )
+    diagnostics = frame.drop(columns=["x", "y", "z"]).set_index(diagnostic_key)
+    for _, trace in features.groupby(trace_group_key(features), sort=False):
         barcodes = trace["Barcode"].to_numpy(dtype=int)
         coords = trace[["x", "y", "z"]].to_numpy(dtype=float)
         for i, row in enumerate(trace.itertuples(index=False)):
@@ -289,7 +301,12 @@ def score_observations(
                 "has_left_flank": bool(len(left_values)),
                 "has_right_flank": bool(len(right_values)),
             }
-            metadata = diagnostics.loc[str(row.Spot_ID)].to_dict()
+            diagnostic_id = (
+                (str(row.simulation_id), str(row.Spot_ID))
+                if "simulation_id" in features.columns
+                else str(row.Spot_ID)
+            )
+            metadata = diagnostics.loc[diagnostic_id].to_dict()
             metadata.update(
                 {
                     "Trace_ID": str(row.Trace_ID),

@@ -67,6 +67,45 @@ def test_reference_excludes_corrupted_rows():
     assert model.separation[1].max() < 10
 
 
+def test_reference_does_not_merge_reused_trace_ids_across_simulations():
+    frame = pd.DataFrame(
+        {
+            "simulation_id": ["sim-a", "sim-a", "sim-b", "sim-b"],
+            "Trace_ID": ["trace-1"] * 4,
+            "Spot_ID": ["a1", "a2", "b1", "b2"],
+            "Barcode": [1, 2, 1, 2],
+            "x": [0.0, 1.0, 100.0, 102.0],
+            "y": 0.0,
+            "z": 0.0,
+            "is_corrupted": False,
+        }
+    )
+
+    model = analysis.fit_reference(frame, minimum_observations=1)
+
+    np.testing.assert_array_equal(model.separation[1], [1.0, 2.0])
+    np.testing.assert_array_equal(model.barcode_pair[(1, 2)], [1.0, 2.0])
+
+
+def test_scoring_does_not_merge_reused_trace_ids_across_simulations():
+    first = _evaluation()
+    second = _evaluation(xs=(10.0, 11.0, 12.0, 13.0))
+    first["simulation_id"] = "sim-a"
+    second["simulation_id"] = "sim-b"
+    second["Spot_ID"] = [f"other-{value}" for value in second["Spot_ID"]]
+    combined = pd.concat([first, second], ignore_index=True)
+
+    scores = analysis.score_observations(
+        combined, analysis.fit_reference(_reference_frame(), 1)
+    )
+    all_context = scores[
+        (scores.model == "trace_splitter_like_residual") & (scores.context == "all")
+    ]
+
+    assert len(all_context) == 8
+    assert (all_context.n_context_requested == 3).all()
+
+
 def test_held_out_observation_does_not_enter_reference():
     reference = _reference_frame()
     evaluated = _evaluation(xs=(1, 200, 3, 4), labels=(False, True, False, False))
