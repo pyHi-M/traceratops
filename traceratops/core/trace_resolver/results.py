@@ -53,3 +53,21 @@ class ResolutionResult:
         return (
             self.n_unassigned / len(self.assignments) if len(self.assignments) else 0.0
         )
+
+
+@dataclass(frozen=True)
+class CandidateScore:
+    """Score and decision diagnostics for one duplicate localization."""
+
+    barcode: object
+    candidate_index: int
+    spot_id: object
+    score: float
+    rank: int
+    best_score: float
+    second_score: float
+    raw_score_gap: float
+    confidence: float
+    selected: bool
+    ambiguity_threshold: float
+    decision: str

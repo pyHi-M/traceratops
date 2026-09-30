@@ -15,11 +15,12 @@ from .classifier import (
 )
 from .model import EmpiricalDistanceModel
 from .resolver import TraceResolver
-from .results import ResolutionResult, TraceMultiplicity
+from .results import CandidateScore, ResolutionResult, TraceMultiplicity
 
 __all__ = [
     "AutoNuisanceReliabilityAssessment",
     "ClassificationThresholds",
+    "CandidateScore",
     "EmpiricalDistanceModel",
     "LikelihoodMultiplicityClassifier",
     "LikelihoodReliabilityAssessment",

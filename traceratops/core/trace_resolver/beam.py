@@ -30,6 +30,8 @@ def beam_search(
     beam_width,
     rejection_cost,
     minimum_polymer_size,
+    forced_candidates=None,
+    excluded_barcodes=None,
 ):
     if n_polymers not in {1, 2}:
         raise ValueError("Only one or two polymers are supported")
@@ -37,9 +39,23 @@ def beam_search(
         raise ValueError("beam_width must be at least 2")
     if rejection_cost < 0:
         raise ValueError("rejection_cost must be non-negative")
+    if (forced_candidates or excluded_barcodes) and n_polymers != 1:
+        raise ValueError(
+            "forced candidates and excluded barcodes are only supported for one polymer"
+        )
 
     coords = np.column_stack((trace["x"], trace["y"], trace["z"])).astype(float)
     barcodes = np.asarray(trace["Barcode #"])
+    forced_candidates = forced_candidates or {}
+    excluded_barcodes = set(excluded_barcodes or ())
+    overlap = excluded_barcodes.intersection(forced_candidates)
+    if overlap:
+        raise ValueError(f"Barcodes cannot be both forced and excluded: {overlap}")
+    for barcode, index in forced_candidates.items():
+        if index < 0 or index >= len(trace) or barcodes[index] != barcode:
+            raise ValueError(
+                f"Forced candidate index {index} does not belong to barcode {barcode}"
+            )
     ordered_barcodes = sorted(
         set(barcodes), key=lambda barcode: np.min(positions[barcodes == barcode])
     )
@@ -51,12 +67,18 @@ def beam_search(
     )
     beam = [initial]
     for barcode in ordered_barcodes:
+        if barcode in excluded_barcodes:
+            continue
         candidates = np.flatnonzero(barcodes == barcode).tolist()
         # One-polymer resolution is duplicate curation: every barcode must
         # contribute exactly one localization during optimization. Unique
         # localizations are therefore forced, and repeated barcodes compare
         # their candidates without an option to reject the whole barcode.
-        choices = candidates if n_polymers == 1 else [None] + candidates
+        choices = (
+            [forced_candidates[barcode]]
+            if barcode in forced_candidates
+            else candidates if n_polymers == 1 else [None] + candidates
+        )
         barcode_states = []
         for state in beam:
             for selected in product(choices, repeat=n_polymers):

@@ -15,7 +15,9 @@ from traceratops.core.trace_resolver import (
     assess_likelihood_classifier_reliability,
     classify_trace,
 )
+from traceratops.core.trace_resolver.beam import BeamState, beam_search
 from traceratops.core.trace_resolver.model import DistanceStatistics
+from traceratops.core.trace_resolver.scoring import PolymerScorer
 
 
 def _trace(rows, trace_id="merged"):
@@ -357,6 +359,184 @@ def test_all_history_and_distance_score_combinations(history_mode, distance_scor
         rejection_cost=20,
     ).resolve(trace, n_polymers=1)
     assert result.status == "cleaned"
+
+
+def test_candidate_cleanup_selects_geometrically_consistent_copy():
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0, 0), (2, 20, 0, 0), (3, 2, 0, 0)])
+    resolver = TraceResolver(_linear_model(), beam_width=10)
+
+    result, comparisons = resolver.resolve_one_polymer_candidates(trace, 0.01)
+
+    assert list(trace[result.assignments == 0]["Spot_ID"]) == [
+        "spot-0",
+        "spot-1",
+        "spot-3",
+    ]
+    assert [item.spot_id for item in comparisons if item.selected] == ["spot-1"]
+    assert comparisons[0].confidence > 0.01
+
+
+def test_candidate_cleanup_removes_near_equivalent_copies():
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)])
+
+    result, comparisons = TraceResolver(_linear_model()).resolve_one_polymer_candidates(
+        trace, 0.05
+    )
+
+    assert comparisons[0].confidence == pytest.approx(0.0)
+    assert {item.decision for item in comparisons} == {"ambiguous_remove_all"}
+    assert np.all(result.assignments[[1, 2]] == -1)
+
+
+def test_forced_search_jointly_optimizes_other_duplicate_barcodes():
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0, 0),
+            (2, 10, 0, 0),
+            (3, 2, 0, 0),
+            (3, 11, 0, 0),
+            (4, 3, 0, 0),
+        ]
+    )
+    model = _linear_model()
+    states = beam_search(
+        trace,
+        model.positions(trace),
+        PolymerScorer(model, history_mode="nearest"),
+        1,
+        20,
+        16,
+        2,
+        forced_candidates={2: 2},
+    )
+
+    assert states[0].assignments[2] == 0
+    assert states[0].assignments[4] == 0
+    assert states[0].assignments[3] == -1
+
+
+def test_forced_candidate_survives_narrow_beam_pruning():
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0, 0),
+            (2, 2, 0, 0),
+            (2, 50, 0, 0),
+            (3, 2, 0, 0),
+        ]
+    )
+    model = _linear_model()
+    scorer = PolymerScorer(model)
+    unconstrained = beam_search(trace, model.positions(trace), scorer, 1, 2, 16, 2)
+    constrained = beam_search(
+        trace,
+        model.positions(trace),
+        scorer,
+        1,
+        2,
+        16,
+        2,
+        forced_candidates={2: 3},
+    )
+
+    assert all(state.assignments[3] == -1 for state in unconstrained)
+    assert constrained[0].assignments[3] == 0
+    assert constrained[0].counts == (3,)
+
+
+def test_legacy_one_polymer_resolve_is_unchanged_by_candidate_api():
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)])
+    resolver = TraceResolver(_linear_model(), minimum_confidence=0.1)
+    before = resolver.resolve(trace, 1)
+    resolver.resolve_one_polymer_candidates(trace, 0.0)
+    after = resolver.resolve(trace, 1)
+
+    assert np.array_equal(before.assignments, after.assignments)
+    assert before.status == after.status
+    assert before.best_score == after.best_score
+    assert before.alternative_score == after.alternative_score
+    assert before.confidence_score == after.confidence_score
+    assert before.ambiguous_barcodes == after.ambiguous_barcodes
+
+
+def test_candidate_cleanup_finalizes_incompatible_winners_jointly(monkeypatch):
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0, 0),
+            (2, 10, 0, 0),
+            (3, 2, 0, 0),
+            (3, 11, 0, 0),
+            (4, 3, 0, 0),
+        ]
+    )
+    calls = []
+
+    def state(score, selected):
+        assignments = np.full(len(trace), -1, dtype=int)
+        assignments[list(selected)] = 0
+        return BeamState(score, assignments, ((),), (len(selected),))
+
+    def approximate_search(
+        trace,
+        positions,
+        scorer,
+        n_polymers,
+        beam_width,
+        rejection_cost,
+        minimum_polymer_size,
+        forced_candidates=None,
+        excluded_barcodes=None,
+    ):
+        forced = dict(forced_candidates or {})
+        excluded = tuple(excluded_barcodes or ())
+        calls.append((forced, excluded))
+        # These narrow-beam conditional optima prefer incompatible companions:
+        # barcode 2 prefers index 1 via index 4, while barcode 3 prefers index 3
+        # via index 2. The last case is their simultaneous constrained run.
+        conditional = {
+            ((2, 1),): state(1.0, {0, 1, 4, 5}),
+            ((2, 2),): state(2.0, {0, 2, 3, 5}),
+            ((3, 3),): state(1.0, {0, 2, 3, 5}),
+            ((3, 4),): state(2.0, {0, 1, 4, 5}),
+            ((2, 1), (3, 3)): state(10.0, {0, 1, 3, 5}),
+        }
+        if forced:
+            return [conditional[tuple(sorted(forced.items()))]]
+        return [state(0.0, {0, 1, 3, 5})]
+
+    monkeypatch.setattr(
+        "traceratops.core.trace_resolver.resolver.beam_search", approximate_search
+    )
+    resolver = TraceResolver(_linear_model(), beam_width=2)
+
+    result, comparisons = resolver.resolve_one_polymer_candidates(trace, 0.1)
+
+    assert [item.candidate_index for item in comparisons if item.selected] == [1, 3]
+    assert calls[-1] == ({2: 1, 3: 3}, ())
+    assert np.array_equal(result.assignments, state(10.0, {0, 1, 3, 5}).assignments)
+
+
+def test_joint_finalization_does_not_reintroduce_ambiguous_barcode():
+    trace = _trace(
+        [
+            (1, 0, 0, 0),
+            (2, 1, 0.1, 0),
+            (2, 1, -0.1, 0),
+            (3, 2, 0, 0),
+            (3, 20, 0, 0),
+            (4, 3, 0, 0),
+        ]
+    )
+
+    result, _ = TraceResolver(_linear_model()).resolve_one_polymer_candidates(
+        trace, 0.05
+    )
+
+    assert np.all(result.assignments[np.asarray(trace["Barcode #"]) == 2] == -1)
+    assert np.sum(result.assignments[np.asarray(trace["Barcode #"]) == 3] == 0) == 1
+    assert np.all(result.assignments[np.isin(trace["Barcode #"], [1, 4])] == 0)
 
 
 def test_empirical_model_prefers_genomic_coordinates_and_has_sparse_fallback():
