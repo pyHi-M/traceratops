@@ -1,5 +1,7 @@
 import importlib.util
+import gc
 import sys
+import weakref
 from pathlib import Path
 
 import numpy as np
@@ -241,3 +243,106 @@ def test_pairwise_output_includes_directional_and_insufficient_diagnostics():
     assert (missing.relationship_status == "insufficient_reference").all()
     assert missing.empirical_percentile.isna().all()
     assert set(pairwise.anomaly_direction).issuperset({"short", "long"})
+
+
+def test_run_releases_condition_score_frames_between_conditions(tmp_path, monkeypatch):
+    root = tmp_path / "benchmark"
+    output = tmp_path / "output"
+    root.mkdir()
+    seeds = [11, 22, 33]
+    simulations = [
+        {
+            "id": f"simulation-{seed}",
+            "seed": seed,
+            "detection_efficiency": 1.0,
+        }
+        for seed in seeds
+    ]
+    conditions = [
+        {
+            "id": f"condition-{seed}-{index}",
+            "simulation_id": f"simulation-{seed}",
+            "seed": seed,
+            "replicate_index": index,
+            "detection_efficiency": 1.0,
+            "displacement_um": float(index),
+            "directory": f"condition-{seed}-{index}",
+        }
+        for seed in seeds
+        for index in range(2)
+    ]
+    (root / "sweep_manifest.yaml").write_text(
+        analysis.yaml.safe_dump(
+            {"dry_run": False, "simulations": simulations, "conditions": conditions}
+        )
+    )
+
+    def fake_baseline(path, metadata):
+        return pd.DataFrame(
+            {
+                "seed": [metadata["seed"]],
+                "detection_efficiency": [metadata["detection_efficiency"]],
+            }
+        )
+
+    def fake_observations(path, metadata):
+        return pd.DataFrame(
+            {
+                "condition": [metadata["id"]],
+                "replicate": [metadata["replicate_index"]],
+                "seed": [metadata["seed"]],
+                "detection_efficiency": [metadata["detection_efficiency"]],
+                "displacement": [metadata["displacement_um"]],
+            }
+        )
+
+    condition_frames = []
+
+    def fake_scores(frame, model, residual_fallback="none", relationship_rows=None):
+        is_calibration = frame["condition"].iloc[0] == "calibration"
+        result = pd.DataFrame(
+            {
+                "condition": frame["condition"],
+                "replicate": frame["replicate"],
+                "seed": frame["seed"],
+                "detection_efficiency": frame["detection_efficiency"],
+                "displacement": frame["displacement"],
+                "model": "empirical_separation_mean",
+                "context": "k3",
+                "score": [0.0 if is_calibration else 1.0],
+                "ground_truth_corrupted": [not is_calibration],
+                "selected_for_corruption": [not is_calibration],
+            }
+        )
+        if not is_calibration:
+            condition_frames.append(weakref.ref(result))
+            gc.collect()
+            # At most the immediately preceding condition can still be referenced
+            # while Python evaluates the next score_observations() call.
+            assert sum(reference() is not None for reference in condition_frames) <= 2
+        return result
+
+    monkeypatch.setattr(analysis, "load_baseline", fake_baseline)
+    monkeypatch.setattr(analysis, "load_observations", fake_observations)
+    monkeypatch.setattr(analysis, "fit_reference", lambda frame, minimum: object())
+    monkeypatch.setattr(
+        analysis,
+        "reference_summary",
+        lambda model, fold: pd.DataFrame([{**fold, "n_observations": 1}]),
+    )
+    monkeypatch.setattr(analysis, "score_observations", fake_scores)
+    monkeypatch.setattr(
+        analysis,
+        "plot_outputs",
+        lambda representative, fixed, destination: pd.DataFrame(
+            [{"representative_rows": len(representative)}]
+        ),
+    )
+
+    analysis.run(root, output, minimum_observations=1)
+    gc.collect()
+
+    assert len(condition_frames) == len(conditions)
+    assert all(reference() is None for reference in condition_frames)
+    assert not (output / "localization_scores.ecsv").exists()
+    assert not (output / "pairwise_relationship_scores.ecsv").exists()
