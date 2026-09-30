@@ -362,9 +362,7 @@ def test_all_history_and_distance_score_combinations(history_mode, distance_scor
 
 
 def test_candidate_cleanup_selects_geometrically_consistent_copy():
-    trace = _trace(
-        [(1, 0, 0, 0), (2, 1, 0, 0), (2, 20, 0, 0), (3, 2, 0, 0)]
-    )
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0, 0), (2, 20, 0, 0), (3, 2, 0, 0)])
     resolver = TraceResolver(_linear_model(), beam_width=10)
 
     result, comparisons = resolver.resolve_one_polymer_candidates(trace, 0.01)
@@ -379,9 +377,7 @@ def test_candidate_cleanup_selects_geometrically_consistent_copy():
 
 
 def test_candidate_cleanup_removes_near_equivalent_copies():
-    trace = _trace(
-        [(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)]
-    )
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)])
 
     result, comparisons = TraceResolver(_linear_model()).resolve_one_polymer_candidates(
         trace, 0.05
@@ -450,9 +446,7 @@ def test_forced_candidate_survives_narrow_beam_pruning():
 
 
 def test_legacy_one_polymer_resolve_is_unchanged_by_candidate_api():
-    trace = _trace(
-        [(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)]
-    )
+    trace = _trace([(1, 0, 0, 0), (2, 1, 0.1, 0), (2, 1, -0.1, 0), (3, 2, 0, 0)])
     resolver = TraceResolver(_linear_model(), minimum_confidence=0.1)
     before = resolver.resolve(trace, 1)
     resolver.resolve_one_polymer_candidates(trace, 0.0)

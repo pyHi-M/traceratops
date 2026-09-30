@@ -34,7 +34,6 @@ from traceratops.core.trace_resolver import (
 )
 from traceratops.script_banner import print_script_banner
 
-
 CANDIDATE_DIAGNOSTIC_COLUMNS = (
     "Input_Trace_ID",
     "Barcode #",
@@ -528,9 +527,7 @@ def resolve_traces(
     if missing:
         raise KeyError(f"Trace table is missing required columns: {sorted(missing)}")
     if one_polymer_ambiguity_mode not in {"global", "candidate"}:
-        raise ValueError(
-            "one_polymer_ambiguity_mode must be 'global' or 'candidate'"
-        )
+        raise ValueError("one_polymer_ambiguity_mode must be 'global' or 'candidate'")
     if (
         one_polymer_ambiguity_mode == "candidate"
         and "Spot_ID" not in trace_table.data.colnames

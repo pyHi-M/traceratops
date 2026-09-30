@@ -255,9 +255,7 @@ def test_candidate_mode_does_not_change_two_polymer_output_or_diagnostics(
     rows = []
     for barcode in range(1, 5):
         rows.append((f"left-{barcode}", "doublet", barcode, float(barcode), 0.0, 0.0))
-        rows.append(
-            (f"right-{barcode}", "doublet", barcode, float(barcode), 10.0, 0.0)
-        )
+        rows.append((f"right-{barcode}", "doublet", barcode, float(barcode), 10.0, 0.0))
 
     def make_table():
         result = ChromatinTraceTable()
