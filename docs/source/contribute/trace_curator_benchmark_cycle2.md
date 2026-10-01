@@ -8,7 +8,9 @@ reproducible baseline.
 ## Run the frozen benchmark
 
 The historical homogeneous simulation has regular polymer beads whose numeric
-barcode values encode polymer order. That assumption is enabled explicitly:
+barcode values encode polymer order. The fallback sorts those identifiers and
+assigns equally spaced, one-based polymer ranks; it does not use the identifier
+itself as a genomic coordinate. That assumption is enabled explicitly:
 
 ```bash
 python scripts/analyze_trace_curator_benchmark_cycle2.py \
@@ -36,14 +38,25 @@ coordinate order; bridge gaps and separation references use the mapped values.
 
 The analysis retains genomic-separation and exact barcode-pair k1 baselines.
 It compares leave-one-localization-out changes in four whole-trace costs, edge
-concentration, and a joint nearest-flank bridge residual. A deterministic
+concentration, and a robust nearest-flank bridge residual. The bridge score
+standardizes its three distances marginally with median/MAD estimates and does
+not model their covariance; it is not a full joint probabilistic model. A deterministic
 logistic-regression comparator combines a fixed, documented feature list.
+
+The separation-pooled reference currently requires an exact genomic-separation
+match. This is directly appropriate for the regularly spaced frozen benchmark.
+Arbitrary experimental probe spacing will require a later, explicitly evaluated
+binning, interpolation, or smoothing design. Exact barcode-pair references do
+not have this limitation and remain available.
 
 The outer fold holds out a complete simulation seed and every displacement
 condition derived from it. References and supervised training use other seeds.
 Threshold calibration is nested: each calibration seed and the evaluation seed
-are excluded from its reference and ML training. Labels and the condition, seed,
-displacement, and simulation identity are not classifier features.
+are excluded from its reference and ML training. In addition, every ML training
+seed is scored with a separately fitted statistical reference that excludes that
+training seed's own clean baseline. All displacement conditions for a seed stay
+together. Labels and the condition, seed, displacement, and simulation identity
+are not classifier features.
 The ML result is only an exploratory upper bound: a homogeneous polymer, one
 fixed corruption mechanism, one displaced localization, and fixed radial
 displacements do not establish generalization to experimental errors.
@@ -56,10 +69,15 @@ or condition.
 ## Result tables
 
 * `cycle2_model_performance.ecsv`: per-condition ROC and PR AUC.
-* `cycle2_fixed_fpr_performance.ecsv`: sensitivity, observed FPR, and precision
-  at 0.1%, 1%, and 5% clean-localization FPR.
+* `cycle2_fixed_fpr_performance.ecsv`: conditional and effective sensitivity,
+  scoreability coverage, observed FPR, and precision at 0.1%, 1%, and 5%
+  clean-localization FPR. Effective sensitivity counts unscored corruptions as
+  undetected.
 * `cycle2_attribution_performance.ecsv`: per-corrupted-trace top-1/top-2 result,
-  rank, score margin, and scored trace size.
+  attribution coverage, minimum rank, unique and tie-inclusive top-1 results,
+  number tied at the best score, score margin, and scored trace size. Unique
+  top-1 is the primary attribution metric; unconditional metrics count an
+  unscoreable corrupted localization as failure.
 * `cycle2_collateral_calls.ecsv`: genuine calls per corrupted trace at 1% FPR.
 * `cycle2_rank_distribution.ecsv`: the corrupted localization rank for plotting.
 * `cycle2_reference_summary.ecsv`: fold-specific support for genomic-separation,

@@ -110,7 +110,10 @@ def load_genomic_coordinates(
         mapping = pd.DataFrame(
             {"Barcode": sorted(set(barcodes), key=lambda value: float(value))}
         )
-        mapping["Genomic_Position"] = mapping["Barcode"].astype(float)
+        # This is polymer order, not a claim that barcode identifiers are
+        # genomic coordinates.  One-based ranks preserve the historical 1--25
+        # benchmark mapping while also handling non-consecutive identifiers.
+        mapping["Genomic_Position"] = np.arange(1, len(mapping) + 1, dtype=float)
         return mapping
     mapping = _read(path) if path.suffix.lower() == ".ecsv" else pd.read_csv(path)
     mapping = mapping.rename(columns={"Barcode #": "Barcode"})
@@ -193,7 +196,7 @@ def _trace_key(frame: pd.DataFrame):
 
 
 def fit_reference(frame: pd.DataFrame, minimum_observations: int = 20) -> ReferenceModel:
-    """Fit clean edge and joint bridge distributions using genomic coordinates."""
+    """Fit clean edge and three-distance bridge references."""
     clean = frame.loc[~frame["is_corrupted"].astype(bool)]
     separations, pairs, bridges = defaultdict(list), defaultdict(list), defaultdict(list)
     for _, trace in clean.groupby(_trace_key(clean), sort=False):
@@ -295,8 +298,8 @@ def bridge_score(trace: pd.DataFrame, index: int, model: ReferenceModel) -> dict
     if values is None or len(values) < model.minimum_observations:
         return {**result, "score": math.nan, "status": "insufficient_reference"}
     observed = np.asarray([np.linalg.norm(coords[index] - coords[left]), np.linalg.norm(coords[right] - coords[index]), np.linalg.norm(coords[right] - coords[left])])
-    # Sum of squared robust standardized joint residuals retains covariance-free
-    # interpretability and evaluates the three bridge distances together.
+    # Mean squared robust marginal residuals evaluate all three bridge distances
+    # together without claiming to model their covariance.
     center = np.median(values, axis=0)
     scale = np.maximum(np.median(np.abs(values - center), axis=0) * 1.4826, 1e-6)
     return {**result, "score": float(np.mean(((observed - center) / scale) ** 2)), "status": "ok"}
@@ -328,13 +331,15 @@ def score_trace(trace: pd.DataFrame, model: ReferenceModel) -> pd.DataFrame:
         edges, lookup = _edge_tables(trace, model, strategy)
         concentration = edge_concentration_features(len(trace), edges)
         for context in ("k1", "k2", "all"):
-            scores = []
+            means, maxima = [], []
             for i in range(len(trace)):
                 selected = select_genomic_context(positions, i, context)
                 values = [lookup.get(tuple(sorted((i, j)))) for j in selected]
                 finite = [value for value in values if value is not None]
-                scores.append(float(np.mean(finite)) if finite else math.nan)
-            output[f"{context}_{strategy}_mean"] = scores
+                means.append(float(np.mean(finite)) if finite else math.nan)
+                maxima.append(float(np.max(finite)) if finite else math.nan)
+            output[f"{context}_{strategy}_mean"] = means
+            output[f"{context}_{strategy}_maximum"] = maxima
         for variant in ("mean", "trimmed_mean", "top3_mean", "strong_fraction"):
             output[f"loo_{strategy}_{variant}"] = leave_one_out_improvements(len(trace), edges, variant)
         for feature in ("mean", "maximum", "second_largest", "fraction_strong", "count_strong", "incident_vs_rest", "concentration"):
@@ -372,13 +377,18 @@ def score_observations(frame: pd.DataFrame, model: ReferenceModel) -> pd.DataFra
 
 def long_scores(features: pd.DataFrame, include_ml: bool = True) -> pd.DataFrame:
     models = {
-        "baseline_separation_k1": "k1_separation_mean",
-        "baseline_barcode_pair_k1": "k1_barcode_pair_mean",
+        "baseline_separation_k1_mean": "k1_separation_mean",
+        "baseline_separation_k1_maximum": "k1_separation_maximum",
+        "baseline_barcode_pair_k1_mean": "k1_barcode_pair_mean",
+        "baseline_barcode_pair_k1_maximum": "k1_barcode_pair_maximum",
         "loo_separation_mean": "loo_separation_mean",
         "loo_separation_trimmed_mean": "loo_separation_trimmed_mean",
         "loo_separation_top3_mean": "loo_separation_top3_mean",
         "loo_separation_strong_fraction": "loo_separation_strong_fraction",
+        "loo_barcode_pair_mean": "loo_barcode_pair_mean",
+        "loo_barcode_pair_trimmed_mean": "loo_barcode_pair_trimmed_mean",
         "loo_barcode_pair_top3_mean": "loo_barcode_pair_top3_mean",
+        "loo_barcode_pair_strong_fraction": "loo_barcode_pair_strong_fraction",
         "edge_separation_concentration": "edge_separation_concentration",
         "edge_barcode_pair_concentration": "edge_barcode_pair_concentration",
         "bridge_separation": "bridge_separation",
@@ -401,7 +411,7 @@ def ml_training_matrix(frame: pd.DataFrame) -> np.ndarray:
 
 
 def fit_ml(training: pd.DataFrame):
-    pipeline = make_pipeline(SimpleImputer(strategy="median", add_indicator=True), StandardScaler(), LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=0))
+    pipeline = make_pipeline(SimpleImputer(strategy="median", add_indicator=True, keep_empty_features=True), StandardScaler(), LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=0))
     pipeline.fit(ml_training_matrix(training), training["is_corrupted"].astype(int))
     return pipeline
 
@@ -411,25 +421,90 @@ def assert_seed_split(training: pd.DataFrame, evaluation_seed: int) -> None:
         raise ValueError("Evaluation seed leaked into ML training")
 
 
+def build_crossfit_ml_training(
+    condition_items: Sequence[Mapping],
+    excluded_seeds: set[int],
+    baselines: pd.DataFrame,
+    minimum_observations: int,
+    load_condition,
+    mapping: pd.DataFrame,
+) -> pd.DataFrame:
+    """Construct each training seed's features without its own clean baseline."""
+    compact_parts = []
+    training_seeds = sorted(
+        {int(item["seed"]) for item in condition_items}.difference(excluded_seeds)
+    )
+    for training_seed in training_seeds:
+        reference_seeds = sorted(
+            set(baselines["seed"].astype(int)).difference(
+                {*excluded_seeds, training_seed}
+            )
+        )
+        reference_rows = baselines[baselines["seed"].astype(int).isin(reference_seeds)]
+        feature_model = fit_reference(reference_rows, minimum_observations)
+        for item in condition_items:
+            if int(item["seed"]) != training_seed:
+                continue
+            observations = attach_genomic_coordinates(load_condition(item), mapping)
+            features = score_observations(observations, feature_model)
+            compact = features[[*ML_FEATURES, "is_corrupted", "seed"]].copy()
+            compact["feature_reference_seeds"] = ",".join(map(str, reference_seeds))
+            compact_parts.append(compact)
+            del observations, features
+    if not compact_parts:
+        raise ValueError("No seeds remain for ML training after fold exclusions")
+    return pd.concat(compact_parts, ignore_index=True)
+
+
 def attribution_metrics(scores: pd.DataFrame, threshold: float) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Return per-trace attribution, collateral, and rank-distribution rows."""
     attribution, collateral, ranks = [], [], []
     group_columns = [column for column in ("condition", "replicate", "seed", "detection_efficiency", "displacement", "model", "simulation_id", "Trace_ID") if column in scores]
     for key, group in scores.groupby(group_columns, sort=False):
         metadata = dict(zip(group_columns, key if isinstance(key, tuple) else (key,)))
+        corrupted = group[group["is_corrupted"].astype(bool)]
+        if len(corrupted) != 1:
+            continue
         valid = group[np.isfinite(group["score"])].copy()
         bad = valid[valid["is_corrupted"].astype(bool)]
-        if len(bad) != 1:
+        scoreable = len(bad) == 1
+        good = valid[~valid["is_corrupted"].astype(bool)]
+        calls = good["score"].to_numpy() > threshold
+        common = {
+            **metadata,
+            "attribution_coverage": float(scoreable),
+            "n_scored_in_trace": len(valid),
+        }
+        if not scoreable:
+            attribution.append(
+                {
+                    **common,
+                    "rank": math.nan,
+                    "top1_including_ties": False,
+                    "top1_unique": False,
+                    "top1": False,
+                    "top2": False,
+                    "top1_given_scoreable": math.nan,
+                    "top2_given_scoreable": math.nan,
+                    "n_tied_best": 0,
+                    "score_margin": math.nan,
+                }
+            )
+            collateral.append({**metadata, "threshold": threshold, "collateral_calls": int(calls.sum()), "zero_collateral_calls": not calls.any()})
+            ranks.append({**metadata, "corrupted_rank": math.nan, "scoreable": False})
             continue
         # Stable ranking gives deterministic handling; ties receive minimum rank.
         bad_score = float(bad["score"].iloc[0])
         rank = int(1 + np.sum(valid["score"].to_numpy() > bad_score))
-        good = valid[~valid["is_corrupted"].astype(bool)]
         margin = bad_score - float(good["score"].max()) if len(good) else math.nan
-        calls = good["score"].to_numpy() > threshold
-        attribution.append({**metadata, "rank": rank, "top1": rank == 1, "top2": rank <= 2, "score_margin": margin, "n_scored_in_trace": len(valid)})
+        maximum = float(valid["score"].max())
+        n_tied_best = int(np.sum(valid["score"].to_numpy() == maximum)) if bad_score == maximum else 0
+        top1_including_ties = rank == 1
+        top1_unique = top1_including_ties and n_tied_best == 1
+        top2 = rank <= 2
+        attribution.append({**common, "rank": rank, "top1_including_ties": top1_including_ties, "top1_unique": top1_unique, "top1": top1_unique, "top2": top2, "top1_given_scoreable": top1_unique, "top2_given_scoreable": top2, "n_tied_best": n_tied_best, "score_margin": margin})
         collateral.append({**metadata, "threshold": threshold, "collateral_calls": int(calls.sum()), "zero_collateral_calls": not calls.any()})
-        ranks.append({**metadata, "corrupted_rank": rank})
+        ranks.append({**metadata, "corrupted_rank": rank, "scoreable": True})
     return pd.DataFrame(attribution), pd.DataFrame(collateral), pd.DataFrame(ranks)
 
 
@@ -445,12 +520,18 @@ def performance(scores: pd.DataFrame, thresholds: Mapping[tuple[str, float], flo
     keys = ["condition", "replicate", "seed", "detection_efficiency", "displacement", "model"]
     for key, group in scores.groupby(keys, sort=False):
         metadata = dict(zip(keys, key)); valid = group[np.isfinite(group.score)]
+        all_labels = group.is_corrupted.astype(bool)
         labels = valid.is_corrupted.astype(bool).to_numpy(); values = valid.score.to_numpy()
-        overall.append({**metadata, "roc_auc": roc_auc_score(labels, values) if len(np.unique(labels)) == 2 else math.nan, "precision_recall_auc": average_precision_score(labels, values) if labels.any() else math.nan, "n_scored": len(valid)})
+        n_corrupted_total = int(all_labels.sum()); n_genuine_total = int((~all_labels).sum())
+        n_corrupted_scored = int(labels.sum()); n_genuine_scored = int((~labels).sum())
+        coverage = {"n_corrupted_total": n_corrupted_total, "n_corrupted_scored": n_corrupted_scored, "corrupted_coverage": n_corrupted_scored / n_corrupted_total if n_corrupted_total else math.nan, "n_genuine_total": n_genuine_total, "n_genuine_scored": n_genuine_scored, "genuine_coverage": n_genuine_scored / n_genuine_total if n_genuine_total else math.nan}
+        overall.append({**metadata, **coverage, "roc_auc": roc_auc_score(labels, values) if len(np.unique(labels)) == 2 else math.nan, "precision_recall_auc": average_precision_score(labels, values) if labels.any() else math.nan, "n_scored": len(valid)})
         for fpr in FIXED_FPRS:
             threshold = thresholds.get((str(key[-1]), fpr), math.nan); calls = values > threshold
             tp, fp = np.sum(calls & labels), np.sum(calls & ~labels)
-            fixed.append({**metadata, "target_fpr": fpr, "threshold": threshold, "sensitivity": tp / labels.sum() if labels.sum() else math.nan, "observed_fpr": fp / (~labels).sum() if (~labels).sum() else math.nan, "precision": tp / calls.sum() if calls.sum() else math.nan, "n_corrupted": int(labels.sum()), "n_genuine": int((~labels).sum())})
+            sensitivity_given_scored = tp / n_corrupted_scored if n_corrupted_scored else math.nan
+            effective_sensitivity = tp / n_corrupted_total if n_corrupted_total else math.nan
+            fixed.append({**metadata, **coverage, "target_fpr": fpr, "threshold": threshold, "sensitivity": effective_sensitivity, "sensitivity_given_scored": sensitivity_given_scored, "effective_sensitivity": effective_sensitivity, "observed_fpr": fp / n_genuine_scored if n_genuine_scored else math.nan, "precision": tp / calls.sum() if calls.sum() else math.nan, "n_corrupted": n_corrupted_scored, "n_genuine": n_genuine_scored})
     return pd.DataFrame(overall), pd.DataFrame(fixed)
 
 
@@ -469,7 +550,7 @@ def _aggregate_replicates(frame: pd.DataFrame, value_columns: Sequence[str]) -> 
 
 def plot_results(fixed: pd.DataFrame, attribution: pd.DataFrame, collateral: pd.DataFrame, output: Path) -> None:
     selected = fixed[np.isclose(fixed.target_fpr, 0.01)]
-    plots = [(selected, "sensitivity", "Sensitivity", "cycle2_sensitivity.png"), (attribution, "top1", "Top-1 attribution", "cycle2_top1_attribution.png"), (attribution, "top2", "Top-2 attribution", "cycle2_top2_attribution.png"), (collateral, "collateral_calls", "Mean collateral calls", "cycle2_collateral_calls.png"), (attribution, "score_margin", "Median score margin", "cycle2_score_margin.png")]
+    plots = [(selected, "effective_sensitivity", "Effective sensitivity", "cycle2_sensitivity.png"), (attribution, "top1_unique", "Unique top-1 attribution", "cycle2_top1_attribution.png"), (attribution, "top2", "Unconditional top-2 attribution", "cycle2_top2_attribution.png"), (collateral, "collateral_calls", "Mean collateral calls", "cycle2_collateral_calls.png"), (attribution, "score_margin", "Median score margin", "cycle2_score_margin.png")]
     for frame, value, ylabel, filename in plots:
         if frame.empty: continue
         figure, axis = plt.subplots(figsize=(9, 5))
@@ -511,19 +592,9 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
             model = fit_reference(reference_rows, minimum_observations)
             for strategy in ("separation", "barcode_pair", "bridge"):
                 for key, values in getattr(model, strategy).items(): references.append({"detection_efficiency": efficiency, "evaluation_seed": evaluation_seed, "reference_strategy": strategy, "reference_key": str(key), "n_observations": len(values), "sufficient": len(values) >= minimum_observations})
-            def build_ml_training(excluded_seeds, feature_model):
-                # Retain only the compact fixed ML matrix, label, and split key;
-                # full condition score frames are discarded immediately.
-                compact_parts = []
-                for train_item in items:
-                    if int(train_item["seed"]) in excluded_seeds: continue
-                    train_observations = attach_genomic_coordinates(cycle1.load_observations(root / str(train_item["directory"]), train_item), mapping)
-                    train_features = score_observations(train_observations, feature_model)
-                    compact_parts.append(train_features[[*ML_FEATURES, "is_corrupted", "seed"]].copy())
-                    del train_observations, train_features
-                return pd.concat(compact_parts, ignore_index=True)
-
-            training = build_ml_training({evaluation_seed}, model); assert_seed_split(training, evaluation_seed)
+            load_condition = lambda item: cycle1.load_observations(root / str(item["directory"]), item)
+            training = build_crossfit_ml_training(items, {evaluation_seed}, efficiency_baselines, minimum_observations, load_condition, mapping)
+            assert_seed_split(training, evaluation_seed)
             learner = fit_ml(training)
             coefficients = learner.named_steps["logisticregression"].coef_[0]
             for index, coefficient in enumerate(coefficients[: len(ML_FEATURES)]): ml_importance.append({"detection_efficiency": efficiency, "evaluation_seed": evaluation_seed, "feature": ML_FEATURES[index], "coefficient": coefficient})
@@ -534,7 +605,7 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
                 if calibration_seed == evaluation_seed: continue
                 nested_rows = efficiency_baselines[~efficiency_baselines.seed.isin([evaluation_seed, calibration_seed])]
                 nested_model = fit_reference(nested_rows, minimum_observations)
-                nested_training = build_ml_training({evaluation_seed, calibration_seed}, nested_model)
+                nested_training = build_crossfit_ml_training(items, {evaluation_seed, calibration_seed}, efficiency_baselines, minimum_observations, load_condition, mapping)
                 nested_learner = fit_ml(nested_training)
                 calibration = efficiency_baselines[efficiency_baselines.seed == calibration_seed].copy()
                 calibration["condition"] = "clean_calibration"; calibration["replicate"] = calibration_seed; calibration["displacement"] = 0.0; calibration["selected_for_corruption"] = False
@@ -560,13 +631,13 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
     performance_table = pd.concat(overall_parts, ignore_index=True); fixed_table = pd.concat(fixed_parts, ignore_index=True)
     attribution_table = pd.concat(attribution_parts, ignore_index=True); collateral_table = pd.concat(collateral_parts, ignore_index=True); rank_table = pd.concat(rank_parts, ignore_index=True)
     _write(performance_table, output / "cycle2_model_performance.ecsv"); _write(fixed_table, output / "cycle2_fixed_fpr_performance.ecsv"); _write(attribution_table, output / "cycle2_attribution_performance.ecsv"); _write(collateral_table, output / "cycle2_collateral_calls.ecsv"); _write(rank_table, output / "cycle2_rank_distribution.ecsv"); _write(pd.DataFrame(references), output / "cycle2_reference_summary.ecsv"); _write(pd.DataFrame(ml_importance), output / "cycle2_ml_feature_importance.ecsv")
-    aggregate = pd.concat([_aggregate_replicates(fixed_table[np.isclose(fixed_table.target_fpr, .01)], ["sensitivity", "observed_fpr", "precision"]), _aggregate_replicates(attribution_table, ["top1", "top2", "rank", "score_margin"]), _aggregate_replicates(collateral_table, ["collateral_calls", "zero_collateral_calls"])], ignore_index=True)
+    aggregate = pd.concat([_aggregate_replicates(fixed_table[np.isclose(fixed_table.target_fpr, .01)], ["sensitivity_given_scored", "effective_sensitivity", "corrupted_coverage", "genuine_coverage", "observed_fpr", "precision"]), _aggregate_replicates(attribution_table, ["attribution_coverage", "top1_unique", "top1_including_ties", "top1_given_scoreable", "top2", "top2_given_scoreable", "rank", "score_margin"]), _aggregate_replicates(collateral_table, ["collateral_calls", "zero_collateral_calls"])], ignore_index=True)
     _write(aggregate, output / "cycle2_aggregate_performance.ecsv"); plot_results(fixed_table, attribution_table, collateral_table, output)
     _progress(f"complete: {output}")
 
 
 def parse_arguments(argv: Sequence[str] | None = None):
-    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--benchmark-root", required=True, type=Path); parser.add_argument("--output-dir", required=True, type=Path); parser.add_argument("--genomic-coordinates", type=Path); parser.add_argument("--assume-uniform-barcode-spacing", action="store_true", help="Simulation-only: use numeric barcode values as uniformly spaced polymer positions."); parser.add_argument("--minimum-reference-observations", type=int, default=20); parser.add_argument("--write-localization-scores", action="store_true"); return parser.parse_args(argv)
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--benchmark-root", required=True, type=Path); parser.add_argument("--output-dir", required=True, type=Path); parser.add_argument("--genomic-coordinates", type=Path); parser.add_argument("--assume-uniform-barcode-spacing", action="store_true", help="Simulation-only: sort barcode identifiers and assign equally spaced polymer-order ranks."); parser.add_argument("--minimum-reference-observations", type=int, default=20); parser.add_argument("--write-localization-scores", action="store_true"); return parser.parse_args(argv)
 
 
 def main() -> None:

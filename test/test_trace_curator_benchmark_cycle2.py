@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
+from astropy.table import Table
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "analyze_trace_curator_benchmark_cycle2.py"
 SPEC = importlib.util.spec_from_file_location("curator_cycle2", SCRIPT)
@@ -99,7 +101,7 @@ def test_attribution_top1_top2_rank_and_margin():
     )
     attribution, _, ranks = cycle2.attribution_metrics(scores, 1.5)
     assert attribution.iloc[0]["rank"] == 2
-    assert not bool(attribution.iloc[0]["top1"])
+    assert not bool(attribution.iloc[0]["top1_unique"])
     assert bool(attribution.iloc[0]["top2"])
     assert attribution.iloc[0]["score_margin"] == -1
     assert ranks.iloc[0]["corrupted_rank"] == 2
@@ -131,6 +133,89 @@ def test_uniform_mapping_is_explicit_simulation_only():
     assert result.Genomic_Position.tolist() == [1.0, 2.0]
 
 
+def test_uniform_mapping_uses_order_ranks_not_numeric_barcode_values():
+    result = cycle2.load_genomic_coordinates(None, [41, 3, 17], True)
+    assert result.Barcode.tolist() == [3, 17, 41]
+    assert result.Genomic_Position.tolist() == [1.0, 2.0, 3.0]
+
+
+def test_attribution_reports_unscoreable_corruption_as_unconditional_failure():
+    scores = pd.DataFrame(
+        {"condition": "c", "seed": 1, "model": "m", "Trace_ID": "t", "score": [np.nan, 4.0], "is_corrupted": [True, False]}
+    )
+    attribution, _, _ = cycle2.attribution_metrics(scores, 1)
+    row = attribution.iloc[0]
+    assert row.attribution_coverage == 0
+    assert not bool(row.top1_unique)
+    assert not bool(row.top2)
+    assert np.isnan(row.top1_given_scoreable)
+
+
+def test_attribution_distinguishes_tied_and_unique_top1():
+    tied = pd.DataFrame(
+        {"condition": "c", "seed": 1, "model": "m", "Trace_ID": "t", "score": [5.0, 5.0, 1.0], "is_corrupted": [True, False, False]}
+    )
+    attribution, _, _ = cycle2.attribution_metrics(tied, 10)
+    row = attribution.iloc[0]
+    assert bool(row.top1_including_ties)
+    assert not bool(row.top1_unique)
+    assert row.n_tied_best == 2
+
+
+def test_performance_reports_score_coverage_and_effective_sensitivity():
+    scores = pd.DataFrame(
+        {
+            "condition": "c", "replicate": 1, "seed": 1,
+            "detection_efficiency": 1.0, "displacement": 1.0, "model": "m",
+            "score": [2.0, np.nan, 2.0, np.nan],
+            "is_corrupted": [True, True, False, False],
+        }
+    )
+    _, fixed = cycle2.performance(scores, {("m", fpr): 1.0 for fpr in cycle2.FIXED_FPRS})
+    row = fixed.iloc[0]
+    assert row.n_corrupted_total == 2 and row.n_corrupted_scored == 1
+    assert row.corrupted_coverage == 0.5 and row.genuine_coverage == 0.5
+    assert row.sensitivity_given_scored == 1.0
+    assert row.effective_sensitivity == 0.5
+
+
+def test_long_scores_exposes_all_k1_baselines_and_barcode_pair_loo_variants():
+    features = pd.DataFrame({
+        "k1_separation_mean": [1], "k1_separation_maximum": [1],
+        "k1_barcode_pair_mean": [1], "k1_barcode_pair_maximum": [1],
+        "loo_separation_mean": [1], "loo_separation_trimmed_mean": [1],
+        "loo_separation_top3_mean": [1], "loo_separation_strong_fraction": [1],
+        "loo_barcode_pair_mean": [1], "loo_barcode_pair_trimmed_mean": [1],
+        "loo_barcode_pair_top3_mean": [1], "loo_barcode_pair_strong_fraction": [1],
+        "edge_separation_concentration": [1], "edge_barcode_pair_concentration": [1],
+        "bridge_separation": [1],
+    })
+    names = set(cycle2.long_scores(features, include_ml=False).model)
+    assert {"baseline_separation_k1_mean", "baseline_separation_k1_maximum", "baseline_barcode_pair_k1_mean", "baseline_barcode_pair_k1_maximum"}.issubset(names)
+    assert {"loo_barcode_pair_mean", "loo_barcode_pair_trimmed_mean", "loo_barcode_pair_top3_mean", "loo_barcode_pair_strong_fraction"}.issubset(names)
+
+
+def test_ml_training_features_crossfit_each_training_seed(monkeypatch):
+    baselines = pd.DataFrame({"seed": [1, 2, 3, 4], "is_corrupted": False})
+    items = [{"seed": seed} for seed in (1, 2, 3, 4)]
+    mapping = pd.DataFrame({"Barcode": [1], "Genomic_Position": [1.0]})
+
+    monkeypatch.setattr(cycle2, "fit_reference", lambda rows, minimum: set(rows.seed))
+    monkeypatch.setattr(
+        cycle2,
+        "score_observations",
+        lambda observations, model: pd.DataFrame({**{name: [0.0] for name in cycle2.ML_FEATURES}, "is_corrupted": [False], "seed": observations.seed}),
+    )
+    training = cycle2.build_crossfit_ml_training(
+        items, {4}, baselines, 1,
+        lambda item: pd.DataFrame({"Barcode": [1], "seed": [item["seed"]]}),
+        mapping,
+    )
+    for row in training.itertuples():
+        assert str(row.seed) not in row.feature_reference_seeds.split(",")
+        assert "4" not in row.feature_reference_seeds.split(",")
+
+
 def test_scoring_is_deterministic():
     first = cycle2.score_trace(toy_trace(), reference())
     second = cycle2.score_trace(toy_trace(), reference())
@@ -145,3 +230,50 @@ def test_condition_score_frames_can_be_released_in_streaming_architecture():
         del frame
         gc.collect()
     assert all(item() is None for item in references)
+
+
+def _write_ecsv(frame, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Table.from_pandas(frame).write(path, format="ascii.ecsv", overwrite=True)
+
+
+def test_run_end_to_end_tiny_four_seed_benchmark(tmp_path):
+    root, output = tmp_path / "benchmark", tmp_path / "output"
+    simulations, conditions = [], []
+    for replicate, seed in enumerate((11, 22, 33, 44), start=1):
+        simulation_id = f"sim-{seed}"
+        simulations.append({"id": simulation_id, "seed": seed, "detection_efficiency": 1.0})
+        baseline_rows = []
+        for trace_index in range(2):
+            for barcode in range(1, 5):
+                baseline_rows.append({"Spot_ID": f"b-{trace_index}-{barcode}", "Trace_ID": f"t{trace_index}", "Barcode #": barcode, "x": float(barcode + trace_index * .1), "y": float(seed % 3) * .01, "z": 0.0})
+        _write_ecsv(pd.DataFrame(baseline_rows), root / "simulations" / simulation_id / "simulated.ecsv")
+        for displacement in (0.0, 1.0):
+            condition_id = f"c-{seed}-{displacement:g}"
+            directory = f"conditions/{condition_id}"
+            main_rows, truth_rows = [], []
+            for trace_index in range(2):
+                for barcode in range(1, 5):
+                    spot = f"s-{trace_index}-{barcode}"
+                    selected = barcode == 2
+                    corrupted = selected and displacement > 0
+                    main_rows.append({"Spot_ID": spot, "Trace_ID": f"t{trace_index}", "Barcode #": barcode, "x": float(barcode + trace_index * .1 + (displacement * 5 if corrupted else 0)), "y": float(seed % 3) * .01, "z": 0.0})
+                    truth_rows.append({"Spot_ID": spot, "Input_Trace_ID": f"t{trace_index}", "Barcode #": barcode, "selected_for_corruption": selected, "is_corrupted": corrupted, "injected_displacement_um": displacement if corrupted else 0.0})
+            _write_ecsv(pd.DataFrame(main_rows), root / directory / "simulated.ecsv")
+            _write_ecsv(pd.DataFrame(truth_rows), root / directory / "simulated.ground_truth.ecsv")
+            conditions.append({"id": condition_id, "simulation_id": simulation_id, "seed": seed, "replicate_index": replicate, "detection_efficiency": 1.0, "displacement_um": displacement, "directory": directory})
+    root.mkdir(exist_ok=True)
+    (root / "sweep_manifest.yaml").write_text(yaml.safe_dump({"dry_run": False, "simulations": simulations, "conditions": conditions}))
+
+    cycle2.run(root, output, assume_uniform_barcode_spacing=True, minimum_observations=1)
+
+    expected = {
+        "cycle2_model_performance.ecsv", "cycle2_fixed_fpr_performance.ecsv",
+        "cycle2_attribution_performance.ecsv", "cycle2_collateral_calls.ecsv",
+        "cycle2_rank_distribution.ecsv", "cycle2_reference_summary.ecsv",
+        "cycle2_ml_feature_importance.ecsv", "cycle2_aggregate_performance.ecsv",
+    }
+    assert expected.issubset({path.name for path in output.iterdir()})
+    fixed = Table.read(output / "cycle2_fixed_fpr_performance.ecsv", format="ascii.ecsv").to_pandas()
+    assert {"corrupted_coverage", "sensitivity_given_scored", "effective_sensitivity"}.issubset(fixed.columns)
+    assert "ml_logistic_regression" in set(fixed.model)
