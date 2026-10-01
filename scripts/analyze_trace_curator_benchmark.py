@@ -10,7 +10,13 @@ using the replicate being evaluated.  See
 from __future__ import annotations
 
 import argparse
+import io
 import math
+import os
+import resource
+import sys
+import tempfile
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +43,118 @@ REQUIRED_TRUTH = {
     "is_corrupted",
     "injected_displacement_um",
 }
+
+_START_TIME = time.monotonic()
+
+
+def _progress(message: str) -> None:
+    """Print a timestamped progress message immediately.
+
+    Progress goes to stderr so redirected result output remains clean.  Explicit
+    flushing is important when this script is run non-interactively, where the
+    normal stream buffering previously made a long analysis appear to hang.
+    """
+    elapsed = time.monotonic() - _START_TIME
+    try:
+        resident_pages = int(Path("/proc/self/statm").read_text().split()[1])
+        rss = resident_pages * os.sysconf("SC_PAGE_SIZE") / (1024**2)
+        memory_label = "RSS"
+    except (FileNotFoundError, IndexError, OSError, ValueError):
+        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+        memory_label = "peak RSS"
+    print(
+        f"[trace benchmark {elapsed:8.1f}s, {memory_label} {rss:,.0f} MiB] {message}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
+class _EcsvChunkWriter:
+    """Incrementally write identically shaped frames to one ECSV file.
+
+    Pairwise diagnostics are by far the largest output of this analysis.  The
+    old implementation retained every diagnostic dictionary until the very end,
+    causing memory use to grow for the entire run.  ECSV has one commented
+    metadata header and a plain-text data section, so subsequent Astropy-rendered
+    chunks can safely contribute only their data rows.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.temporary_path = path.with_name(f".{path.name}.tmp")
+        self.columns: list[str] | None = None
+        self._has_rows = False
+        self.temporary_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _render(frame: pd.DataFrame) -> list[str]:
+        safe = frame.copy()
+        for column in safe.select_dtypes(include="object"):
+            safe[column] = safe[column].fillna("").astype(str)
+        stream = io.StringIO()
+        Table.from_pandas(safe).write(stream, format="ascii.ecsv")
+        return stream.getvalue().splitlines(keepends=True)
+
+    def write(self, frame: pd.DataFrame, chunk_rows: int = 50_000) -> None:
+        if frame.empty:
+            return
+        columns = list(frame.columns)
+        if self.columns is None:
+            self.columns = columns
+        elif columns != self.columns:
+            raise ValueError("Pairwise diagnostic columns changed between chunks")
+        for start in range(0, len(frame), chunk_rows):
+            lines = self._render(frame.iloc[start : start + chunk_rows])
+            mode = "a" if self._has_rows else "w"
+            if self._has_rows:
+                # The first non-comment line is the repeated column-name row.
+                header_index = next(
+                    index
+                    for index, line in enumerate(lines)
+                    if not line.startswith("#")
+                )
+                lines = lines[header_index + 1 :]
+            with self.temporary_path.open(mode) as stream:
+                stream.writelines(lines)
+            self._has_rows = True
+
+    def finish(self) -> None:
+        if not self._has_rows:
+            _write(pd.DataFrame(), self.temporary_path)
+        os.replace(self.temporary_path, self.path)
+
+
+class _CalibrationAccumulator:
+    """Spool the score-only calibration data needed to derive thresholds."""
+
+    def __init__(self) -> None:
+        self._temporary_directory = tempfile.TemporaryDirectory(
+            prefix="trace-benchmark-calibration-"
+        )
+        self._keys: dict[tuple[str, str], Path] = {}
+
+    def add(self, scores: pd.DataFrame) -> None:
+        for (model, context), group in scores.groupby(["model", "context"], sort=False):
+            key = (str(model), str(context))
+            path = self._keys.setdefault(
+                key,
+                Path(self._temporary_directory.name) / f"scores-{len(self._keys)}.bin",
+            )
+            values = group["score"].to_numpy(dtype=np.float64)
+            with path.open("ab") as stream:
+                values[np.isfinite(values)].tofile(stream)
+
+    def thresholds(self) -> dict[tuple[str, str, float], float]:
+        result = {}
+        for (model, context), path in self._keys.items():
+            values = np.fromfile(path, dtype=np.float64)
+            for fpr in FIXED_FPRS:
+                result[(model, context, fpr)] = fixed_fpr_threshold(values, fpr)
+            del values
+        return result
+
+    def close(self) -> None:
+        self._temporary_directory.cleanup()
 
 
 def _frame(path: Path) -> pd.DataFrame:
@@ -557,6 +675,56 @@ def evaluate(
     return pd.DataFrame(overall), pd.DataFrame(fixed)
 
 
+def evaluate_condition(
+    scores: pd.DataFrame,
+    thresholds: Mapping[tuple[str, str, float], float],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Evaluate one condition using its fold's precomputed thresholds."""
+    overall, fixed = [], []
+    condition_keys = [
+        "condition",
+        "replicate",
+        "seed",
+        "detection_efficiency",
+        "displacement",
+        "model",
+        "context",
+    ]
+    for key, group in scores.groupby(condition_keys, sort=False):
+        labels = group["ground_truth_corrupted"].astype(bool).to_numpy()
+        valid = np.isfinite(group["score"].to_numpy())
+        auc = (
+            roc_auc_score(labels[valid], group.loc[valid, "score"])
+            if valid.sum() and len(np.unique(labels[valid])) == 2
+            else math.nan
+        )
+        ap = (
+            average_precision_score(labels[valid], group.loc[valid, "score"])
+            if valid.sum() and labels[valid].any()
+            else math.nan
+        )
+        metadata = dict(zip(condition_keys, key))
+        overall.append(
+            {
+                **metadata,
+                "roc_auc": auc,
+                "precision_recall_auc": ap,
+                "n_scored": int(valid.sum()),
+            }
+        )
+        for fpr in FIXED_FPRS:
+            threshold = thresholds.get((str(key[-2]), str(key[-1]), fpr), math.nan)
+            fixed.append(
+                {
+                    **metadata,
+                    "target_fpr": fpr,
+                    "threshold": threshold,
+                    **_rates(group, threshold),
+                }
+            )
+    return pd.DataFrame(overall), pd.DataFrame(fixed)
+
+
 def _write(frame: pd.DataFrame, path: Path) -> None:
     safe = frame.copy()
     for column in safe.select_dtypes(include="object"):
@@ -565,7 +733,7 @@ def _write(frame: pd.DataFrame, path: Path) -> None:
 
 
 def plot_outputs(
-    scores: pd.DataFrame, fixed: pd.DataFrame, output: Path
+    representative: pd.DataFrame, fixed: pd.DataFrame, output: Path
 ) -> pd.DataFrame:
     primary = fixed[np.isclose(fixed["target_fpr"], 0.01)].copy()
     primary["detection_rate"] = primary["true_positive_rate"]
@@ -622,9 +790,6 @@ def plot_outputs(
     fig.tight_layout()
     fig.savefig(output / "performance_by_context.png", dpi=160)
     plt.close(fig)
-    representative = scores[
-        (scores["model"] == "empirical_separation_mean") & (scores["context"] == "k3")
-    ]
     fig, ax = plt.subplots(figsize=(8, 5))
     displacements = sorted(representative["displacement"].unique())
     if displacements:
@@ -659,11 +824,7 @@ def plot_outputs(
     fig.tight_layout()
     fig.savefig(output / "score_distributions.png", dpi=160)
     plt.close(fig)
-    zero = scores[
-        (scores["displacement"] == 0)
-        & (scores["model"] == "empirical_separation_mean")
-        & (scores["context"] == "k3")
-    ]
+    zero = representative[representative["displacement"] == 0]
     fig, ax = plt.subplots(figsize=(7, 5))
     for selected, label in (
         (False, "ordinary clean"),
@@ -687,6 +848,16 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--minimum-reference-observations", type=int, default=20)
     parser.add_argument(
+        "--write-localization-scores",
+        action="store_true",
+        help="Write the very large per-localization score table (default: disabled).",
+    )
+    parser.add_argument(
+        "--write-pairwise-diagnostics",
+        action="store_true",
+        help="Write the very large pairwise diagnostic table (default: disabled).",
+    )
+    parser.add_argument(
         "--residual-separation-fallback",
         choices=("none", "nearest"),
         default="none",
@@ -703,7 +874,10 @@ def run(
     output: Path,
     minimum_observations: int = 20,
     residual_fallback: str = "none",
+    write_localization_scores: bool = False,
+    write_pairwise_diagnostics: bool = False,
 ) -> None:
+    _progress(f"Starting analysis in {root}")
     manifest_path = root / "sweep_manifest.yaml"
     if not manifest_path.is_file():
         raise FileNotFoundError(f"Benchmark manifest not found: {manifest_path}")
@@ -714,17 +888,39 @@ def run(
     simulations = manifest.get("simulations")
     if not conditions or not simulations:
         raise ValueError("Manifest must contain non-empty simulations and conditions")
+    _progress(
+        f"Loaded manifest with {len(simulations)} simulations and "
+        f"{len(conditions)} conditions"
+    )
     output.mkdir(parents=True, exist_ok=True)
-    baselines = {
-        str(item["id"]): load_baseline(root / "simulations" / str(item["id"]), item)
-        for item in simulations
-    }
+    baselines = {}
+    for index, item in enumerate(simulations, start=1):
+        simulation_id = str(item["id"])
+        _progress(f"Loading baseline {index}/{len(simulations)}: {simulation_id}")
+        baselines[simulation_id] = load_baseline(
+            root / "simulations" / simulation_id, item
+        )
     conditions_by_efficiency: dict[float, list[Mapping]] = defaultdict(list)
     for item in conditions:
         conditions_by_efficiency[float(item["detection_efficiency"])].append(item)
-    all_scores, all_calibration, summaries, relationships = [], [], [], []
+    performances, fixed_tables, summaries, representative_parts = [], [], [], []
+    score_writer = (
+        _EcsvChunkWriter(output / "localization_scores.ecsv")
+        if write_localization_scores
+        else None
+    )
+    relationship_writer = (
+        _EcsvChunkWriter(output / "pairwise_relationship_scores.ecsv")
+        if write_pairwise_diagnostics
+        else None
+    )
+    rows_processed = 0
     for efficiency, condition_items in conditions_by_efficiency.items():
         seeds = sorted({int(item["seed"]) for item in condition_items})
+        _progress(
+            f"Processing efficiency {efficiency:g}: {len(condition_items)} "
+            f"conditions across {len(seeds)} folds"
+        )
         if len(seeds) < 3:
             raise ValueError(
                 f"Efficiency {efficiency} needs at least 3 replicates for nested out-of-sample calibration"
@@ -738,6 +934,10 @@ def run(
             ignore_index=True,
         )
         for evaluation_seed in seeds:
+            _progress(
+                f"Fitting reference model for efficiency {efficiency:g}, "
+                f"evaluation seed {evaluation_seed}"
+            )
             reference_rows = efficiency_baselines[
                 efficiency_baselines["seed"] != evaluation_seed
             ]
@@ -750,72 +950,119 @@ def run(
                 ),
             }
             summaries.append(reference_summary(model, fold))
-            calibration_parts = []
-            for calibration_seed in seeds:
-                if calibration_seed == evaluation_seed:
-                    continue
-                nested_reference = efficiency_baselines[
-                    ~efficiency_baselines["seed"].isin(
-                        [evaluation_seed, calibration_seed]
+            calibration_accumulator = _CalibrationAccumulator()
+            try:
+                for calibration_seed in seeds:
+                    if calibration_seed == evaluation_seed:
+                        continue
+                    _progress(
+                        f"Scoring calibration seed {calibration_seed} for evaluation "
+                        f"seed {evaluation_seed}"
                     )
-                ]
-                nested_model = fit_reference(nested_reference, minimum_observations)
-                calibration_frame = efficiency_baselines[
-                    efficiency_baselines["seed"] == calibration_seed
-                ].copy()
-                calibration_frame["condition"] = "calibration"
-                calibration_frame["replicate"] = calibration_seed
-                calibration_frame["displacement"] = 0.0
-                calibration_frame["selected_for_corruption"] = False
-                calibration_frame["injected_displacement_um"] = 0.0
-                calibration_parts.append(
-                    score_observations(
+                    nested_reference = efficiency_baselines[
+                        ~efficiency_baselines["seed"].isin(
+                            [evaluation_seed, calibration_seed]
+                        )
+                    ]
+                    nested_model = fit_reference(nested_reference, minimum_observations)
+                    calibration_frame = efficiency_baselines[
+                        efficiency_baselines["seed"] == calibration_seed
+                    ].copy()
+                    calibration_frame["condition"] = "calibration"
+                    calibration_frame["replicate"] = calibration_seed
+                    calibration_frame["displacement"] = 0.0
+                    calibration_frame["selected_for_corruption"] = False
+                    calibration_frame["injected_displacement_um"] = 0.0
+                    calibration_scores = score_observations(
                         calibration_frame,
                         nested_model,
                         residual_fallback=residual_fallback,
                     )
-                )
-            calibration = pd.concat(calibration_parts, ignore_index=True)
-            all_calibration.append(calibration.assign(evaluation_seed=evaluation_seed))
-            for item in condition_items:
-                if int(item["seed"]) != evaluation_seed:
-                    continue
-                observations = load_observations(root / str(item["directory"]), item)
-                all_scores.append(
-                    score_observations(
-                        observations,
-                        model,
-                        residual_fallback=residual_fallback,
-                        relationship_rows=relationships,
+                    rows_processed += len(calibration_scores)
+                    calibration_accumulator.add(calibration_scores)
+                    _progress(
+                        f"Spooled {len(calibration_scores):,} calibration scores; "
+                        f"{rows_processed:,} score rows processed overall"
                     )
+                    del calibration_scores, calibration_frame, nested_model
+                thresholds = calibration_accumulator.thresholds()
+            finally:
+                calibration_accumulator.close()
+            _progress(
+                f"Derived {len(thresholds):,} fixed-FPR thresholds for evaluation "
+                f"seed {evaluation_seed}; raw calibration scores discarded"
+            )
+            evaluation_items = [
+                item for item in condition_items if int(item["seed"]) == evaluation_seed
+            ]
+            for condition_index, item in enumerate(evaluation_items, start=1):
+                _progress(
+                    f"Scoring condition {condition_index}/{len(evaluation_items)} "
+                    f"for seed {evaluation_seed}: {item['id']}"
                 )
-    scores = pd.concat(all_scores, ignore_index=True)
-    calibration_all = pd.concat(all_calibration, ignore_index=True)
-    # Each evaluation fold needs its own independently calibrated thresholds.
-    performances, fixed_tables = [], []
-    for seed, fold_scores in scores.groupby("seed", sort=False):
-        fold_calibration = calibration_all[calibration_all["evaluation_seed"] == seed]
-        overall, fixed = evaluate(fold_scores, fold_calibration)
-        performances.append(overall)
-        fixed_tables.append(fixed)
+                observations = load_observations(root / str(item["directory"]), item)
+                relationships: list[dict] | None = (
+                    [] if relationship_writer is not None else None
+                )
+                condition_scores = score_observations(
+                    observations,
+                    model,
+                    residual_fallback=residual_fallback,
+                    relationship_rows=relationships,
+                )
+                rows_processed += len(condition_scores)
+                overall, fixed = evaluate_condition(condition_scores, thresholds)
+                performances.append(overall)
+                fixed_tables.append(fixed)
+                representative_parts.append(
+                    condition_scores.loc[
+                        (condition_scores["model"] == "empirical_separation_mean")
+                        & (condition_scores["context"] == "k3"),
+                        [
+                            "displacement",
+                            "ground_truth_corrupted",
+                            "selected_for_corruption",
+                            "score",
+                        ],
+                    ].copy()
+                )
+                if score_writer is not None:
+                    score_writer.write(condition_scores)
+                relationship_count = 0
+                if relationship_writer is not None and relationships is not None:
+                    relationship_table = pd.DataFrame(relationships).rename(
+                        columns={
+                            "is_corrupted": "ground_truth_corrupted",
+                            "injected_displacement_um": "ground_truth_displacement",
+                        }
+                    )
+                    relationship_count = len(relationship_table)
+                    relationship_writer.write(relationship_table)
+                _progress(
+                    f"Finished condition {item['id']}: "
+                    f"{len(condition_scores):,} scores and "
+                    f"{relationship_count:,} pairwise diagnostics; "
+                    f"{rows_processed:,} score rows processed overall"
+                )
+                del condition_scores, observations
+    if score_writer is not None:
+        score_writer.finish()
+    if relationship_writer is not None:
+        relationship_writer.finish()
     performance, fixed = pd.concat(performances, ignore_index=True), pd.concat(
         fixed_tables, ignore_index=True
     )
-    plot_summary = plot_outputs(scores, fixed, output)
-    relationship_table = pd.DataFrame(relationships).rename(
-        columns={
-            "is_corrupted": "ground_truth_corrupted",
-            "injected_displacement_um": "ground_truth_displacement",
-        }
-    )
-    _write(scores, output / "localization_scores.ecsv")
-    _write(relationship_table, output / "pairwise_relationship_scores.ecsv")
+    representative = pd.concat(representative_parts, ignore_index=True)
+    _progress("Generating plots")
+    plot_summary = plot_outputs(representative, fixed, output)
+    _progress("Writing result tables")
     _write(performance, output / "model_performance.ecsv")
     _write(fixed, output / "performance_at_fixed_fpr.ecsv")
     _write(
         pd.concat(summaries, ignore_index=True), output / "reference_model_summary.ecsv"
     )
     _write(plot_summary, output / "plot_aggregate_values.ecsv")
+    _progress(f"Analysis complete; results written to {output}")
 
 
 def main() -> None:
@@ -825,6 +1072,8 @@ def main() -> None:
         args.output_dir.resolve(),
         args.minimum_reference_observations,
         args.residual_separation_fallback,
+        args.write_localization_scores,
+        args.write_pairwise_diagnostics,
     )
 
 
