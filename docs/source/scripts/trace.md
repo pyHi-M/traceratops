@@ -15,6 +15,7 @@
 - Analyzer ([trace_analyzer](trace/trace_analyzer.md))
 - Physical vs Genomic Distance ([trace_physical_vs_genomic_distance](trace/trace_physical_vs_genomic_distance.md))
 - Compute and Plot 3-Way co-localization ([trace_3way_coloc](trace/trace_3way_coloc.md))
+- Simulate single-polymer benchmarks ([trace_simulator](trace/trace_simulator.md))
 
 ```{toctree}
 :maxdepth: 1
@@ -35,4 +36,5 @@ trace/trace_assign_mask
 trace/trace_analyzer
 trace/trace_physical_vs_genomic_distance
 trace/trace_3way_coloc
+trace/trace_simulator
 ```
