@@ -170,3 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 data/RUT/*
+
+# Local IDE and AI assistant outputs
+.idea/
+Claude outputs/
