@@ -197,7 +197,7 @@ def test_long_scores_exposes_all_k1_baselines_and_barcode_pair_loo_variants():
 
 def test_ml_training_features_crossfit_each_training_seed(monkeypatch):
     baselines = pd.DataFrame({"seed": [1, 2, 3, 4], "is_corrupted": False})
-    items = [{"seed": seed} for seed in (1, 2, 3, 4)]
+    items = [{"id": f"condition-{seed}", "seed": seed} for seed in (1, 2, 3, 4)]
     mapping = pd.DataFrame({"Barcode": [1], "Genomic_Position": [1.0]})
 
     monkeypatch.setattr(cycle2, "fit_reference", lambda rows, minimum: set(rows.seed))
@@ -214,6 +214,52 @@ def test_ml_training_features_crossfit_each_training_seed(monkeypatch):
     for row in training.itertuples():
         assert str(row.seed) not in row.feature_reference_seeds.split(",")
         assert "4" not in row.feature_reference_seeds.split(",")
+
+
+def test_crossfit_cache_reuses_only_identical_condition_reference_pair(monkeypatch):
+    baselines = pd.DataFrame({"seed": [1, 2, 3], "is_corrupted": False})
+    item = {"id": "condition-1", "seed": 1}
+    mapping = pd.DataFrame({"Barcode": [1], "Genomic_Position": [1.0]})
+    calls = {"fit": 0, "score": 0}
+
+    def fake_fit(rows, minimum):
+        calls["fit"] += 1
+        return tuple(sorted(rows.seed))
+
+    def fake_score(observations, model):
+        calls["score"] += 1
+        return pd.DataFrame(
+            {
+                **{name: [float(len(model))] for name in cycle2.ML_FEATURES},
+                "is_corrupted": [False],
+                "seed": observations.seed,
+            }
+        )
+
+    monkeypatch.setattr(cycle2, "fit_reference", fake_fit)
+    monkeypatch.setattr(cycle2, "score_observations", fake_score)
+    cache = cycle2.CrossfitCache(
+        baselines,
+        [item],
+        1,
+        lambda condition: pd.DataFrame({"Barcode": [1], "seed": [condition["seed"]]}),
+        mapping,
+    )
+    try:
+        first = cache.features(item, (2, 3))
+        repeated = cache.features(item, (3, 2))
+        distinct = cache.features(item, (2,))
+        cache.reference((2, 3))
+    finally:
+        cache.close()
+
+    pd.testing.assert_frame_equal(first, repeated)
+    assert not first.equals(distinct)
+    assert calls == {"fit": 2, "score": 2}
+    assert cache.condition_feature_computations == 2
+    assert cache.condition_feature_cache_hits == 1
+    assert cache.reference_fits == 2
+    assert cache.reference_cache_hits == 1
 
 
 def test_scoring_is_deterministic():

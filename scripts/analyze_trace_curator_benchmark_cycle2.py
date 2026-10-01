@@ -12,6 +12,7 @@ import argparse
 import importlib.util
 import math
 import sys
+import tempfile
 import time
 from collections import defaultdict
 from dataclasses import dataclass
@@ -421,6 +422,95 @@ def assert_seed_split(training: pd.DataFrame, evaluation_seed: int) -> None:
         raise ValueError("Evaluation seed leaked into ML training")
 
 
+class CrossfitCache:
+    """Efficiency-scoped cache for reference fits and compact ML features."""
+
+    def __init__(
+        self,
+        baselines: pd.DataFrame,
+        condition_items: Sequence[Mapping],
+        minimum_observations: int,
+        load_condition,
+        mapping: pd.DataFrame,
+        memory_limit_bytes: int = 256 * 1024**2,
+    ) -> None:
+        self.baselines = baselines
+        self.condition_items = condition_items
+        self.minimum_observations = minimum_observations
+        self.load_condition = load_condition
+        self.mapping = mapping
+        self.memory_limit_bytes = memory_limit_bytes
+        self.reference_models: dict[tuple[int, ...], ReferenceModel] = {}
+        self.condition_features: dict[tuple[str, tuple[int, ...]], pd.DataFrame | Path] = {}
+        self.feature_memory_bytes = 0
+        self.reference_fits = 0
+        self.reference_cache_hits = 0
+        self.condition_feature_computations = 0
+        self.condition_feature_cache_hits = 0
+        self._temporary_directory = tempfile.TemporaryDirectory(
+            prefix="trace-curator-cycle2-features-"
+        )
+
+    @staticmethod
+    def seed_key(reference_seeds: Iterable[int]) -> tuple[int, ...]:
+        return tuple(sorted(int(seed) for seed in reference_seeds))
+
+    def reference(self, reference_seeds: Iterable[int]) -> ReferenceModel:
+        key = self.seed_key(reference_seeds)
+        if key in self.reference_models:
+            self.reference_cache_hits += 1
+            _progress(f"reusing reference {key}")
+            return self.reference_models[key]
+        _progress(f"fitting reference {key}")
+        rows = self.baselines[self.baselines["seed"].astype(int).isin(key)]
+        model = fit_reference(rows, self.minimum_observations)
+        self.reference_models[key] = model
+        self.reference_fits += 1
+        return model
+
+    def features(self, item: Mapping, reference_seeds: Iterable[int]) -> pd.DataFrame:
+        reference_key = self.seed_key(reference_seeds)
+        condition_id = str(item["id"])
+        key = (condition_id, reference_key)
+        cached = self.condition_features.get(key)
+        if cached is not None:
+            self.condition_feature_cache_hits += 1
+            _progress(
+                f"reusing condition {condition_id} against reference {reference_key}"
+            )
+            frame = pd.read_pickle(cached) if isinstance(cached, Path) else cached
+            return frame.copy()
+        _progress(f"scoring condition {condition_id} against reference {reference_key}")
+        observations = attach_genomic_coordinates(self.load_condition(item), self.mapping)
+        scored = score_observations(observations, self.reference(reference_key))
+        compact = scored[[*ML_FEATURES, "is_corrupted", "seed"]].copy()
+        compact["feature_reference_seeds"] = ",".join(map(str, reference_key))
+        size = int(compact.memory_usage(index=True, deep=True).sum())
+        if self.feature_memory_bytes + size <= self.memory_limit_bytes:
+            self.condition_features[key] = compact
+            self.feature_memory_bytes += size
+        else:
+            path = Path(self._temporary_directory.name) / f"features-{len(self.condition_features)}.pkl"
+            compact.to_pickle(path)
+            self.condition_features[key] = path
+        self.condition_feature_computations += 1
+        return compact.copy()
+
+    def report(self) -> None:
+        _progress(
+            "cache statistics: "
+            f"reference fits={self.reference_fits}, "
+            f"reference cache hits={self.reference_cache_hits}, "
+            f"condition feature computations={self.condition_feature_computations}, "
+            f"condition feature cache hits={self.condition_feature_cache_hits}"
+        )
+
+    def close(self) -> None:
+        self.reference_models.clear()
+        self.condition_features.clear()
+        self._temporary_directory.cleanup()
+
+
 def build_crossfit_ml_training(
     condition_items: Sequence[Mapping],
     excluded_seeds: set[int],
@@ -428,8 +518,18 @@ def build_crossfit_ml_training(
     minimum_observations: int,
     load_condition,
     mapping: pd.DataFrame,
+    cache: CrossfitCache | None = None,
 ) -> pd.DataFrame:
     """Construct each training seed's features without its own clean baseline."""
+    owns_cache = cache is None
+    if cache is None:
+        cache = CrossfitCache(
+            baselines,
+            condition_items,
+            minimum_observations,
+            load_condition,
+            mapping,
+        )
     compact_parts = []
     training_seeds = sorted(
         {int(item["seed"]) for item in condition_items}.difference(excluded_seeds)
@@ -440,20 +540,16 @@ def build_crossfit_ml_training(
                 {*excluded_seeds, training_seed}
             )
         )
-        reference_rows = baselines[baselines["seed"].astype(int).isin(reference_seeds)]
-        feature_model = fit_reference(reference_rows, minimum_observations)
         for item in condition_items:
             if int(item["seed"]) != training_seed:
                 continue
-            observations = attach_genomic_coordinates(load_condition(item), mapping)
-            features = score_observations(observations, feature_model)
-            compact = features[[*ML_FEATURES, "is_corrupted", "seed"]].copy()
-            compact["feature_reference_seeds"] = ",".join(map(str, reference_seeds))
-            compact_parts.append(compact)
-            del observations, features
+            compact_parts.append(cache.features(item, reference_seeds))
     if not compact_parts:
         raise ValueError("No seeds remain for ML training after fold exclusions")
-    return pd.concat(compact_parts, ignore_index=True)
+    result = pd.concat(compact_parts, ignore_index=True)
+    if owns_cache:
+        cache.close()
+    return result
 
 
 def attribution_metrics(scores: pd.DataFrame, threshold: float) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -586,14 +682,20 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
     for efficiency, items in by_efficiency.items():
         seeds = sorted({int(item["seed"]) for item in items})
         efficiency_baselines = pd.concat([frame for frame in baselines.values() if np.isclose(frame.detection_efficiency.iloc[0], efficiency)], ignore_index=True)
+        load_condition = lambda item: cycle1.load_observations(root / str(item["directory"]), item)
+        crossfit_cache = CrossfitCache(
+            efficiency_baselines,
+            items,
+            minimum_observations,
+            load_condition,
+            mapping,
+        )
         for evaluation_seed in seeds:
             _progress(f"efficiency={efficiency:g}, held-out seed={evaluation_seed}")
-            reference_rows = efficiency_baselines[efficiency_baselines.seed != evaluation_seed]
-            model = fit_reference(reference_rows, minimum_observations)
+            model = crossfit_cache.reference(set(seeds).difference({evaluation_seed}))
             for strategy in ("separation", "barcode_pair", "bridge"):
                 for key, values in getattr(model, strategy).items(): references.append({"detection_efficiency": efficiency, "evaluation_seed": evaluation_seed, "reference_strategy": strategy, "reference_key": str(key), "n_observations": len(values), "sufficient": len(values) >= minimum_observations})
-            load_condition = lambda item: cycle1.load_observations(root / str(item["directory"]), item)
-            training = build_crossfit_ml_training(items, {evaluation_seed}, efficiency_baselines, minimum_observations, load_condition, mapping)
+            training = build_crossfit_ml_training(items, {evaluation_seed}, efficiency_baselines, minimum_observations, load_condition, mapping, cache=crossfit_cache)
             assert_seed_split(training, evaluation_seed)
             learner = fit_ml(training)
             coefficients = learner.named_steps["logisticregression"].coef_[0]
@@ -603,16 +705,17 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
             calibration_long_parts = []
             for calibration_seed in seeds:
                 if calibration_seed == evaluation_seed: continue
-                nested_rows = efficiency_baselines[~efficiency_baselines.seed.isin([evaluation_seed, calibration_seed])]
-                nested_model = fit_reference(nested_rows, minimum_observations)
-                nested_training = build_crossfit_ml_training(items, {evaluation_seed, calibration_seed}, efficiency_baselines, minimum_observations, load_condition, mapping)
+                nested_model = crossfit_cache.reference(
+                    set(seeds).difference({evaluation_seed, calibration_seed})
+                )
+                nested_training = build_crossfit_ml_training(items, {evaluation_seed, calibration_seed}, efficiency_baselines, minimum_observations, load_condition, mapping, cache=crossfit_cache)
                 nested_learner = fit_ml(nested_training)
                 calibration = efficiency_baselines[efficiency_baselines.seed == calibration_seed].copy()
                 calibration["condition"] = "clean_calibration"; calibration["replicate"] = calibration_seed; calibration["displacement"] = 0.0; calibration["selected_for_corruption"] = False
                 calibration_features = score_observations(calibration, nested_model)
                 calibration_features["ml_probability"] = nested_learner.predict_proba(ml_training_matrix(calibration_features))[:, 1]
                 calibration_long_parts.append(long_scores(calibration_features))
-                del nested_rows, nested_model, nested_training, nested_learner, calibration, calibration_features
+                del nested_model, nested_training, nested_learner, calibration, calibration_features
             calibration_long = pd.concat(calibration_long_parts, ignore_index=True)
             thresholds = {(name, fpr): fixed_fpr_threshold(group.score, fpr) for name, group in calibration_long.groupby("model") for fpr in FIXED_FPRS}
             del calibration_long, calibration_long_parts, training
@@ -626,6 +729,8 @@ def run(root: Path, output: Path, genomic_coordinates: Path | None = None, assum
                 if detail_writer is not None:
                     detail_writer.write(features)
                 del observations, features, scores, overall, fixed
+        crossfit_cache.report()
+        crossfit_cache.close()
     if detail_writer is not None:
         detail_writer.finish()
     performance_table = pd.concat(overall_parts, ignore_index=True); fixed_table = pd.concat(fixed_parts, ignore_index=True)

@@ -62,9 +62,18 @@ fixed corruption mechanism, one displaced localization, and fixed radial
 displacements do not establish generalization to experimental errors.
 
 Conditions are scored and evaluated one at a time. Detailed localization output
-is disabled by default; `--write-localization-scores` enables it. Calibration,
-condition features, and scores are released before advancing to the next fold
-or condition.
+is disabled by default; `--write-localization-scores` enables it. Full
+observation, condition-feature, and long-score tables are released before
+advancing; only the compact ML columns described below may remain cached.
+
+Within one detection-efficiency block, deterministic caches reuse reference
+models keyed by their sorted reference-seed tuple and compact ML feature tables
+keyed by condition identity plus that exact tuple. Cached feature tables contain
+only the fixed ML features, label, seed, and reference-seed provenance. The
+cache never retains observations or long-score tables. Compact features beyond
+the in-memory limit are stored in a temporary disk-backed cache, and all cache
+state is released before the next efficiency. Progress output distinguishes
+fits/scores from cache reuse and reports fit, scoring, and hit counts per block.
 
 ## Result tables
 
