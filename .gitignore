@@ -170,3 +170,11 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 data/RUT/*
+
+# Local IDE and AI assistant outputs
+.idea/
+Claude outputs/
+
+# Local debug artifacts
+traceratops/Test.py
+traceratops/debug_violin_first10.png
