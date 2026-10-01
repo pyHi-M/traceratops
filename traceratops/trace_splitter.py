@@ -20,6 +20,7 @@ import numpy as np
 from astropy.table import Column, Table, vstack
 from scipy.spatial.distance import pdist
 from sklearn.cluster import HDBSCAN, KMeans
+from tqdm import tqdm
 
 from traceratops.core.chromatin_trace_table import ChromatinTraceTable
 from traceratops.core.trace_resolver import (
@@ -191,6 +192,9 @@ def parse_arguments():
     parser.add_argument(
         "--pipe", help="Input trace-file list from stdin.", action="store_true"
     )
+    parser.add_argument(
+        "--quiet", action="store_true", help="Disable analysis progress bars."
+    )
     return parser
 
 
@@ -250,10 +254,15 @@ def _otsu_threshold(values, bins=256):
     return float(centers[np.argmax(variance)])
 
 
-def estimate_hdbscan_epsilon(groups):
+def estimate_hdbscan_epsilon(groups, show_progress=True):
     """Estimate epsilon as the median per-trace Otsu pair-distance threshold."""
     thresholds = []
-    for trace in groups:
+    for trace in tqdm(
+        groups,
+        desc="Estimating HDBSCAN epsilon",
+        unit="trace",
+        disable=not show_progress,
+    ):
         coords = _coordinates(trace)
         if len(coords) > 1:
             thresholds.append(_otsu_threshold(pdist(coords)))
@@ -309,6 +318,7 @@ def split_large_traces(
     cluster_selection_method="eom",
     cluster_selection_epsilon=None,
     allow_single_cluster=False,
+    show_progress=True,
 ):
     """Split selected traces in place with K-means or HDBSCAN.
 
@@ -318,7 +328,15 @@ def split_large_traces(
     """
     grouped = trace_table.data.group_by("Trace_ID")
     groups = list(grouped.groups)
-    rg_values = [compute_radius_of_gyration(_coordinates(t)) for t in groups]
+    rg_values = [
+        compute_radius_of_gyration(_coordinates(trace))
+        for trace in tqdm(
+            groups,
+            desc="Computing trace radii",
+            unit="trace",
+            disable=not show_progress,
+        )
+    ]
     mean_rg, std_rg = np.mean(rg_values), np.std(rg_values)
     rg_threshold = mean_rg + std_threshold * std_rg
     print(
@@ -327,12 +345,19 @@ def split_large_traces(
 
     epsilon = cluster_selection_epsilon
     if clustering_method == "hdbscan" and epsilon is None:
-        epsilon = estimate_hdbscan_epsilon(groups)
+        epsilon = estimate_hdbscan_epsilon(groups, show_progress=show_progress)
         print(f"$ Estimated HDBSCAN cluster selection epsilon: {epsilon:.3f}")
 
     new_data = trace_table.data.copy()
     num_splits = 0
-    for trace, rg in zip(groups, rg_values):
+    trace_iterator = tqdm(
+        zip(groups, rg_values),
+        total=len(groups),
+        desc=f"Applying {clustering_method}",
+        unit="trace",
+        disable=not show_progress,
+    )
+    for trace, rg in trace_iterator:
         original_id = trace["Trace_ID"][0]
         coords = _coordinates(trace)
         if not (split_all or rg > rg_threshold):
@@ -516,6 +541,7 @@ def resolve_traces(
     one_polymer_ambiguity_mode="global",
     duplicate_minimum_confidence=None,
     candidate_diagnostics=None,
+    show_progress=True,
 ):
     """Resolve barcode duplicates and merged pairs, returning diagnostics.
 
@@ -588,7 +614,14 @@ def resolve_traces(
     output_groups = []
     diagnostics = []
     candidate_mode_used = False
-    for trace in trace_table.data.group_by("Trace_ID").groups:
+    groups = trace_table.data.group_by("Trace_ID").groups
+    for trace in tqdm(
+        groups,
+        total=len(groups),
+        desc="Resolving traces",
+        unit="trace",
+        disable=not show_progress,
+    ):
         trace_id = trace["Trace_ID"][0]
         multiplicity = TraceMultiplicity.from_barcodes(trace["Barcode #"])
         rg = compute_radius_of_gyration(_coordinates(trace))
@@ -775,6 +808,7 @@ def main():
                 one_polymer_ambiguity_mode=args.one_polymer_ambiguity_mode,
                 duplicate_minimum_confidence=args.duplicate_minimum_confidence,
                 candidate_diagnostics=candidate_rows,
+                show_progress=not args.quiet,
             )
             diagnostics_output = args.diagnostics_output or (
                 f"{os.path.splitext(trace_file)[0]}_split_diagnostics.ecsv"
@@ -808,6 +842,7 @@ def main():
                 args.cluster_selection_method,
                 args.cluster_selection_epsilon,
                 args.allow_single_cluster,
+                show_progress=not args.quiet,
             )
         trace_table.save(output)
 

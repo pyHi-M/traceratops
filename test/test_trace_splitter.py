@@ -49,6 +49,26 @@ def test_argument_defaults_preserve_existing_behavior():
     assert args.one_polymer_ambiguity_mode == "global"
     assert args.duplicate_minimum_confidence is None
     assert args.candidate_diagnostics_output is None
+    assert args.quiet is False
+
+
+def test_quiet_disables_progress_bars(monkeypatch):
+    table = _table({"aaaa": [0, 1, 10], "bbbb": [0, 1, 10]})
+    calls = []
+
+    def fake_tqdm(iterable, **kwargs):
+        calls.append(kwargs)
+        return iterable
+
+    monkeypatch.setattr(trace_splitter, "tqdm", fake_tqdm)
+
+    trace_splitter.split_large_traces(table, split_all=True, show_progress=False)
+
+    assert [call["desc"] for call in calls] == [
+        "Computing trace radii",
+        "Applying kmeans",
+    ]
+    assert all(call["disable"] for call in calls)
 
 
 def test_method_and_legacy_clustering_method_are_aliases():
@@ -144,7 +164,11 @@ def test_hdbscan_epsilon_is_estimated_when_omitted(monkeypatch):
             return np.full(len(coords), -1)
 
     monkeypatch.setattr(trace_splitter, "HDBSCAN", FakeHDBSCAN)
-    monkeypatch.setattr(trace_splitter, "estimate_hdbscan_epsilon", lambda groups: 3.25)
+    monkeypatch.setattr(
+        trace_splitter,
+        "estimate_hdbscan_epsilon",
+        lambda groups, show_progress=True: 3.25,
+    )
     trace_splitter.split_large_traces(
         table, split_all=True, clustering_method="hdbscan"
     )
