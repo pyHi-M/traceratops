@@ -139,3 +139,18 @@ def test_zero_displacement_labels_do_not_change_scores():
     first=analysis.score_trace(toy_trace(labels=True),model)
     second=analysis.score_trace(toy_trace(labels=False),model)
     np.testing.assert_allclose(first.score,second.score,equal_nan=True)
+
+
+def test_plot_lines_uses_sem_column(tmp_path):
+    frame = pd.DataFrame({
+        "model": ["m", "m", "m", "m"],
+        "detection_efficiency": [.5, .5, .5, .5],
+        "displacement": [.1, .1, .2, .2],
+        "seed": [1, 2, 1, 2],
+        "metric": [.2, .4, .6, .8],
+        "sem": [99., 99., 99., 99.],
+    })
+
+    analysis._plot_lines(frame, "metric", tmp_path, "metric.png", "Metric")
+
+    assert (tmp_path / "metric.png").is_file()
