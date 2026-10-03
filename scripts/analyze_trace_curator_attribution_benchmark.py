@@ -40,6 +40,15 @@ MODELS = {
     "star_anomalous_fraction_all": ("star", "all", "fraction"),
     "empirical_two_flank_bridge": ("bridge", "k1", "empirical"),
 }
+COMPACT_OUTPUTS = (
+    "attribution_model_performance.ecsv",
+    "attribution_performance_at_fixed_fpr.ecsv",
+    "culprit_ranking_performance.ecsv",
+    "collateral_fpr_by_barcode_distance.ecsv",
+    "culprit_rank_distribution.ecsv",
+    "clean_trace_false_culprit_behavior.ecsv",
+    "attribution_reference_summary.ecsv",
+)
 
 
 def fold_seed_sets(
@@ -73,6 +82,19 @@ def _write(frame: pd.DataFrame, path: Path) -> None:
     for column in safe.select_dtypes(include="object"):
         safe[column] = safe[column].fillna("").astype(str)
     Table.from_pandas(safe).write(path, format="ascii.ecsv", overwrite=True)
+
+
+def _read_compact_outputs(output: Path) -> dict[str, pd.DataFrame]:
+    """Read and validate the compact results needed to reproduce the plots."""
+    missing = [name for name in COMPACT_OUTPUTS if not (output / name).is_file()]
+    if missing:
+        raise FileNotFoundError(
+            f"Missing compact benchmark output(s) in {output}: {', '.join(missing)}"
+        )
+    return {
+        name: Table.read(output / name, format="ascii.ecsv").to_pandas()
+        for name in COMPACT_OUTPUTS
+    }
 
 
 def _trace_keys(frame: pd.DataFrame) -> list[str]:
@@ -361,21 +383,23 @@ def _plot_lines(frame: pd.DataFrame, metric: str, output: Path, filename: str, y
     fig,axis=plt.subplots(figsize=(10,6))
     for (model,efficiency),line in aggregate.groupby(["model","detection_efficiency"]):
         line=line.sort_values("displacement")
-        axis.errorbar(line.displacement,line["mean"],yerr=line.sem,marker="o",label=f"{model}; eff={efficiency:g}")
+        axis.errorbar(line["displacement"],line["mean"],yerr=line["sem"],marker="o",label=f"{model}; eff={efficiency:g}")
     axis.set(xlabel="Injected displacement (µm)",ylabel=ylabel); axis.legend(fontsize=6,ncol=2)
     fig.tight_layout(); fig.savefig(output/filename,dpi=160); plt.close(fig)
 
 
 def plot_results(fixed: pd.DataFrame, ranking: pd.DataFrame, collateral: pd.DataFrame, clean_maxima: pd.DataFrame, output: Path) -> None:
-    primary=fixed[np.isclose(fixed.target_fpr,.01)]
+    primary=fixed[np.isclose(fixed["target_fpr"],.01)]
     for metric,name,label in (("target_sensitivity","target_sensitivity.png","Target sensitivity at 1% FPR"),("clean_trace_fpr","clean_trace_fpr.png","Clean-trace FPR"),("collateral_fpr","collateral_fpr.png","Collateral FPR")):
         _plot_lines(primary,metric,output,name,label)
     _plot_lines(ranking,"top1",output,"top1_culprit_attribution.png","Unique top-1 attribution accuracy")
     if not collateral.empty:
-        summary=collateral.groupby(["model","detection_efficiency","displacement","barcode_distance"]).called.mean().reset_index()
+        keys = ["model", "detection_efficiency", "displacement", "barcode_distance"]
+        totals = collateral.groupby(keys)[["n_calls", "n_genuine"]].sum().reset_index()
+        totals["collateral_fpr"] = totals["n_calls"] / totals["n_genuine"]
         fig,axis=plt.subplots(figsize=(10,6))
-        for (model,distance),line in summary.groupby(["model","barcode_distance"]):
-            axis.plot(line.displacement,line.called,marker="o",label=f"{model}; Δbarcode={distance}")
+        for (model,distance),line in totals.groupby(["model","barcode_distance"]):
+            axis.plot(line["displacement"],line["collateral_fpr"],marker="o",label=f"{model}; Δbarcode={distance}")
         axis.set(xlabel="Injected displacement (µm)",ylabel="Collateral FPR at 1%",ylim=(-.01,1.01)); axis.legend(fontsize=5,ncol=3)
         fig.tight_layout(); fig.savefig(output/"collateral_fpr_by_barcode_distance.png",dpi=160); plt.close(fig)
     if not ranking.empty:
@@ -388,7 +412,7 @@ def plot_results(fixed: pd.DataFrame, ranking: pd.DataFrame, collateral: pd.Data
     if not clean_maxima.empty:
         fig,axis=plt.subplots(figsize=(9,5))
         for model,group in clean_maxima.groupby("model"):
-            axis.hist(group.maximum_score.dropna(),bins=40,density=True,histtype="step",label=model)
+            axis.hist(group["maximum_score"].dropna(),bins=40,density=True,histtype="step",label=model)
         axis.set(xlabel="Maximum localization score in a clean trace",ylabel="Density"); axis.legend(fontsize=6,ncol=2)
         fig.tight_layout(); fig.savefig(output/"clean_trace_false_culprit_maxima.png",dpi=160); plt.close(fig)
 
@@ -464,8 +488,21 @@ def run(root: Path, output: Path, minimum_observations: int=20, write_localizati
     _write(ranking,output/"culprit_rank_distribution.ecsv")
     _write(clean_maxima,output/"clean_trace_false_culprit_behavior.ecsv")
     _write(pd.DataFrame(reference_rows),output/"attribution_reference_summary.ecsv")
-    plot_results(fixed,ranking,collateral,clean_maxima,output)
+    plot_results(fixed,ranking,collateral_summary,clean_maxima,output)
     _progress(f"complete: {output}")
+
+
+def plot_only(output: Path) -> None:
+    """Regenerate plots from a completed run's compact ECSV outputs."""
+    frames = _read_compact_outputs(output)
+    plot_results(
+        frames["attribution_performance_at_fixed_fpr.ecsv"],
+        frames["culprit_rank_distribution.ecsv"],
+        frames["collateral_fpr_by_barcode_distance.ecsv"],
+        frames["clean_trace_false_culprit_behavior.ecsv"],
+        output,
+    )
+    _progress(f"plots complete: {output}")
 
 
 def parse_arguments(argv: Sequence[str]|None=None) -> argparse.Namespace:
@@ -474,11 +511,17 @@ def parse_arguments(argv: Sequence[str]|None=None) -> argparse.Namespace:
     parser.add_argument("--output-dir",type=Path,required=True)
     parser.add_argument("--minimum-reference-observations",type=int,default=20)
     parser.add_argument("--write-localization-scores",action="store_true",help="Write large localization diagnostics (disabled by default).")
+    parser.add_argument("--plot-only",action="store_true",help="Regenerate plots from compact ECSV outputs without rerunning the benchmark.")
     return parser.parse_args(argv)
 
 
 def main() -> None:
-    args=parse_arguments(); run(args.benchmark_root.resolve(),args.output_dir.resolve(),args.minimum_reference_observations,args.write_localization_scores)
+    args=parse_arguments()
+    output = args.output_dir.resolve()
+    if args.plot_only:
+        plot_only(output)
+    else:
+        run(args.benchmark_root.resolve(),output,args.minimum_reference_observations,args.write_localization_scores)
 
 
 if __name__ == "__main__": main()
