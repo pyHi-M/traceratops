@@ -82,7 +82,7 @@ def _trace_keys(frame: pd.DataFrame) -> list[str]:
 @dataclass
 class EmpiricalReference:
     separation: dict[float, np.ndarray]
-    bridge: dict[tuple[float, float], tuple[np.ndarray, np.ndarray, np.ndarray]]
+    bridge: dict[tuple[float, float], tuple[np.ndarray, np.ndarray]]
     minimum_observations: int = 20
 
 
@@ -90,7 +90,7 @@ def fit_reference(frame: pd.DataFrame, minimum_observations: int = 20) -> Empiri
     """Fit separation and two-flank references from clean traces only."""
     clean = frame.loc[~frame["is_corrupted"].astype(bool)]
     edge_values: dict[float, list[float]] = defaultdict(list)
-    bridge_values: dict[tuple[float, float], list[tuple[float, float, float]]] = defaultdict(list)
+    bridge_values: dict[tuple[float, float], list[tuple[float, float]]] = defaultdict(list)
     for _, trace in clean.groupby(_trace_keys(clean), sort=False):
         trace = trace.sort_values("Barcode")
         xyz = trace[["x", "y", "z"]].to_numpy(float)
@@ -100,8 +100,10 @@ def fit_reference(frame: pd.DataFrame, minimum_observations: int = 20) -> Empiri
                 edge_values[float(barcode[j] - barcode[i])].append(float(np.linalg.norm(xyz[j]-xyz[i])))
         for i in range(1, len(trace)-1):
             key = (float(barcode[i]-barcode[i-1]), float(barcode[i+1]-barcode[i]))
-            bridge_values[key].append((float(np.linalg.norm(xyz[i]-xyz[i-1])), float(np.linalg.norm(xyz[i+1]-xyz[i])), float(np.linalg.norm(xyz[i+1]-xyz[i-1]))))
-    bridges = {key: tuple(np.asarray(values, float)[:, column] for column in range(3)) for key, values in bridge_values.items()}
+            geometry = bridge_coordinates(xyz[i - 1], xyz[i], xyz[i + 1])
+            if geometry is not None:
+                bridge_values[key].append(geometry)
+    bridges = {key: tuple(np.asarray(values, float)[:, column] for column in range(2)) for key, values in bridge_values.items()}
     return EmpiricalReference({key: np.asarray(values, float) for key, values in edge_values.items()}, bridges, minimum_observations)
 
 
@@ -111,6 +113,21 @@ def empirical_anomaly(reference: Sequence[float], observed: float) -> float:
     lower = (np.searchsorted(sample, observed, side="right") + 1) / (len(sample) + 1)
     upper = (len(sample) - np.searchsorted(sample, observed, side="left") + 1) / (len(sample) + 1)
     return -math.log10(min(1.0, 2.0 * min(lower, upper)))
+
+
+def bridge_coordinates(
+    left: np.ndarray, candidate: np.ndarray, right: np.ndarray
+) -> tuple[float, float] | None:
+    """Represent a candidate by projection and offset relative to its flanks."""
+    axis = np.asarray(right, float) - np.asarray(left, float)
+    squared_span = float(np.dot(axis, axis))
+    if squared_span <= np.finfo(float).eps:
+        return None
+    candidate_from_left = np.asarray(candidate, float) - np.asarray(left, float)
+    fractional_projection = float(np.dot(candidate_from_left, axis) / squared_span)
+    projected = np.asarray(left, float) + fractional_projection * axis
+    perpendicular_distance = float(np.linalg.norm(np.asarray(candidate, float) - projected))
+    return fractional_projection, perpendicular_distance
 
 
 def _context(barcodes: np.ndarray, index: int, name: str) -> list[int]:
@@ -135,6 +152,13 @@ def trace_cost(scores: Sequence[float], variant: str) -> float:
 
 
 def leave_one_out_improvement(n_nodes: int, edges: Sequence[tuple[int, int, float]], variant: str) -> np.ndarray:
+    """Return cost improvement; the sum variant equals incident-edge sum.
+
+    Consequently ``loo_sum_all`` is retained as the most transparent LOO
+    baseline, but is not an attribution principle independent of a star sum.
+    ``loo_top3_all`` remains distinct because removing a node can change which
+    edges enter the whole-trace top-three set.
+    """
     before = trace_cost([score for _, _, score in edges], variant)
     result = np.full(n_nodes, np.nan)
     for node in range(n_nodes):
@@ -163,7 +187,7 @@ def star_scores(n_nodes: int, edges: Sequence[tuple[int, int,float]], variant: s
 
 
 def bridge_score(trace: pd.DataFrame, index: int, reference: EmpiricalReference) -> tuple[float, str]:
-    """Score the two incident distances and flank bridge against clean marginals."""
+    """Score candidate projection and perpendicular offset relative to flanks."""
     if index == 0 or index == len(trace)-1:
         return math.nan, "missing_flank"
     barcode = trace["Barcode"].to_numpy(float)
@@ -172,9 +196,11 @@ def bridge_score(trace: pd.DataFrame, index: int, reference: EmpiricalReference)
     distributions = reference.bridge.get(key)
     if distributions is None or any(len(values) < reference.minimum_observations for values in distributions):
         return math.nan, "insufficient_reference"
-    observed = (np.linalg.norm(xyz[index]-xyz[index-1]), np.linalg.norm(xyz[index+1]-xyz[index]), np.linalg.norm(xyz[index+1]-xyz[index-1]))
-    # The flank-to-flank term conditions the two incident distances on bridge span;
-    # averaging empirical marginal surprises stays transparent and non-parametric.
+    observed = bridge_coordinates(xyz[index - 1], xyz[index], xyz[index + 1])
+    if observed is None:
+        return math.nan, "degenerate_flank_geometry"
+    # Both quantities depend on the candidate.  The score is transparent and
+    # empirical without asserting a multivariate parametric distribution.
     return float(np.mean([empirical_anomaly(values, value) for values, value in zip(distributions, observed)])), "ok"
 
 
@@ -237,11 +263,23 @@ def rank_trace(group: pd.DataFrame) -> dict:
     valid = group[np.isfinite(group.score)]
     target = valid[valid.is_corrupted.astype(bool)]
     if len(target) != 1:
-        return {"scoreable": False, "rank": math.nan, "top1": False, "top2": False, "reciprocal_rank": 0.0}
+        return {"scoreable": False, "rank": math.nan, "top1": False,
+                "top1_unique": False, "top2": False,
+                "top2_including_ties": False, "top2_conservative": False,
+                "n_tied_at_target_rank": 0, "reciprocal_rank": 0.0}
     target_score = float(target.score.iloc[0])
     rank = int(1 + np.sum(valid.score.to_numpy() > target_score))
-    tied = int(np.sum(valid.score.to_numpy() == valid.score.max())) if target_score == valid.score.max() else 0
-    return {"scoreable": True, "rank": rank, "top1": rank == 1 and tied == 1, "top2": rank <= 2, "reciprocal_rank": 1/rank}
+    tied = int(np.sum(valid.score.to_numpy() == target_score))
+    top1_unique = rank == 1 and tied == 1
+    top2_including_ties = rank <= 2
+    # Conservatively require the complete set ranked at least as highly as the
+    # target to fit into two slots.  A three-way maximum therefore fails.
+    top2_conservative = int(np.sum(valid.score.to_numpy() >= target_score)) <= 2
+    return {"scoreable": True, "rank": rank, "top1": top1_unique,
+            "top1_unique": top1_unique, "top2": top2_conservative,
+            "top2_including_ties": top2_including_ties,
+            "top2_conservative": top2_conservative,
+            "n_tied_at_target_rank": tied, "reciprocal_rank": 1/rank}
 
 
 def evaluate(scores: pd.DataFrame, thresholds: Mapping[tuple[str,float],float]):
@@ -250,16 +288,24 @@ def evaluate(scores: pd.DataFrame, thresholds: Mapping[tuple[str,float],float]):
     for key, group in scores.groupby(keys, sort=False):
         meta = dict(zip(keys,key)); valid = group[np.isfinite(group.score)]
         labels = valid.is_corrupted.astype(bool).to_numpy(); values = valid.score.to_numpy()
+        trace_keys = _trace_keys(group)
+        trace_state = (
+            group.groupby(trace_keys, sort=False, dropna=False)["is_corrupted"]
+            .any().rename("trace_has_target").reset_index()
+        )
+        valid_with_state = valid.merge(
+            trace_state, on=trace_keys, how="left", validate="many_to_one"
+        )
+        trace_has_target = valid_with_state.trace_has_target.astype(bool).to_numpy()
         overall.append({**meta,"roc_auc":roc_auc_score(labels,values) if len(np.unique(labels))==2 else math.nan,"precision_recall_auc":average_precision_score(labels,values) if labels.any() else math.nan,"n_scored":len(valid)})
         for fpr in FIXED_FPRS:
             threshold=thresholds.get((meta["model"],fpr),math.nan); calls=valid.score.to_numpy()>threshold
             # A corrupted trace has exactly one positive-displacement target; r=0
             # selected targets remain clean and contribute to clean-trace FPR.
-            trace_has_target = valid.groupby(_trace_keys(valid)).is_corrupted.transform("any").astype(bool).to_numpy()
             target = labels; clean = ~trace_has_target; collateral_mask = trace_has_target & ~target
-            fixed.append({**meta,"target_fpr":fpr,"threshold":threshold,"target_sensitivity":np.mean(calls[target]) if target.any() else math.nan,"clean_trace_fpr":np.mean(calls[clean]) if clean.any() else math.nan,"collateral_fpr":np.mean(calls[collateral_mask]) if collateral_mask.any() else math.nan,"selected_zero_call_rate":np.mean(calls[valid.selected_for_corruption.astype(bool).to_numpy()]) if np.isclose(meta["displacement"],0) and valid.selected_for_corruption.astype(bool).any() else math.nan})
+            n_targets = int(group.is_corrupted.astype(bool).sum())
+            fixed.append({**meta,"target_fpr":fpr,"threshold":threshold,"target_sensitivity":np.sum(calls & target)/n_targets if n_targets else math.nan,"clean_trace_fpr":np.mean(calls[clean]) if clean.any() else math.nan,"collateral_fpr":np.mean(calls[collateral_mask]) if collateral_mask.any() else math.nan,"selected_zero_call_rate":np.mean(calls[valid.selected_for_corruption.astype(bool).to_numpy()]) if np.isclose(meta["displacement"],0) and valid.selected_for_corruption.astype(bool).any() else math.nan})
         primary=thresholds.get((meta["model"],.01),math.nan)
-        trace_keys=_trace_keys(group)
         for trace_key, trace in group.groupby(trace_keys,sort=False):
             trace_meta={name:value for name,value in zip(trace_keys,trace_key if isinstance(trace_key,tuple) else (trace_key,))}
             corrupted=trace[trace.is_corrupted.astype(bool)]
@@ -295,8 +341,12 @@ def summarize_ranking(frame: pd.DataFrame) -> pd.DataFrame:
                 "attribution_coverage": group.scoreable.mean(),
                 # top-k values are False for an unscoreable target, making these
                 # unconditional attribution accuracies.
-                "top1_attribution_accuracy": group.top1.mean(),
-                "top2_attribution_accuracy": group.top2.mean(),
+                "top1_attribution_accuracy": group.top1_unique.mean(),
+                "top1_unique_accuracy": group.top1_unique.mean(),
+                "top2_attribution_accuracy": group.top2_conservative.mean(),
+                "top2_conservative_accuracy": group.top2_conservative.mean(),
+                "top2_including_ties_accuracy": group.top2_including_ties.mean(),
+                "mean_n_tied_at_target_rank": group.n_tied_at_target_rank.mean(),
                 "mean_true_target_rank": scoreable["rank"].mean(),
                 "median_true_target_rank": scoreable["rank"].median(),
                 "mean_reciprocal_rank": group.reciprocal_rank.mean(),

@@ -57,14 +57,28 @@ def test_collateral_distance_binning():
 def test_trace_ranking_metrics_include_reciprocal_rank():
     frame=pd.DataFrame({"score":[3.,5.,1.],"is_corrupted":[False,True,False]})
     row=analysis.rank_trace(frame)
-    assert row=={"scoreable":True,"rank":1,"top1":True,"top2":True,"reciprocal_rank":1.}
+    assert row["rank"] == 1 and row["reciprocal_rank"] == 1
+    assert row["top1_unique"] and row["top2_conservative"]
+    assert row["top2_including_ties"] and row["n_tied_at_target_rank"] == 1
+
+
+def test_three_way_maximum_tie_is_not_conservative_top2():
+    frame=pd.DataFrame({"score":[5.,5.,5.,1.],"is_corrupted":[False,True,False,False]})
+    row=analysis.rank_trace(frame)
+    assert row["rank"] == 1 and row["n_tied_at_target_rank"] == 3
+    assert not row["top1_unique"]
+    assert row["top2_including_ties"]
+    assert not row["top2_conservative"]
 
 
 def test_ranking_summary_reports_mean_median_and_unconditional_top_k():
     frame=pd.DataFrame({
         "model":"m","detection_efficiency":.5,"displacement":.4,
         "scoreable":[True,True,False],"rank":[1.,3.,np.nan],
-        "top1":[True,False,False],"top2":[True,False,False],
+        "top1":[True,False,False],"top1_unique":[True,False,False],
+        "top2":[True,False,False],"top2_conservative":[True,False,False],
+        "top2_including_ties":[True,False,False],
+        "n_tied_at_target_rank":[1,1,0],
         "reciprocal_rank":[1.,1/3,0.],
     })
     row=analysis.summarize_ranking(frame).iloc[0]
@@ -79,6 +93,31 @@ def test_bridge_reports_missing_flank_and_insufficient_reference():
     assert analysis.bridge_score(trace,0,model)[1]=="missing_flank"
     insufficient=analysis.fit_reference(reference_frame(1),20)
     assert analysis.bridge_score(trace,2,insufficient)[1]=="insufficient_reference"
+
+
+def test_bridge_coordinates_are_candidate_dependent():
+    left=np.array([0.,0.,0.]); right=np.array([4.,0.,0.])
+    assert analysis.bridge_coordinates(left,np.array([1.,2.,0.]),right)==(.25,2.)
+    assert analysis.bridge_coordinates(left,np.array([3.,1.,0.]),right)==(.75,1.)
+
+
+def test_unscorable_target_trace_neighbors_are_collateral_not_clean():
+    common={"condition":"c","replicate":1,"seed":1,"detection_efficiency":.5,
+            "displacement":.4,"model":"empirical_two_flank_bridge",
+            "selected_for_corruption":False}
+    scores=pd.DataFrame([
+        {**common,"simulation_id":"s","Trace_ID":"corrupt","Spot_ID":"target","Barcode":2,"score":np.nan,"is_corrupted":True},
+        {**common,"simulation_id":"s","Trace_ID":"corrupt","Spot_ID":"neighbor1","Barcode":1,"score":2.,"is_corrupted":False},
+        {**common,"simulation_id":"s","Trace_ID":"corrupt","Spot_ID":"neighbor2","Barcode":3,"score":2.,"is_corrupted":False},
+        {**common,"simulation_id":"s","Trace_ID":"clean","Spot_ID":"clean1","Barcode":1,"score":0.,"is_corrupted":False},
+    ])
+    thresholds={(common["model"],fpr):1. for fpr in analysis.FIXED_FPRS}
+    _,fixed,_,collateral=analysis.evaluate(scores,thresholds)
+    primary=fixed[np.isclose(fixed.target_fpr,.01)].iloc[0]
+    assert primary.target_sensitivity == 0
+    assert primary.clean_trace_fpr == 0
+    assert primary.collateral_fpr == 1
+    assert set(collateral.Trace_ID)=={"corrupt"}
 
 
 def test_edge_reference_support_is_explicit():
