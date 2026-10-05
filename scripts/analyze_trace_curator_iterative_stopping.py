@@ -36,6 +36,13 @@ OUTPUTS = (
     "cycle4_thresholds.ecsv",
     "cycle4_runtime_profile.ecsv",
 )
+_PROGRESS_EPOCH = time.monotonic()
+
+
+def _progress(message: str) -> None:
+    """Emit a timestamped progress message immediately to stderr."""
+    elapsed = time.monotonic() - _PROGRESS_EPOCH
+    print(f"[{elapsed:10.1f}s] {message}", file=sys.stderr, flush=True)
 
 
 def _pair_key(left, right) -> tuple[str, str]:
@@ -81,7 +88,8 @@ def empirical_threshold(values: Sequence[float], fpr: float) -> float:
 
 
 def empirical_anomaly(reference: Sequence[float], observed: float) -> float:
-    sample = np.sort(np.asarray(reference, float))
+    """Score against a reference array sorted when its model was fitted."""
+    sample = np.asarray(reference, float)
     lower = (np.searchsorted(sample, observed, side="right") + 1) / (len(sample) + 1)
     upper = (len(sample) - np.searchsorted(sample, observed, side="left") + 1) / (
         len(sample) + 1
@@ -428,8 +436,10 @@ def _reference_with_coordinates(
                 pair_values.setdefault(
                     _pair_key(barcode[left], barcode[right]), []
                 ).append(distance)
-    separation = {key: np.asarray(value) for key, value in sep_values.items()}
-    pairs = {key: np.asarray(value) for key, value in pair_values.items()}
+    separation = {
+        key: np.sort(np.asarray(value, float)) for key, value in sep_values.items()
+    }
+    pairs = {key: np.sort(np.asarray(value, float)) for key, value in pair_values.items()}
     return SimpleNamespace(
         separation=separation,
         barcode_pair=pairs,
@@ -446,6 +456,7 @@ def benchmark(
     max_removals: int = 3,
     min_remaining: int = 3,
     profile_traces: int = 0,
+    profile_calibration_traces: int = 0,
 ) -> None:
     """Run cycle 4 against the existing cycle-3 manifest and datasets."""
     started = time.monotonic()
@@ -466,13 +477,66 @@ def benchmark(
         baselines[str(item["id"])] = frame
     output.mkdir(parents=True, exist_ok=True)
     traces_out, audits_out, threshold_out = [], [], []
+    timings = {
+        "reference_fitting_seconds": 0.0,
+        "calibration_scoring_seconds": 0.0,
+        "clean_evaluation_seconds": 0.0,
+        "corrupted_condition_scoring_seconds": 0.0,
+        "plotting_writing_seconds": 0.0,
+    }
+    build_trace_scores_calls = 0
+    reference_cache = {}
+    reference_cache_hits = 0
+    reference_cache_misses = 0
+
+    def fit_reference(n_barcodes, efficiency, seeds, baseline, label):
+        nonlocal reference_cache_hits, reference_cache_misses
+        key = (
+            int(n_barcodes),
+            float(efficiency),
+            reference_mode,
+            tuple(sorted(map(int, seeds))),
+        )
+        if key in reference_cache:
+            reference_cache_hits += 1
+            _progress(f"reference cache hit: {label}; seeds={key[-1]}")
+            return reference_cache[key]
+        reference_cache_misses += 1
+        _progress(f"reference cache miss: {label}; seeds={key[-1]}")
+        fit_started = time.monotonic()
+        _progress(f"{label} reference fit start")
+        model = _reference_with_coordinates(
+            cycle3,
+            baseline[baseline["seed"].isin(seeds)],
+            minimum_observations,
+            reference_mode,
+        )
+        fit_elapsed = time.monotonic() - fit_started
+        timings["reference_fitting_seconds"] += fit_elapsed
+        _progress(f"{label} reference fit end; elapsed={fit_elapsed:.3f}s")
+        reference_cache[key] = model
+        return model
+
+    def score_trace(trace, reference, category):
+        nonlocal build_trace_scores_calls
+        score_started = time.monotonic()
+        result = build_trace_scores(
+            trace, reference, reference_mode, assume_uniform
+        )
+        timings[category] += time.monotonic() - score_started
+        build_trace_scores_calls += 1
+        return result
+
     groups = {}
     for item in conditions:
         n, _ = cycle3._condition_metadata(item)
         groups.setdefault((n, float(item["detection_efficiency"])), []).append(item)
     processed = 0
     for (n_barcodes, efficiency), items in groups.items():
-        print(f"n_barcodes={n_barcodes}, efficiency={efficiency:g}")
+        group_started = time.monotonic()
+        _progress(
+            f"start group: n_barcodes={n_barcodes}, efficiency={efficiency:g}"
+        )
         seeds = sorted({int(item["seed"]) for item in items})
         baseline = pd.concat(
             [
@@ -484,12 +548,11 @@ def benchmark(
             ]
         )
         for evaluation_seed in seeds:
+            evaluation_started = time.monotonic()
+            _progress(f"evaluation seed: {evaluation_seed}")
             ref_seeds, _, _ = fold_seed_sets(seeds, evaluation_seed)
-            reference = _reference_with_coordinates(
-                cycle3,
-                baseline[baseline["seed"].isin(ref_seeds)],
-                minimum_observations,
-                reference_mode,
+            reference = fit_reference(
+                n_barcodes, efficiency, ref_seeds, baseline, "outer"
             )
             clean_states = []
             calibration_seeds = []
@@ -497,34 +560,48 @@ def benchmark(
             for calibration_seed in seeds:
                 if calibration_seed == evaluation_seed:
                     continue
+                _progress(f"calibration seed: {calibration_seed}")
                 nested, _, _ = fold_seed_sets(seeds, evaluation_seed, calibration_seed)
                 calibration_seeds.append(calibration_seed)
                 nested_reference_sets.append(
                     f"{calibration_seed}:{','.join(map(str, sorted(nested)))}"
                 )
-                nested_ref = _reference_with_coordinates(
-                    cycle3,
-                    baseline[baseline["seed"].isin(nested)],
-                    minimum_observations,
-                    reference_mode,
+                nested_ref = fit_reference(
+                    n_barcodes, efficiency, nested, baseline, "nested"
                 )
-                for _, clean in baseline[baseline["seed"] == calibration_seed].groupby(
-                    ["simulation_id", "Trace_ID"], sort=False
+                calibration_groups = baseline[
+                    baseline["seed"] == calibration_seed
+                ].groupby(["simulation_id", "Trace_ID"], sort=False)
+                if profile_calibration_traces:
+                    calibration_groups = list(calibration_groups)[
+                        :profile_calibration_traces
+                    ]
+                for calibration_index, (_, clean) in enumerate(
+                    calibration_groups, start=1
                 ):
                     clean_states.append(
-                        build_trace_scores(
-                            clean, nested_ref, reference_mode, assume_uniform
-                        )
+                        score_trace(clean, nested_ref, "calibration_scoring_seconds")
                     )
+                    if calibration_index % 100 == 0:
+                        _progress(
+                            "clean calibration trace progress: "
+                            f"seed={calibration_seed}, traces={calibration_index}"
+                        )
             thresholds = calibrate_thresholds(clean_states)
             evaluation_clean = []
-            for identity, clean in baseline[
+            evaluation_groups = baseline[
                 baseline["seed"] == evaluation_seed
-            ].groupby(["simulation_id", "Trace_ID"], sort=False):
-                state = build_trace_scores(
-                    clean, reference, reference_mode, assume_uniform
-                )
+            ].groupby(["simulation_id", "Trace_ID"], sort=False)
+            for clean_index, (identity, clean) in enumerate(
+                evaluation_groups, start=1
+            ):
+                state = score_trace(clean, reference, "clean_evaluation_seconds")
                 evaluation_clean.append((identity, clean, state))
+                if clean_index % 100 == 0:
+                    _progress(
+                        "held-out clean evaluation progress: "
+                        f"seed={evaluation_seed}, traces={clean_index}"
+                    )
             evaluation_states = [state for _, _, state in evaluation_clean]
             for threshold in thresholds.to_dict("records"):
                 evaluation_rates = clean_gate_rates(evaluation_states, threshold)
@@ -558,6 +635,7 @@ def benchmark(
                 "displacement": 0.0,
                 "dataset_type": "clean_evaluation",
             }
+            clean_policy_count = 0
             for identity, trace, initial_state in evaluation_clean:
                 if profile_traces and processed >= profile_traces:
                     break
@@ -568,8 +646,8 @@ def benchmark(
                 def shared_clean_scorer(current, model, mode, fallback):
                     key = tuple(sorted(current["Spot_ID"].astype(str)))
                     if key not in score_cache:
-                        score_cache[key] = build_trace_scores(
-                            current, model, mode, fallback
+                        score_cache[key] = score_trace(
+                            current, model, "clean_evaluation_seconds"
                         )
                     return score_cache[key]
 
@@ -591,11 +669,23 @@ def benchmark(
                         {"simulation_id": identity[0], **clean_meta, **metrics}
                     )
                 processed += 1
+                clean_policy_count += 1
+                if clean_policy_count % 100 == 0:
+                    _progress(
+                        "clean-policy evaluation progress: "
+                        f"seed={evaluation_seed}, traces={clean_policy_count}"
+                    )
             if profile_traces and processed >= profile_traces:
+                _progress(
+                    f"end evaluation seed: {evaluation_seed}; "
+                    f"elapsed={time.monotonic() - evaluation_started:.3f}s"
+                )
                 break
             for item in items:
                 if int(item["seed"]) != evaluation_seed:
                     continue
+                condition_id = str(item.get("id", item.get("condition_id", "unknown")))
+                _progress(f"benchmark condition ID: {condition_id}")
                 observations = cycle3._load_observations(cycle1, root, item)
                 if "Genomic_Position" not in observations and assume_uniform:
                     mapping = {
@@ -605,8 +695,11 @@ def benchmark(
                     observations["Genomic_Position"] = observations["Barcode"].map(
                         mapping
                     )
-                for identity, trace in observations.groupby(
+                condition_groups = observations.groupby(
                     ["simulation_id", "Trace_ID"], sort=False
+                )
+                for condition_index, (identity, trace) in enumerate(
+                    condition_groups, start=1
                 ):
                     if profile_traces and processed >= profile_traces:
                         break
@@ -617,8 +710,8 @@ def benchmark(
                     def shared_scorer(current, model, mode, fallback):
                         key = tuple(sorted(current["Spot_ID"].astype(str)))
                         if key not in score_cache:
-                            score_cache[key] = build_trace_scores(
-                                current, model, mode, fallback
+                            score_cache[key] = score_trace(
+                                current, model, "corrupted_condition_scoring_seconds"
                             )
                         return score_cache[key]
 
@@ -640,12 +733,33 @@ def benchmark(
                             {"simulation_id": identity[0], **meta, **metrics}
                         )
                     processed += 1
+                    if condition_index % 100 == 0:
+                        _progress(
+                            "condition trace progress: "
+                            f"ID={condition_id}, traces={condition_index}"
+                        )
                 if profile_traces and processed >= profile_traces:
                     break
             if profile_traces and processed >= profile_traces:
+                _progress(
+                    f"end evaluation seed: {evaluation_seed}; "
+                    f"elapsed={time.monotonic() - evaluation_started:.3f}s"
+                )
                 break
+            _progress(
+                f"end evaluation seed: {evaluation_seed}; "
+                f"elapsed={time.monotonic() - evaluation_started:.3f}s"
+            )
         if profile_traces and processed >= profile_traces:
+            _progress(
+                f"end group: n_barcodes={n_barcodes}, efficiency={efficiency:g}; "
+                f"elapsed={time.monotonic() - group_started:.3f}s"
+            )
             break
+        _progress(
+            f"end group: n_barcodes={n_barcodes}, efficiency={efficiency:g}; "
+            f"elapsed={time.monotonic() - group_started:.3f}s"
+        )
     trace_metrics = pd.DataFrame(traces_out)
     audit = pd.concat(audits_out, ignore_index=True) if audits_out else pd.DataFrame()
     condition = summarize(
@@ -659,28 +773,42 @@ def benchmark(
             "displacement",
         ],
     )
+    output_started = time.monotonic()
     _write(trace_metrics, output / OUTPUTS[0])
     _write(condition, output / OUTPUTS[1])
     _write(audit, output / OUTPUTS[2])
     _write(pd.DataFrame(threshold_out), output / OUTPUTS[3])
+    plot_results(output)
+    timings["plotting_writing_seconds"] = time.monotonic() - output_started
     elapsed = time.monotonic() - started
     _write(
         pd.DataFrame(
             [
                 {
                     "profile_traces": processed,
+                    "profile_calibration_traces": profile_calibration_traces,
                     "elapsed_seconds": elapsed,
                     "seconds_per_trace_all_policies": elapsed / max(processed, 1),
                     "projected_hours_for_100000_traces": elapsed
                     / max(processed, 1)
                     * 100000
                     / 3600,
+                    **timings,
+                    "build_trace_scores_calls": build_trace_scores_calls,
+                    "reference_cache_hits": reference_cache_hits,
+                    "reference_cache_misses": reference_cache_misses,
                 }
             ]
         ),
         output / OUTPUTS[4],
     )
-    plot_results(output)
+    _progress(
+        "runtime summary: "
+        + ", ".join(f"{key}={value:.3f}s" for key, value in timings.items())
+        + f", build_trace_scores_calls={build_trace_scores_calls}, "
+        f"reference_cache_hits={reference_cache_hits}, "
+        f"reference_cache_misses={reference_cache_misses}"
+    )
 
 
 def plot_results(output: Path) -> None:
@@ -741,6 +869,12 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-removals", type=int, default=3)
     parser.add_argument("--min-remaining-localizations", type=int, default=3)
     parser.add_argument("--profile-traces", type=int, default=0)
+    parser.add_argument(
+        "--profile-calibration-traces",
+        type=int,
+        default=0,
+        help="profiling-only deterministic per-seed cap on clean calibration traces",
+    )
     return parser.parse_args(argv)
 
 
@@ -755,6 +889,7 @@ def main() -> None:
         args.max_removals,
         args.min_remaining_localizations,
         args.profile_traces,
+        args.profile_calibration_traces,
     )
 
 

@@ -67,13 +67,19 @@ python scripts/analyze_trace_curator_iterative_stopping.py \
   --benchmark-root benchmark_curator_loo_validation \
   --output-dir curator_cycle4_profile \
   --assume-uniform-barcode-spacing \
-  --profile-traces 1000
+  --profile-traces 1000 \
+  --profile-calibration-traces 200
 ```
 
-`cycle4_runtime_profile.ecsv` records elapsed time, seconds per trace for all
-policies, and a transparent 100,000-trace projection. Inspect this projection
-before the full run; if the relevant manifest projection exceeds 6–8 hours,
-profile and optimize rather than launching it.
+Both limits are profiling-only: the latter deterministically takes the first
+200 clean traces from each calibration seed, so a small run does not first pay
+the full calibration cost. Do not use either option for final results.
+`cycle4_runtime_profile.ecsv` records elapsed time, component timings,
+reference-cache hits and misses, the number of score builds, seconds per trace
+for all policies, and a transparent 100,000-trace projection. Progress and
+fit timings are also flushed to stderr throughout the run. Inspect this
+projection before the full run; if the relevant manifest projection exceeds
+6–8 hours, profile and optimize rather than launching it.
 
 Each outer fold also sends the held-out seed's clean baseline traces through
 all four complete iterative policies with the primary 1% thresholds and the

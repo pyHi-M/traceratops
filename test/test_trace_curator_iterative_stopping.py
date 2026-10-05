@@ -276,6 +276,43 @@ def test_barcode_pair_reference_remains_supported():
     assert len(analysis.build_trace_scores(frame, reference, "barcode_pair").edges) == 1
 
 
+def test_presorted_reference_preserves_empirical_anomaly_values():
+    reference = np.array([3.0, 0.5, 2.0, 4.5, 1.0])
+
+    def legacy_empirical_anomaly(values, observed):
+        sample = np.sort(np.asarray(values, float))
+        lower = (np.searchsorted(sample, observed, side="right") + 1) / (
+            len(sample) + 1
+        )
+        upper = (
+            len(sample) - np.searchsorted(sample, observed, side="left") + 1
+        ) / (len(sample) + 1)
+        return -np.log10(min(1.0, 2.0 * min(lower, upper)))
+
+    sorted_reference = np.sort(reference)
+    for observed in (0.25, 0.5, 1.5, 3.0, 5.0):
+        assert analysis.empirical_anomaly(
+            sorted_reference, observed
+        ) == legacy_empirical_anomaly(reference, observed)
+
+
+def test_reference_model_arrays_are_sorted_once():
+    baseline = pd.concat(
+        [
+            trace().assign(simulation_id="s1"),
+            trace().assign(
+                simulation_id="s2",
+                Trace_ID="t2",
+                x=lambda frame: frame["x"][::-1].to_numpy(),
+            ),
+        ],
+        ignore_index=True,
+    )
+    reference = analysis._reference_with_coordinates(None, baseline, 1, "separation")
+    for samples in (*reference.separation.values(), *reference.barcode_pair.values()):
+        assert np.all(samples[:-1] <= samples[1:])
+
+
 def test_execution_is_deterministic():
     kwargs = dict(
         trace=trace((2,)),
