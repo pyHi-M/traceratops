@@ -472,6 +472,7 @@ def benchmark(
         groups.setdefault((n, float(item["detection_efficiency"])), []).append(item)
     processed = 0
     for (n_barcodes, efficiency), items in groups.items():
+        print(f"n_barcodes={n_barcodes}, efficiency={efficiency:g}")
         seeds = sorted({int(item["seed"]) for item in items})
         baseline = pd.concat(
             [
