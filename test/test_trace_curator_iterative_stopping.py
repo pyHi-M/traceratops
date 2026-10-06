@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
+import pytest
 
 SCRIPT = (
     Path(__file__).parents[1]
@@ -138,6 +139,7 @@ def test_maximum_removal_safeguard():
         THRESHOLDS,
         "C_cap",
         max_removals=2,
+        min_remaining=2,
         scorer=ScriptedScorer([10, 9, 8], ["p0", "p1", "p2"]),
     )
     assert result["n_removed"] == 2
@@ -284,16 +286,18 @@ def test_presorted_reference_preserves_empirical_anomaly_values():
         lower = (np.searchsorted(sample, observed, side="right") + 1) / (
             len(sample) + 1
         )
-        upper = (
-            len(sample) - np.searchsorted(sample, observed, side="left") + 1
-        ) / (len(sample) + 1)
+        upper = (len(sample) - np.searchsorted(sample, observed, side="left") + 1) / (
+            len(sample) + 1
+        )
         return -np.log10(min(1.0, 2.0 * min(lower, upper)))
 
     sorted_reference = np.sort(reference)
     for observed in (0.25, 0.5, 1.5, 3.0, 5.0):
-        assert analysis.empirical_anomaly(
-            sorted_reference, observed
-        ) == legacy_empirical_anomaly(reference, observed)
+        np.testing.assert_allclose(
+            analysis.empirical_anomaly(sorted_reference, observed),
+            legacy_empirical_anomaly(reference, observed),
+            rtol=1e-15,
+        )
 
 
 def test_reference_model_arrays_are_sorted_once():
@@ -332,7 +336,9 @@ def test_clean_calibration_produces_all_operating_points():
         analysis.TraceScores(frame, (), float(i), np.arange(5), float(i) - np.arange(5))
         for i in range(1, 101)
     ]
-    result = analysis.calibrate_thresholds(states)
+    result = analysis.calibrate_thresholds(
+        [analysis.CompactTraceStats.from_scores(state) for state in states]
+    )
     assert set(result["trace_fpr"]) == set(analysis.FIXED_FPRS)
     assert set(result["n_clean_traces"]) == {100}
     assert {
@@ -355,3 +361,399 @@ def test_shared_score_cache_pattern_avoids_duplicate_reference_scoring():
     for policy in analysis.POLICIES:
         analysis.run_policy(trace(), object(), THRESHOLDS, policy, scorer=shared)
     assert raw.calls == 1
+
+
+def legacy_calibration(states):
+    """Independent oracle for the former full-state calibration formulas."""
+    samples = {"global": [], "absolute": [], "relative": []}
+    for state in states:
+        finite = np.flatnonzero(np.isfinite(state.loo))
+        samples["global"].append(state.cost)
+        if len(finite):
+            best = finite[np.argmax(state.loo[finite])]
+            samples["absolute"].append(state.loo[best])
+            samples["relative"].append(state.loo[best] / max(state.cost, 1e-12))
+    rows = []
+    for fpr in analysis.FIXED_FPRS:
+        thresholds = {
+            f"{key}_threshold": analysis.empirical_threshold(values, fpr)
+            for key, values in samples.items()
+        }
+        flags = [[], [], []]
+        for state in states:
+            finite = state.loo[np.isfinite(state.loo)]
+            best = np.max(finite) if len(finite) else np.nan
+            relative = best / max(state.cost, 1e-12) if np.isfinite(best) else np.nan
+            abnormal = bool(
+                np.isfinite(state.cost) and state.cost > thresholds["global_threshold"]
+            )
+            flags[0].append(abnormal)
+            flags[1].append(abnormal and best > thresholds["absolute_threshold"])
+            flags[2].append(abnormal and relative > thresholds["relative_threshold"])
+        rows.append(
+            {
+                "trace_fpr": fpr,
+                **thresholds,
+                "observed_clean_global_fpr": np.mean(
+                    np.asarray(samples["global"]) > thresholds["global_threshold"]
+                ),
+                "n_clean_traces": len(states),
+                **dict(zip(analysis._GATE_KEYS, map(np.mean, flags))),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def test_compact_calibration_matches_full_state_oracle_and_releases_states():
+    import weakref
+
+    rng = np.random.default_rng(13)
+    states = [
+        analysis.TraceScores(trace(), (), float(cost), loo, cost - loo)
+        for cost, loo in zip(rng.uniform(0, 10, 200), rng.normal(size=(200, 5)))
+    ]
+    states.extend(
+        [
+            analysis.TraceScores(
+                trace(), (), np.nan, np.full(5, np.nan), np.full(5, np.nan)
+            ),
+            analysis.TraceScores(trace(), (), 0.0, np.zeros(5), np.zeros(5)),
+            analysis.TraceScores(
+                trace(), (), 2.0, np.full(5, np.nan), np.full(5, np.nan)
+            ),
+        ]
+    )
+    expected = legacy_calibration(states)
+    refs = [weakref.ref(state) for state in states]
+    compact = [analysis.CompactTraceStats.from_scores(state) for state in states]
+    del states
+    assert all(ref() is None for ref in refs)
+    pd.testing.assert_frame_equal(analysis.calibrate_thresholds(compact), expected)
+
+
+def test_streamed_condition_summaries_match_summarize():
+    rng = np.random.default_rng(97)
+    rows = []
+    accumulator = analysis.ConditionAccumulator()
+    for i in range(211):
+        removed, true, false = (int(x) for x in rng.integers(0, 4, 3))
+        row = {
+            "dataset_type": "clean_evaluation" if i % 3 else "corrupted_evaluation",
+            "policy": analysis.POLICIES[i % 4],
+            "n_barcodes": 5,
+            "K": i % 3,
+            "detection_efficiency": 0.5,
+            "displacement": 0.0,
+            "true_removed": true,
+            "n_true_corruptions": true + 2,
+            "n_removed": removed,
+            "false_removed": false,
+            "exact_recovery": i % 2 == 0,
+            "true_corruptions_remaining": 2,
+            "unresolved_true_corruption": True,
+            "abnormal_unresolved": i % 5 == 0,
+            "terminal_global_abnormal": i % 7 == 0,
+            "n_iterations": removed,
+            "stop_reason": ("normal", "ambiguous", "cap")[i % 3],
+        }
+        rows.append(row)
+        accumulator.add(row)
+    expected = analysis.summarize(pd.DataFrame(rows), analysis.SUMMARY_GROUP)
+    actual = accumulator.frame()[expected.columns]
+    pd.testing.assert_frame_equal(actual, expected)
+    # Repetition changes counts, not the number of retained condition buckets.
+    size = len(accumulator.groups)
+    for _ in range(50):
+        for row in rows:
+            accumulator.add(row)
+    assert len(accumulator.groups) == size
+
+
+def test_audit_and_trace_writers_flush_bounded_chunks(tmp_path):
+    from astropy.table import Table
+
+    cycle1 = analysis._cycle3()._cycle(1)
+    for name in (analysis.OUTPUTS[0], analysis.OUTPUTS[2]):
+        underlying = cycle1._EcsvChunkWriter(tmp_path / name)
+        writer = analysis.BufferedEcsvWriter(underlying, max_rows=8)
+        for i in range(25):
+            writer.write(pd.DataFrame([{"Trace_ID": f"trace {i}", "score": float(i)}]))
+            assert len(writer.pending) < 8
+            if i == 7:
+                assert underlying.temporary_path.exists()
+                assert (
+                    len(Table.read(underlying.temporary_path, format="ascii.ecsv")) == 8
+                )
+        writer.finish()
+        result = Table.read(tmp_path / name, format="ascii.ecsv").to_pandas()
+        assert len(result) == 25
+        assert result["Trace_ID"].iloc[-1] == "trace 24"
+        assert not writer.pending
+
+
+def test_unused_reference_mode_is_not_built(monkeypatch):
+    baseline = trace().assign(simulation_id="s")
+
+    def forbidden_pair(*args):
+        raise AssertionError("Unused barcode pair reference was constructed")
+
+    monkeypatch.setattr(analysis, "_pair_key", forbidden_pair)
+    reference = analysis._reference_with_coordinates(None, baseline, 1, "separation")
+    assert reference.separation and not reference.barcode_pair
+    monkeypatch.undo()
+    reference = analysis._reference_with_coordinates(None, baseline, 1, "barcode_pair")
+    assert reference.barcode_pair and not reference.separation
+    assert all(isinstance(key, tuple) for key in reference.barcode_pair)
+
+
+def make_tiny_benchmark(root, n_traces=3, efficiencies=(0.5,)):
+    """Actual ECSV simulator inputs; also usable for local profiling."""
+    import yaml
+    from astropy.table import Table
+
+    simulations, conditions = [], []
+    for efficiency in efficiencies:
+        for seed in (11, 12, 13):
+            simulation_id = f"s-{efficiency}-{seed}"
+            simulation = {
+                "id": simulation_id,
+                "seed": seed,
+                "detection_efficiency": efficiency,
+                "n_barcodes": 5,
+            }
+            simulations.append(simulation)
+            frames = []
+            for i in range(n_traces):
+                frame = trace(barcodes=(1, 2, 3, 4, 5)).rename(
+                    columns={"Barcode": "Barcode #"}
+                )
+                frame["Trace_ID"] = f"t-{i}"
+                frame["Spot_ID"] = [f"t-{i}-p-{j}" for j in range(5)]
+                frame["x"] *= 0.9 + 0.03 * seed + 0.02 * (i % 7)
+                frames.append(frame.drop(columns="is_corrupted"))
+            clean = pd.concat(frames, ignore_index=True)
+            simulation_dir = root / "simulations" / simulation_id
+            simulation_dir.mkdir(parents=True)
+            Table.from_pandas(clean).write(
+                simulation_dir / "simulated.ecsv", format="ascii.ecsv"
+            )
+            condition_id = f"c-{efficiency}-{seed}"
+            condition_dir = root / condition_id
+            condition_dir.mkdir()
+            observations = clean.copy()
+            corrupted = observations["Spot_ID"].str.endswith("p-2")
+            observations.loc[corrupted, "y"] += 5.0
+            Table.from_pandas(observations).write(
+                condition_dir / "simulated.ecsv", format="ascii.ecsv"
+            )
+            truth = observations[["Spot_ID", "Trace_ID", "Barcode #"]].rename(
+                columns={"Trace_ID": "Input_Trace_ID"}
+            )
+            truth["selected_for_corruption"] = True
+            truth["is_corrupted"] = corrupted
+            truth["injected_displacement_um"] = np.where(corrupted, 5.0, 0.0)
+            Table.from_pandas(truth).write(
+                condition_dir / "simulated.ground_truth.ecsv", format="ascii.ecsv"
+            )
+            conditions.append(
+                {
+                    "id": condition_id,
+                    "directory": condition_id,
+                    "simulation_id": simulation_id,
+                    "seed": seed,
+                    "replicate_index": seed - 11,
+                    "n_barcodes": 5,
+                    "corrupted_barcodes_per_trace": 1,
+                    "detection_efficiency": efficiency,
+                    "displacement_um": 5.0,
+                }
+            )
+    (root / "sweep_manifest.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "simulations": simulations,
+                "conditions": conditions,
+            }
+        )
+    )
+
+
+@pytest.mark.parametrize("reference_mode", ["separation", "barcode_pair"])
+def test_tiny_benchmark_deterministic_and_streamed_outputs(tmp_path, reference_mode):
+    from astropy.table import Table
+
+    root = tmp_path / "inputs"
+    make_tiny_benchmark(root)
+    first, second = tmp_path / "first", tmp_path / "second"
+    analysis.benchmark(
+        root, first, minimum_observations=1, reference_mode=reference_mode
+    )
+    analysis.benchmark(
+        root, second, minimum_observations=1, reference_mode=reference_mode
+    )
+    for name in analysis.OUTPUTS[:4]:
+        pd.testing.assert_frame_equal(
+            Table.read(first / name, format="ascii.ecsv").to_pandas(),
+            Table.read(second / name, format="ascii.ecsv").to_pandas(),
+        )
+    metrics = Table.read(first / analysis.OUTPUTS[0], format="ascii.ecsv").to_pandas()
+    assert len(metrics) == 3 * 3 * 2 * 4
+    assert set(metrics["dataset_type"]) == {"clean_evaluation", "corrupted_evaluation"}
+    expected = analysis.summarize(metrics, analysis.SUMMARY_GROUP)
+    actual = Table.read(first / analysis.OUTPUTS[1], format="ascii.ecsv").to_pandas()
+    pd.testing.assert_frame_equal(actual[expected.columns], expected)
+    # Standalone replotting streams the audit too.
+    analysis.plot_results(first)
+
+
+def test_many_traces_keep_states_audits_and_reference_cache_bounded(
+    tmp_path, monkeypatch
+):
+    import weakref
+
+    from astropy.table import Table
+
+    root = tmp_path / "inputs"
+    make_tiny_benchmark(root, n_traces=50, efficiencies=(0.5, 0.8))
+    live_states, live_audits, live_references = (
+        weakref.WeakValueDictionary() for _ in range(3)
+    )
+    peaks = {"states": 0, "audits": 0}
+    raw_build, raw_policy, raw_fit = (
+        analysis.build_trace_scores,
+        analysis.run_policy,
+        analysis._reference_with_coordinates,
+    )
+    previous_group = None
+    reference_groups = []
+
+    def build(*args, **kwargs):
+        state = raw_build(*args, **kwargs)
+        live_states[id(state)] = state
+        peaks["states"] = max(peaks["states"], len(live_states))
+        return state
+
+    def policy(*args, **kwargs):
+        audit, metrics = raw_policy(*args, **kwargs)
+        live_audits[id(audit)] = audit
+        peaks["audits"] = max(peaks["audits"], len(live_audits))
+        return audit, metrics
+
+    class Reference:
+        pass
+
+    def fit(*args, **kwargs):
+        nonlocal previous_group
+        group = analysis._PROGRESS_CONTEXT.split(" eval=")[0]
+        if group != previous_group:
+            assert not live_references, "Completed group's references escaped the cache"
+            reference_groups.append(group)
+            previous_group = group
+        reference = Reference()
+        reference.__dict__.update(raw_fit(*args, **kwargs).__dict__)
+        live_references[id(reference)] = reference
+        return reference
+
+    raw_calibrate = analysis.calibrate_thresholds
+
+    def calibrate(stats):
+        assert all(isinstance(item, analysis.CompactTraceStats) for item in stats)
+        assert not live_states, "Calibration retained full scoring states"
+        return raw_calibrate(stats)
+
+    monkeypatch.setattr(analysis, "build_trace_scores", build)
+    monkeypatch.setattr(analysis, "run_policy", policy)
+    monkeypatch.setattr(analysis, "_reference_with_coordinates", fit)
+    monkeypatch.setattr(analysis, "calibrate_thresholds", calibrate)
+    monkeypatch.setattr(analysis, "plot_results", lambda *args: None)
+    analysis.benchmark(root, tmp_path / "out", minimum_observations=1)
+    assert peaks["states"] <= 12  # Four policy paths, at most three states each.
+    assert peaks["audits"] <= 2
+    assert not live_states and not live_audits and not live_references
+    assert len(reference_groups) == 2
+    runtime = Table.read(
+        tmp_path / "out" / analysis.OUTPUTS[4], format="ascii.ecsv"
+    ).to_pandas()
+    groups = runtime[runtime["scope"] == "group"]
+    assert (groups["reference_cache_size_after_clear"] == 0).all()
+    assert (groups["rss_peak_mb"] >= groups["rss_start_mb"]).all()
+    assert runtime.iloc[-1]["profile_traces"] == 600
+
+
+def test_profile_calibration_limit_is_lazy_and_effective(tmp_path, monkeypatch):
+    import inspect
+
+    source = inspect.getsource(analysis.benchmark)
+    compact_source = "".join(source.split())
+    assert "islice(calibration_groups,profile_calibration_traces)" in compact_source
+    assert "list(calibration_groups)" not in compact_source
+    root = tmp_path / "inputs"
+    make_tiny_benchmark(root, n_traces=10)
+    lengths = []
+    raw = analysis.calibrate_thresholds
+
+    def calibrate(stats):
+        lengths.append(len(stats))
+        return raw(stats)
+
+    monkeypatch.setattr(analysis, "calibrate_thresholds", calibrate)
+    monkeypatch.setattr(analysis, "plot_results", lambda *args: None)
+    analysis.benchmark(
+        root,
+        tmp_path / "out",
+        minimum_observations=1,
+        profile_traces=1,
+        profile_calibration_traces=2,
+    )
+    assert lengths == [4]  # Two calibration seeds, first two traces from each.
+
+
+def test_incremental_cost_trajectories_match_full_audit():
+    accumulator = analysis.CostTrajectories()
+    chunks = []
+    for i in range(9):
+        chunk = pd.DataFrame(
+            {
+                "dataset_type": ["corrupted_evaluation"] * 4,
+                "policy": ["A_global", "B_relative"] * 2,
+                "iteration": [0, 0, 1, 1],
+                "C_before": [i + 1.0, np.nan, 2.0, 3.0],
+            }
+        )
+        chunks.append(chunk)
+        accumulator.add(chunk)
+    expected = (
+        pd.concat(chunks)
+        .groupby(["policy", "iteration"], sort=False)["C_before"]
+        .mean()
+    )
+    actual = accumulator.frame().set_index(["policy", "iteration"])["C_before"]
+    pd.testing.assert_series_equal(actual, expected)
+
+
+@pytest.mark.parametrize("barcode_numeric", [True, False])
+def test_audit_chunks_preserve_missing_candidate_types(tmp_path, barcode_numeric):
+    from astropy.table import Table
+
+    writer = analysis.BufferedEcsvWriter(
+        analysis._cycle3()._cycle(1)._EcsvChunkWriter(tmp_path / "audit.ecsv"),
+        max_rows=1,
+    )
+    writer.barcode_numeric = barcode_numeric
+    for value in (2 if barcode_numeric else "locus q", np.nan):
+        writer.write(
+            pd.DataFrame(
+                [
+                    {
+                        "candidate_Barcode": value,
+                        "candidate_rank": 1.0 if pd.notna(value) else np.nan,
+                    }
+                ]
+            )
+        )
+    writer.finish()
+    result = Table.read(tmp_path / "audit.ecsv", format="ascii.ecsv").to_pandas()
+    assert len(result) == 2
+    assert result.iloc[0]["candidate_Barcode"] == (2 if barcode_numeric else "locus q")
+    assert pd.isna(result.iloc[1]["candidate_rank"])
+    assert pd.isna(result.iloc[1]["candidate_Barcode"])
