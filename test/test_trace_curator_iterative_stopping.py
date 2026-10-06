@@ -506,7 +506,7 @@ def test_unused_reference_mode_is_not_built(monkeypatch):
     assert all(isinstance(key, tuple) for key in reference.barcode_pair)
 
 
-def make_tiny_benchmark(root, n_traces=3, efficiencies=(0.5,)):
+def make_tiny_benchmark(root, n_traces=3, efficiencies=(0.5,), n_barcodes=5):
     """Actual ECSV simulator inputs; also usable for local profiling."""
     import yaml
     from astropy.table import Table
@@ -519,16 +519,16 @@ def make_tiny_benchmark(root, n_traces=3, efficiencies=(0.5,)):
                 "id": simulation_id,
                 "seed": seed,
                 "detection_efficiency": efficiency,
-                "n_barcodes": 5,
+                "n_barcodes": n_barcodes,
             }
             simulations.append(simulation)
             frames = []
             for i in range(n_traces):
-                frame = trace(barcodes=(1, 2, 3, 4, 5)).rename(
+                frame = trace(barcodes=tuple(range(1, n_barcodes + 1))).rename(
                     columns={"Barcode": "Barcode #"}
                 )
                 frame["Trace_ID"] = f"t-{i}"
-                frame["Spot_ID"] = [f"t-{i}-p-{j}" for j in range(5)]
+                frame["Spot_ID"] = [f"t-{i}-p-{j}" for j in range(n_barcodes)]
                 frame["x"] *= 0.9 + 0.03 * seed + 0.02 * (i % 7)
                 frames.append(frame.drop(columns="is_corrupted"))
             clean = pd.concat(frames, ignore_index=True)
@@ -562,7 +562,7 @@ def make_tiny_benchmark(root, n_traces=3, efficiencies=(0.5,)):
                     "simulation_id": simulation_id,
                     "seed": seed,
                     "replicate_index": seed - 11,
-                    "n_barcodes": 5,
+                    "n_barcodes": n_barcodes,
                     "corrupted_barcodes_per_trace": 1,
                     "detection_efficiency": efficiency,
                     "displacement_um": 5.0,
@@ -757,3 +757,128 @@ def test_audit_chunks_preserve_missing_candidate_types(tmp_path, barcode_numeric
     assert result.iloc[0]["candidate_Barcode"] == (2 if barcode_numeric else "locus q")
     assert pd.isna(result.iloc[1]["candidate_rank"])
     assert pd.isna(result.iloc[1]["candidate_Barcode"])
+
+
+@pytest.mark.parametrize("size_source", ["simulation", "condition", "observed"])
+def test_mixed_barcode_populations_match_cycle3_membership(
+    tmp_path, monkeypatch, size_source
+):
+    import re
+
+    import yaml
+
+    root = tmp_path / "inputs"
+    simulations, conditions = [], []
+    for n in (5, 7):
+        population = root / f"population-{n}"
+        make_tiny_benchmark(population, n_traces=2, n_barcodes=n)
+        manifest = yaml.safe_load((population / "sweep_manifest.yaml").read_text())
+        for item in manifest["simulations"]:
+            original_id = item["id"]
+            item["id"] = f"B{n}-{original_id}"
+            (root / "simulations").mkdir(exist_ok=True)
+            (population / "simulations" / original_id).rename(
+                root / "simulations" / item["id"]
+            )
+            if size_source != "simulation":
+                item.pop("n_barcodes")
+            simulations.append(item)
+        for item in manifest["conditions"]:
+            item["id"] = f"B{n}-{item['id']}"
+            item["directory"] = str(Path(f"population-{n}") / item["directory"])
+            item["simulation_id"] = f"B{n}-{item['simulation_id']}"
+            if size_source == "observed":
+                # No baseline simulation ID in the condition-derived map:
+                # exercise cycle-3's last-resort observed barcode fallback.
+                item["simulation_id"] = f"observations-{item['simulation_id']}"
+            conditions.append(item)
+    (root / "sweep_manifest.yaml").write_text(
+        yaml.safe_dump({"simulations": simulations, "conditions": conditions})
+    )
+
+    cycle3 = analysis._cycle3()
+    cycle1 = cycle3._cycle(1)
+    simulation_sizes = {
+        str(item["simulation_id"]): cycle3._condition_metadata(item)[0]
+        for item in conditions
+    }
+    # Independent oracle: the exact population assignment/selection from
+    # cycle-3 run(), including the loader's absence of n_barcodes provenance.
+    cycle3_baselines = []
+    for item in simulations:
+        frame = cycle1.load_baseline(root / "simulations" / item["id"], item)
+        assert "n_barcodes" not in frame
+        frame["n_barcodes"] = int(
+            item.get(
+                "n_barcodes",
+                simulation_sizes.get(str(item["id"]), frame["Barcode"].max()),
+            )
+        )
+        cycle3_baselines.append(frame)
+    expected = pd.concat(cycle3_baselines, ignore_index=True)
+    loaded, fitted, calibrated = [], [], []
+    raw_load = cycle1.load_baseline
+    raw_fit = analysis._reference_with_coordinates
+    raw_score = analysis.build_trace_scores
+
+    def context():
+        n = int(re.search(r"group B=(\d+)", analysis._PROGRESS_CONTEXT)[1])
+        evaluation = re.search(r"eval=(\d+)", analysis._PROGRESS_CONTEXT)
+        calibration = re.search(r"calibration=(\d+)", analysis._PROGRESS_CONTEXT)
+        return (
+            n,
+            int(evaluation[1]) if evaluation else None,
+            int(calibration[1]) if calibration else None,
+        )
+
+    def load(path, item):
+        n, _, _ = context()
+        if size_source != "observed":
+            count = int(item.get("n_barcodes", simulation_sizes.get(item["id"])))
+            assert count == n, "Nonmatching ECSV was loaded instead of prefiltered"
+        loaded.append((n, item["id"]))
+        return raw_load(path, item)
+
+    def fit(module, baseline, minimum, mode):
+        n, evaluation, calibration = context()
+        seeds, _, _ = cycle3.fold_seed_sets((11, 12, 13), evaluation, calibration)
+        population = expected[
+            (expected["n_barcodes"] == n)
+            & np.isclose(expected["detection_efficiency"], 0.5)
+            & expected["seed"].isin(seeds)
+        ]
+        columns = ["simulation_id", "Trace_ID", "Spot_ID", "n_barcodes"]
+        pd.testing.assert_frame_equal(
+            baseline[columns].sort_values(columns).reset_index(drop=True),
+            population[columns].sort_values(columns).reset_index(drop=True),
+        )
+        fitted.append((n, evaluation, calibration))
+        return raw_fit(module, baseline, minimum, mode)
+
+    def score(frame, reference, mode, fallback):
+        n, _, calibration = context()
+        if calibration is not None:
+            population = expected[
+                (expected["n_barcodes"] == n) & (expected["seed"] == calibration)
+            ]
+            assert set(frame["simulation_id"]).issubset(
+                set(population["simulation_id"])
+            )
+            assert set(frame["Spot_ID"]).issubset(set(population["Spot_ID"]))
+            assert (frame["n_barcodes"] == n).all()
+            calibrated.append((n, calibration))
+        return raw_score(frame, reference, mode, fallback)
+
+    monkeypatch.setattr(analysis, "_cycle3", lambda: cycle3)
+    monkeypatch.setattr(cycle3, "_cycle", lambda number: cycle1)
+    monkeypatch.setattr(cycle1, "load_baseline", load)
+    monkeypatch.setattr(analysis, "_reference_with_coordinates", fit)
+    monkeypatch.setattr(analysis, "build_trace_scores", score)
+    monkeypatch.setattr(analysis, "plot_results", lambda *args: None)
+    analysis.benchmark(root, tmp_path / "out", minimum_observations=1)
+    assert {n for n, _, _ in fitted} == {5, 7}
+    assert len(fitted) == 12  # Six unique outer/nested reference models per group.
+    assert (
+        len(calibrated) == 24
+    )  # Two traces x two calibration seeds x three folds x two sizes.
+    assert len(loaded) == (12 if size_source == "observed" else 6)
