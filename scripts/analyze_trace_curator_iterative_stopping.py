@@ -11,21 +11,25 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import math
+import os
+import resource
 import sys
 import time
+from collections import Counter
 from dataclasses import dataclass
+from itertools import islice
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Mapping, Sequence
 
 import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import yaml
 from astropy.table import Table
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
 FIXED_FPRS = (0.001, 0.01, 0.05)
 POLICIES = ("A_global", "B_absolute", "B_relative", "C_cap")
@@ -37,12 +41,31 @@ OUTPUTS = (
     "cycle4_runtime_profile.ecsv",
 )
 _PROGRESS_EPOCH = time.monotonic()
+_PROGRESS_CONTEXT = ""
+_GROUP_PEAK_MB = 0.0
+
+
+def _rss_mb() -> float:
+    """Live resident MiB on Linux; process high-water MiB elsewhere."""
+    global _GROUP_PEAK_MB
+    try:
+        pages = int(Path("/proc/self/statm").read_text().split()[1])
+        rss = pages * os.sysconf("SC_PAGE_SIZE") / 1024**2
+    except (OSError, IndexError, ValueError):
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        rss = peak / (1024**2 if sys.platform == "darwin" else 1024)
+    _GROUP_PEAK_MB = max(_GROUP_PEAK_MB, rss)
+    return rss
 
 
 def _progress(message: str) -> None:
     """Emit a timestamped progress message immediately to stderr."""
     elapsed = time.monotonic() - _PROGRESS_EPOCH
-    print(f"[{elapsed:10.1f}s] {message}", file=sys.stderr, flush=True)
+    print(
+        f"[{elapsed:10.1f}s] RSS={_rss_mb():.1f} MiB {_PROGRESS_CONTEXT} {message}",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 def _pair_key(left, right) -> tuple[str, str]:
@@ -106,6 +129,58 @@ class TraceScores:
     cost: float
     loo: np.ndarray
     cost_without: np.ndarray
+
+
+@dataclass(frozen=True)
+class CompactTraceStats:
+    """Only the three scalars required for exact clean calibration."""
+
+    cost: float
+    best_loo: float
+    best_relative_loo: float
+
+    @classmethod
+    def from_scores(cls, state: TraceScores):
+        finite = state.loo[np.isfinite(state.loo)]
+        best = float(np.max(finite)) if len(finite) else math.nan
+        relative = best / max(state.cost, 1e-12) if np.isfinite(best) else math.nan
+        return cls(state.cost, best, relative)
+
+
+_GATE_KEYS = (
+    "fraction_global_abnormal",
+    "fraction_global_and_absolute_actionable",
+    "fraction_global_and_relative_actionable",
+)
+
+
+class CleanGateCounter:
+    """Constant-size joint gate counts for one operating point."""
+
+    def __init__(self, thresholds):
+        self.thresholds = thresholds
+        self.count = 0
+        self.passed = np.zeros(3, dtype=np.int64)
+
+    def add(self, stats: CompactTraceStats):
+        abnormal = bool(
+            np.isfinite(stats.cost) and stats.cost > self.thresholds["global_threshold"]
+        )
+        self.count += 1
+        self.passed += (
+            abnormal,
+            abnormal and stats.best_loo > self.thresholds["absolute_threshold"],
+            abnormal
+            and stats.best_relative_loo > self.thresholds["relative_threshold"],
+        )
+
+    def rates(self):
+        return dict(
+            zip(
+                _GATE_KEYS,
+                self.passed / self.count if self.count else np.full(3, np.nan),
+            )
+        )
 
 
 def _positions(trace: pd.DataFrame, allow_uniform_fallback: bool) -> np.ndarray:
@@ -174,55 +249,39 @@ def build_trace_scores(
     return TraceScores(current, tuple(edges), cost, cost - without, without)
 
 
-def calibrate_thresholds(clean_states: Sequence[TraceScores]) -> pd.DataFrame:
-    """Calibrate global and secondary safeguards from clean traces only."""
-    samples = {"global": [], "absolute": [], "relative": []}
-    for state in clean_states:
-        finite = np.flatnonzero(np.isfinite(state.loo))
-        samples["global"].append(state.cost)
-        if len(finite):
-            best = finite[np.argmax(state.loo[finite])]
-            samples["absolute"].append(state.loo[best])
-            samples["relative"].append(state.loo[best] / max(state.cost, 1e-12))
+def calibrate_thresholds(clean_stats: Sequence[CompactTraceStats]) -> pd.DataFrame:
+    """Calibrate unchanged empirical cutoffs from compact clean statistics."""
+    samples = {
+        "global": [stats.cost for stats in clean_stats],
+        "absolute": [stats.best_loo for stats in clean_stats],
+        "relative": [stats.best_relative_loo for stats in clean_stats],
+    }
     rows = []
     for fpr in FIXED_FPRS:
         global_threshold = empirical_threshold(samples["global"], fpr)
-        rows.append(
-            {
-                "trace_fpr": fpr,
-                "global_threshold": global_threshold,
-                "absolute_threshold": empirical_threshold(samples["absolute"], fpr),
-                "relative_threshold": empirical_threshold(samples["relative"], fpr),
-                "observed_clean_global_fpr": float(
-                    np.mean(np.asarray(samples["global"]) > global_threshold)
-                ),
-                "n_clean_traces": len(clean_states),
-            }
-        )
-        rows[-1].update(clean_gate_rates(clean_states, rows[-1]))
+        row = {
+            "trace_fpr": fpr,
+            "global_threshold": global_threshold,
+            "absolute_threshold": empirical_threshold(samples["absolute"], fpr),
+            "relative_threshold": empirical_threshold(samples["relative"], fpr),
+            "observed_clean_global_fpr": float(
+                np.mean(np.asarray(samples["global"]) > global_threshold)
+            ),
+            "n_clean_traces": len(clean_stats),
+        }
+        row.update(clean_gate_rates(clean_stats, row))
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
 def clean_gate_rates(
-    clean_states: Sequence[TraceScores], thresholds: Mapping[str, float]
+    clean_stats: Sequence[CompactTraceStats], thresholds: Mapping[str, float]
 ) -> dict[str, float]:
-    """Report joint global/actionability pass rates on a clean collection."""
-    global_flags, absolute_flags, relative_flags = [], [], []
-    for state in clean_states:
-        finite = np.flatnonzero(np.isfinite(state.loo))
-        abnormal = bool(
-            np.isfinite(state.cost) and state.cost > thresholds["global_threshold"]
-        )
-        best = float(np.max(state.loo[finite])) if len(finite) else math.nan
-        relative = best / max(state.cost, 1e-12) if np.isfinite(best) else math.nan
-        global_flags.append(abnormal)
-        absolute_flags.append(abnormal and best > thresholds["absolute_threshold"])
-        relative_flags.append(abnormal and relative > thresholds["relative_threshold"])
-    return {
-        "fraction_global_abnormal": float(np.mean(global_flags)),
-        "fraction_global_and_absolute_actionable": float(np.mean(absolute_flags)),
-        "fraction_global_and_relative_actionable": float(np.mean(relative_flags)),
-    }
+    """Report joint gate rates without retaining flags or full trace states."""
+    counter = CleanGateCounter(thresholds)
+    for stats in clean_stats:
+        counter.add(stats)
+    return counter.rates()
 
 
 def run_policy(
@@ -302,9 +361,9 @@ def run_policy(
                 "absolute_C_drop": absolute,
                 "relative_C_drop": relative,
                 "removal_accepted": accepted,
-                "candidate_is_corrupted": bool(row.get("is_corrupted", False))
-                if row is not None
-                else False,
+                "candidate_is_corrupted": (
+                    bool(row.get("is_corrupted", False)) if row is not None else False
+                ),
                 "stop_reason": stop,
             }
         )
@@ -421,30 +480,203 @@ def summarize(trace_metrics: pd.DataFrame, group: Sequence[str]) -> pd.DataFrame
 def _reference_with_coordinates(
     cycle3, baseline: pd.DataFrame, minimum: int, mode: str
 ):
-    separation, pairs = {}, {}
-    sep_values, pair_values = {}, {}
+    if mode not in {"separation", "barcode_pair"}:
+        raise ValueError("reference_mode must be separation or barcode_pair")
+    values = {}
     for _, trace in baseline.groupby(["simulation_id", "Trace_ID"], sort=False):
         positions = _positions(trace, allow_uniform_fallback=False)
         xyz = trace[["x", "y", "z"]].to_numpy(float)
         barcode = trace["Barcode"].to_numpy()
         for left in range(len(trace)):
             for right in range(left + 1, len(trace)):
-                distance = float(np.linalg.norm(xyz[right] - xyz[left]))
-                sep_values.setdefault(
-                    float(abs(positions[right] - positions[left])), []
-                ).append(distance)
-                pair_values.setdefault(
-                    _pair_key(barcode[left], barcode[right]), []
-                ).append(distance)
-    separation = {
-        key: np.sort(np.asarray(value, float)) for key, value in sep_values.items()
-    }
-    pairs = {key: np.sort(np.asarray(value, float)) for key, value in pair_values.items()}
+                key = (
+                    float(abs(positions[right] - positions[left]))
+                    if mode == "separation"
+                    else _pair_key(barcode[left], barcode[right])
+                )
+                values.setdefault(key, []).append(
+                    float(np.linalg.norm(xyz[right] - xyz[left]))
+                )
+    fitted = {key: np.sort(np.asarray(value, float)) for key, value in values.items()}
     return SimpleNamespace(
-        separation=separation,
-        barcode_pair=pairs,
+        separation=fitted if mode == "separation" else {},
+        barcode_pair=fitted if mode == "barcode_pair" else {},
         minimum_observations=minimum,
     )
+
+
+SUMMARY_GROUP = (
+    "dataset_type",
+    "policy",
+    "n_barcodes",
+    "K",
+    "detection_efficiency",
+    "displacement",
+)
+_SUM_FIELDS = (
+    "true_removed",
+    "n_true_corruptions",
+    "n_removed",
+    "exact_recovery",
+    "false_removed",
+    "true_corruptions_remaining",
+    "unresolved_true_corruption",
+    "abnormal_unresolved",
+    "terminal_global_abnormal",
+    "n_iterations",
+)
+_MEANS = {
+    "exact_recovery_rate": "exact_recovery",
+    "mean_genuine_localizations_removed": "false_removed",
+    "mean_true_corruptions_remaining": "true_corruptions_remaining",
+    "fraction_unresolved_true_corruption": "unresolved_true_corruption",
+    "fraction_abnormal_unresolved": "abnormal_unresolved",
+    "mean_removals": "n_removed",
+    "fraction_terminal_global_abnormal": "terminal_global_abnormal",
+    "mean_iterations": "n_iterations",
+}
+
+
+class ConditionAccumulator:
+    """Exact integer sums/counts per condition; never retain trace rows."""
+
+    def __init__(self):
+        self.groups = {}
+
+    def add(self, row):
+        key = tuple(row[column] for column in SUMMARY_GROUP)
+        if key not in self.groups:
+            self.groups[key] = {
+                "count": 0,
+                "sums": Counter(),
+                "stops": Counter(),
+                "removals": Counter(),
+                "false_removals": Counter(),
+            }
+        group = self.groups[key]
+        group["count"] += 1
+        group["sums"].update({field: int(row[field]) for field in _SUM_FIELDS})
+        group["stops"][row["stop_reason"]] += 1
+        group["removals"][int(row["n_removed"])] += 1
+        group["false_removals"][int(row["false_removed"])] += 1
+
+    def frame(self):
+        rows = []
+        for key, group in self.groups.items():
+            n, sums = group["count"], group["sums"]
+            row = {
+                **dict(zip(SUMMARY_GROUP, key)),
+                "n_traces": n,
+                "true_corruption_recall": sums["true_removed"]
+                / max(sums["n_true_corruptions"], 1),
+                "removal_precision": sums["true_removed"] / max(sums["n_removed"], 1),
+                **{name: sums[field] / n for name, field in _MEANS.items()},
+            }
+            for field, distribution in (
+                ("false_removal", group["false_removals"]),
+                ("removal", group["removals"]),
+            ):
+                row[f"fraction_with_1plus_{field}"] = (
+                    sum(v for k, v in distribution.items() if k >= 1) / n
+                )
+                row[f"fraction_with_2plus_{field}s"] = (
+                    sum(v for k, v in distribution.items() if k >= 2) / n
+                )
+                row[f"maximum_{field}s"] = max(distribution)
+            row["stop_reason_distribution"] = ";".join(
+                f"{k}:{v}" for k, v in group["stops"].most_common()
+            )
+            row["removal_count_distribution"] = ";".join(
+                f"{k}:{v}" for k, v in sorted(group["removals"].items())
+            )
+            rows.append(row)
+        columns = [
+            *SUMMARY_GROUP,
+            "n_traces",
+            "true_corruption_recall",
+            "removal_precision",
+            "exact_recovery_rate",
+            "mean_genuine_localizations_removed",
+            "fraction_with_1plus_false_removal",
+            "fraction_with_2plus_false_removals",
+            "maximum_false_removals",
+            "mean_true_corruptions_remaining",
+            "fraction_unresolved_true_corruption",
+            "fraction_abnormal_unresolved",
+            "mean_removals",
+            "fraction_with_1plus_removal",
+            "fraction_with_2plus_removals",
+            "maximum_removals",
+            "fraction_terminal_global_abnormal",
+            "mean_iterations",
+            "stop_reason_distribution",
+            "removal_count_distribution",
+        ]
+        return pd.DataFrame(rows, columns=columns)
+
+
+class CostTrajectories:
+    """Finite cost sums/counts by policy and iteration for the trajectory plot."""
+
+    def __init__(self):
+        self.values = {}
+
+    def add(self, audit):
+        corrupted = audit[audit["dataset_type"] == "corrupted_evaluation"]
+        for row in corrupted.itertuples():
+            key = (row.policy, int(row.iteration))
+            total, count = self.values.get(key, (0.0, 0))
+            if pd.notna(row.C_before):
+                total += row.C_before
+                count += 1
+            self.values[key] = (total, count)
+
+    def frame(self):
+        return pd.DataFrame(
+            [
+                {
+                    "policy": policy,
+                    "iteration": iteration,
+                    "C_before": total / count if count else math.nan,
+                }
+                for (policy, iteration), (total, count) in self.values.items()
+            ],
+            columns=["policy", "iteration", "C_before"],
+        )
+
+
+class BufferedEcsvWriter:
+    """Bounded row buffer around the earlier benchmark's chunk writer."""
+
+    def __init__(self, writer, max_rows=1024):
+        self.writer = writer
+        self.max_rows = max_rows
+        self.pending = []
+        self.barcode_numeric = None
+
+    def write(self, frame):
+        for row in frame.to_dict("records"):
+            self.pending.append(row)
+            if len(self.pending) >= self.max_rows:
+                self.flush()
+
+    def flush(self):
+        if self.pending:
+            frame = pd.DataFrame(self.pending)
+            # These audit fields can become NaN after a scoreable first chunk.
+            for column in ("candidate_rank", "candidate_Barcode"):
+                if column in frame and pd.api.types.is_numeric_dtype(frame[column]):
+                    frame[column] = frame[column].astype(float)
+            if "candidate_Barcode" in frame and self.barcode_numeric is False:
+                frame["candidate_Barcode"] = (
+                    frame["candidate_Barcode"].fillna("").astype(str)
+                )
+            self.writer.write(frame)
+            self.pending.clear()
+
+    def finish(self):
+        self.flush()
+        self.writer.finish()
 
 
 def benchmark(
@@ -458,74 +690,90 @@ def benchmark(
     profile_traces: int = 0,
     profile_calibration_traces: int = 0,
 ) -> None:
-    """Run cycle 4 against the existing cycle-3 manifest and datasets."""
+    """Run the cycle-3 folds with bounded evaluation/output retention.
+
+    Input tables and exact empirical references remain group/condition sized;
+    calibration retains three scalars per clean trace, never scoring structures.
+    """
+    global _PROGRESS_CONTEXT, _GROUP_PEAK_MB
     started = time.monotonic()
+    rss_start = _rss_mb()
     cycle3 = _cycle3()
     cycle1 = cycle3._cycle(1)
     manifest = yaml.safe_load((root / "sweep_manifest.yaml").read_text())
     conditions = manifest.get("conditions", [])
     if manifest.get("dry_run") or not conditions:
         raise ValueError("A completed cycle-3 sweep manifest is required")
-    baselines = {}
-    for item in manifest["simulations"]:
-        frame = cycle1.load_baseline(root / "simulations" / str(item["id"]), item)
-        if "Genomic_Position" not in frame and assume_uniform:
-            mapping = {
-                b: i + 1 for i, b in enumerate(sorted(frame["Barcode"].unique()))
-            }
-            frame["Genomic_Position"] = frame["Barcode"].map(mapping)
-        baselines[str(item["id"])] = frame
-    output.mkdir(parents=True, exist_ok=True)
-    traces_out, audits_out, threshold_out = [], [], []
-    timings = {
-        "reference_fitting_seconds": 0.0,
-        "calibration_scoring_seconds": 0.0,
-        "clean_evaluation_seconds": 0.0,
-        "corrupted_condition_scoring_seconds": 0.0,
-        "plotting_writing_seconds": 0.0,
+    simulation_sizes = {
+        str(item["simulation_id"]): cycle3._condition_metadata(item)[0]
+        for item in manifest["conditions"]
     }
+    output.mkdir(parents=True, exist_ok=True)
+    trace_writer = BufferedEcsvWriter(cycle1._EcsvChunkWriter(output / OUTPUTS[0]))
+    audit_writer = BufferedEcsvWriter(cycle1._EcsvChunkWriter(output / OUTPUTS[2]))
+    threshold_writer = cycle1._EcsvChunkWriter(output / OUTPUTS[3])
+    aggregates = ConditionAccumulator()
+    trajectories = CostTrajectories()
+    timings = dict.fromkeys(
+        (
+            "reference_fitting_seconds",
+            "calibration_scoring_seconds",
+            "clean_evaluation_seconds",
+            "corrupted_condition_scoring_seconds",
+            "plotting_writing_seconds",
+        ),
+        0.0,
+    )
     build_trace_scores_calls = 0
-    reference_cache = {}
-    reference_cache_hits = 0
-    reference_cache_misses = 0
-
-    def fit_reference(n_barcodes, efficiency, seeds, baseline, label):
-        nonlocal reference_cache_hits, reference_cache_misses
-        key = (
-            int(n_barcodes),
-            float(efficiency),
-            reference_mode,
-            tuple(sorted(map(int, seeds))),
-        )
-        if key in reference_cache:
-            reference_cache_hits += 1
-            _progress(f"reference cache hit: {label}; seeds={key[-1]}")
-            return reference_cache[key]
-        reference_cache_misses += 1
-        _progress(f"reference cache miss: {label}; seeds={key[-1]}")
-        fit_started = time.monotonic()
-        _progress(f"{label} reference fit start")
-        model = _reference_with_coordinates(
-            cycle3,
-            baseline[baseline["seed"].isin(seeds)],
-            minimum_observations,
-            reference_mode,
-        )
-        fit_elapsed = time.monotonic() - fit_started
-        timings["reference_fitting_seconds"] += fit_elapsed
-        _progress(f"{label} reference fit end; elapsed={fit_elapsed:.3f}s")
-        reference_cache[key] = model
-        return model
+    reference_cache_hits = reference_cache_misses = 0
+    runtime_rows = []
 
     def score_trace(trace, reference, category):
         nonlocal build_trace_scores_calls
         score_started = time.monotonic()
-        result = build_trace_scores(
-            trace, reference, reference_mode, assume_uniform
-        )
+        result = build_trace_scores(trace, reference, reference_mode, assume_uniform)
         timings[category] += time.monotonic() - score_started
         build_trace_scores_calls += 1
+        _rss_mb()
         return result
+
+    def evaluate_trace(
+        identity, trace, reference, primary, meta, category, initial_state=None
+    ):
+        # This function boundary prevents score caches/states escaping a trace.
+        cache = {}
+        if initial_state is not None:
+            cache[tuple(sorted(trace["Spot_ID"].astype(str)))] = initial_state
+
+        def shared_scorer(current, model, mode, fallback):
+            key = tuple(sorted(current["Spot_ID"].astype(str)))
+            if key not in cache:
+                cache[key] = score_trace(current, model, category)
+            return cache[key]
+
+        for policy in POLICIES:
+            audit, metrics = run_policy(
+                trace,
+                reference,
+                primary,
+                policy,
+                max_removals=max_removals,
+                min_remaining=min_remaining,
+                reference_mode=reference_mode,
+                allow_uniform_fallback=assume_uniform,
+                scorer=shared_scorer,
+            )
+            write_started = time.monotonic()
+            audit = audit.assign(simulation_id=identity[0], **meta)
+            record = {"simulation_id": identity[0], **meta, **metrics}
+            audit_writer.barcode_numeric = pd.api.types.is_numeric_dtype(
+                trace["Barcode"]
+            )
+            audit_writer.write(audit)
+            trace_writer.write(pd.DataFrame([record]))
+            aggregates.add(record)
+            trajectories.add(audit)
+            timings["plotting_writing_seconds"] += time.monotonic() - write_started
 
     groups = {}
     for item in conditions:
@@ -534,95 +782,117 @@ def benchmark(
     processed = 0
     for (n_barcodes, efficiency), items in groups.items():
         group_started = time.monotonic()
-        _progress(
-            f"start group: n_barcodes={n_barcodes}, efficiency={efficiency:g}"
+        _PROGRESS_CONTEXT = f"group B={n_barcodes} p={efficiency:g}"
+        _GROUP_PEAK_MB = 0.0
+        group_rss_start = _rss_mb()
+        group_processed_start = processed
+        group_hits_start, group_misses_start = (
+            reference_cache_hits,
+            reference_cache_misses,
         )
+        _progress("start group")
+        # Use cycle-3 simulation provenance, never the current group's size.
+        # Known nonmatching populations can be excluded before reading ECSV.
+        parts = []
+        for item in manifest["simulations"]:
+            if not np.isclose(float(item["detection_efficiency"]), efficiency):
+                continue
+            simulation_n = item.get("n_barcodes", simulation_sizes.get(str(item["id"])))
+            if simulation_n is not None and int(simulation_n) != n_barcodes:
+                continue
+            frame = cycle1.load_baseline(root / "simulations" / str(item["id"]), item)
+            simulation_n = int(
+                item.get(
+                    "n_barcodes",
+                    simulation_sizes.get(str(item["id"]), frame["Barcode"].max()),
+                )
+            )
+            if simulation_n != n_barcodes:
+                continue
+            frame["n_barcodes"] = simulation_n
+            if "Genomic_Position" not in frame and assume_uniform:
+                mapping = {
+                    b: i + 1 for i, b in enumerate(sorted(frame["Barcode"].unique()))
+                }
+                frame["Genomic_Position"] = frame["Barcode"].map(mapping)
+            parts.append(frame)
+        baseline = pd.concat(parts)
+        del parts, frame
         seeds = sorted({int(item["seed"]) for item in items})
-        baseline = pd.concat(
-            [
-                f
-                for f in baselines.values()
-                if int(f.get("n_barcodes", pd.Series([n_barcodes])).iloc[0])
-                == n_barcodes
-                and np.isclose(f["detection_efficiency"].iloc[0], efficiency)
-            ]
-        )
+        reference_cache = {}
+
+        def fit_reference(seeds, baseline, label):
+            nonlocal reference_cache_hits, reference_cache_misses
+            key = (reference_mode, tuple(sorted(map(int, seeds))))
+            if key in reference_cache:
+                reference_cache_hits += 1
+                _progress(f"reference cache hit: {label}; seeds={key[-1]}")
+                return reference_cache[key]
+            reference_cache_misses += 1
+            fit_started = time.monotonic()
+            _progress(f"{label} reference fit start; seeds={key[-1]}")
+            model = _reference_with_coordinates(
+                cycle3,
+                baseline[baseline["seed"].isin(seeds)],
+                minimum_observations,
+                reference_mode,
+            )
+            fit_elapsed = time.monotonic() - fit_started
+            timings["reference_fitting_seconds"] += fit_elapsed
+            reference_cache[key] = model
+            _progress(f"{label} reference fit end; elapsed={fit_elapsed:.3f}s")
+            return model
+
         for evaluation_seed in seeds:
             evaluation_started = time.monotonic()
-            _progress(f"evaluation seed: {evaluation_seed}")
-            ref_seeds, _, _ = fold_seed_sets(seeds, evaluation_seed)
-            reference = fit_reference(
-                n_barcodes, efficiency, ref_seeds, baseline, "outer"
+            fold_context = (
+                f"group B={n_barcodes} p={efficiency:g} eval={evaluation_seed}"
             )
-            clean_states = []
+            _PROGRESS_CONTEXT = fold_context
+            _progress("start evaluation seed")
+            ref_seeds, _, _ = fold_seed_sets(seeds, evaluation_seed)
+            reference = fit_reference(ref_seeds, baseline, "outer")
+            clean_stats = []
             calibration_seeds = []
             nested_reference_sets = []
             for calibration_seed in seeds:
                 if calibration_seed == evaluation_seed:
                     continue
-                _progress(f"calibration seed: {calibration_seed}")
+                _PROGRESS_CONTEXT = f"{fold_context} calibration={calibration_seed}"
+                _progress("start calibration seed")
                 nested, _, _ = fold_seed_sets(seeds, evaluation_seed, calibration_seed)
                 calibration_seeds.append(calibration_seed)
                 nested_reference_sets.append(
                     f"{calibration_seed}:{','.join(map(str, sorted(nested)))}"
                 )
-                nested_ref = fit_reference(
-                    n_barcodes, efficiency, nested, baseline, "nested"
-                )
+                nested_ref = fit_reference(nested, baseline, "nested")
                 calibration_groups = baseline[
                     baseline["seed"] == calibration_seed
                 ].groupby(["simulation_id", "Trace_ID"], sort=False)
                 if profile_calibration_traces:
-                    calibration_groups = list(calibration_groups)[
-                        :profile_calibration_traces
-                    ]
+                    calibration_groups = islice(
+                        calibration_groups, profile_calibration_traces
+                    )
+                calibration_index = 0
                 for calibration_index, (_, clean) in enumerate(
                     calibration_groups, start=1
                 ):
-                    clean_states.append(
-                        score_trace(clean, nested_ref, "calibration_scoring_seconds")
-                    )
-                    if calibration_index % 100 == 0:
-                        _progress(
-                            "clean calibration trace progress: "
-                            f"seed={calibration_seed}, traces={calibration_index}"
+                    clean_stats.append(
+                        CompactTraceStats.from_scores(
+                            score_trace(
+                                clean, nested_ref, "calibration_scoring_seconds"
+                            )
                         )
-            thresholds = calibrate_thresholds(clean_states)
-            evaluation_clean = []
-            evaluation_groups = baseline[
-                baseline["seed"] == evaluation_seed
-            ].groupby(["simulation_id", "Trace_ID"], sort=False)
-            for clean_index, (identity, clean) in enumerate(
-                evaluation_groups, start=1
-            ):
-                state = score_trace(clean, reference, "clean_evaluation_seconds")
-                evaluation_clean.append((identity, clean, state))
-                if clean_index % 100 == 0:
-                    _progress(
-                        "held-out clean evaluation progress: "
-                        f"seed={evaluation_seed}, traces={clean_index}"
                     )
-            evaluation_states = [state for _, _, state in evaluation_clean]
-            for threshold in thresholds.to_dict("records"):
-                evaluation_rates = clean_gate_rates(evaluation_states, threshold)
-                threshold_out.append(
-                    {
-                        "n_barcodes": n_barcodes,
-                        "detection_efficiency": efficiency,
-                        "evaluation_seed": evaluation_seed,
-                        "reference_seeds": ",".join(map(str, sorted(ref_seeds))),
-                        "calibration_seeds": ",".join(
-                            map(str, sorted(calibration_seeds))
-                        ),
-                        "nested_reference_seed_sets": ";".join(nested_reference_sets),
-                        "evaluation_seeds": str(evaluation_seed),
-                        **{
-                            f"evaluation_{key}": value
-                            for key, value in evaluation_rates.items()
-                        },
-                        **threshold,
-                    }
-                )
+                    del clean
+                    if calibration_index % 250 == 0:
+                        _progress(f"clean calibration traces={calibration_index}")
+                _progress(f"end calibration seed; traces={calibration_index}")
+                del nested_ref, calibration_groups
+            thresholds = calibrate_thresholds(clean_stats)
+            del clean_stats
+            threshold_records = thresholds.to_dict("records")
+            gates = [CleanGateCounter(row) for row in threshold_records]
             primary = (
                 thresholds[np.isclose(thresholds["trace_fpr"], 0.01)].iloc[0].to_dict()
             )
@@ -635,185 +905,208 @@ def benchmark(
                 "displacement": 0.0,
                 "dataset_type": "clean_evaluation",
             }
-            clean_policy_count = 0
-            for identity, trace, initial_state in evaluation_clean:
-                if profile_traces and processed >= profile_traces:
-                    break
-                score_cache = {
-                    tuple(sorted(trace["Spot_ID"].astype(str))): initial_state
-                }
-
-                def shared_clean_scorer(current, model, mode, fallback):
-                    key = tuple(sorted(current["Spot_ID"].astype(str)))
-                    if key not in score_cache:
-                        score_cache[key] = score_trace(
-                            current, model, "clean_evaluation_seconds"
-                        )
-                    return score_cache[key]
-
-                for policy in POLICIES:
-                    audit, metrics = run_policy(
-                        trace,
+            _PROGRESS_CONTEXT = f"{fold_context} clean_evaluation"
+            evaluation_groups = baseline[baseline["seed"] == evaluation_seed].groupby(
+                ["simulation_id", "Trace_ID"], sort=False
+            )
+            clean_index = 0
+            for clean_index, (identity, clean) in enumerate(evaluation_groups, start=1):
+                # Gate evaluation covers all held-out traces, as before. Once
+                # the profiling policy cap is reached, only the gates continue.
+                state = score_trace(clean, reference, "clean_evaluation_seconds")
+                stats = CompactTraceStats.from_scores(state)
+                for gate in gates:
+                    gate.add(stats)
+                if not profile_traces or processed < profile_traces:
+                    evaluate_trace(
+                        identity,
+                        clean,
                         reference,
                         primary,
-                        policy,
-                        max_removals=max_removals,
-                        min_remaining=min_remaining,
-                        reference_mode=reference_mode,
-                        allow_uniform_fallback=assume_uniform,
-                        scorer=shared_clean_scorer,
+                        clean_meta,
+                        "clean_evaluation_seconds",
+                        state,
                     )
-                    audit = audit.assign(simulation_id=identity[0], **clean_meta)
-                    audits_out.append(audit)
-                    traces_out.append(
-                        {"simulation_id": identity[0], **clean_meta, **metrics}
-                    )
-                processed += 1
-                clean_policy_count += 1
-                if clean_policy_count % 100 == 0:
+                    processed += 1
+                del state, clean
+                if clean_index % 250 == 0:
                     _progress(
-                        "clean-policy evaluation progress: "
-                        f"seed={evaluation_seed}, traces={clean_policy_count}"
+                        f"held-out clean traces={clean_index}; policy traces={processed}"
                     )
-            if profile_traces and processed >= profile_traces:
-                _progress(
-                    f"end evaluation seed: {evaluation_seed}; "
-                    f"elapsed={time.monotonic() - evaluation_started:.3f}s"
+            _progress(
+                f"end held-out clean evaluation; traces={clean_index}; policy traces={processed}"
+            )
+            del evaluation_groups
+            threshold_writer.write(
+                pd.DataFrame(
+                    [
+                        {
+                            "n_barcodes": n_barcodes,
+                            "detection_efficiency": efficiency,
+                            "evaluation_seed": evaluation_seed,
+                            "reference_seeds": ",".join(map(str, sorted(ref_seeds))),
+                            "calibration_seeds": ",".join(
+                                map(str, sorted(calibration_seeds))
+                            ),
+                            "nested_reference_seed_sets": ";".join(
+                                nested_reference_sets
+                            ),
+                            "evaluation_seeds": str(evaluation_seed),
+                            **{
+                                f"evaluation_{key}": value
+                                for key, value in gate.rates().items()
+                            },
+                            **threshold,
+                        }
+                        for threshold, gate in zip(threshold_records, gates)
+                    ]
                 )
-                break
-            for item in items:
-                if int(item["seed"]) != evaluation_seed:
-                    continue
-                condition_id = str(item.get("id", item.get("condition_id", "unknown")))
-                _progress(f"benchmark condition ID: {condition_id}")
-                observations = cycle3._load_observations(cycle1, root, item)
-                if "Genomic_Position" not in observations and assume_uniform:
-                    mapping = {
-                        b: i + 1
-                        for i, b in enumerate(sorted(observations["Barcode"].unique()))
-                    }
-                    observations["Genomic_Position"] = observations["Barcode"].map(
-                        mapping
+            )
+            if not profile_traces or processed < profile_traces:
+                for item in items:
+                    if int(item["seed"]) != evaluation_seed:
+                        continue
+                    condition_id = str(
+                        item.get("id", item.get("condition_id", "unknown"))
                     )
-                condition_groups = observations.groupby(
-                    ["simulation_id", "Trace_ID"], sort=False
-                )
-                for condition_index, (identity, trace) in enumerate(
-                    condition_groups, start=1
-                ):
-                    if profile_traces and processed >= profile_traces:
-                        break
-                    meta = cycle3._trace_metadata(item)
-                    meta["dataset_type"] = "corrupted_evaluation"
-                    score_cache = {}
-
-                    def shared_scorer(current, model, mode, fallback):
-                        key = tuple(sorted(current["Spot_ID"].astype(str)))
-                        if key not in score_cache:
-                            score_cache[key] = score_trace(
-                                current, model, "corrupted_condition_scoring_seconds"
+                    _PROGRESS_CONTEXT = f"{fold_context} condition={condition_id}"
+                    _progress("start corrupted condition")
+                    observations = cycle3._load_observations(cycle1, root, item)
+                    if "Genomic_Position" not in observations and assume_uniform:
+                        mapping = {
+                            b: i + 1
+                            for i, b in enumerate(
+                                sorted(observations["Barcode"].unique())
                             )
-                        return score_cache[key]
-
-                    for policy in POLICIES:
-                        audit, metrics = run_policy(
+                        }
+                        observations["Genomic_Position"] = observations["Barcode"].map(
+                            mapping
+                        )
+                    condition_groups = observations.groupby(
+                        ["simulation_id", "Trace_ID"], sort=False
+                    )
+                    meta = {
+                        **cycle3._trace_metadata(item),
+                        "dataset_type": "corrupted_evaluation",
+                    }
+                    condition_index = 0
+                    for identity, trace in condition_groups:
+                        if profile_traces and processed >= profile_traces:
+                            del trace
+                            break
+                        evaluate_trace(
+                            identity,
                             trace,
                             reference,
                             primary,
-                            policy,
-                            max_removals=max_removals,
-                            min_remaining=min_remaining,
-                            reference_mode=reference_mode,
-                            allow_uniform_fallback=assume_uniform,
-                            scorer=shared_scorer,
+                            meta,
+                            "corrupted_condition_scoring_seconds",
                         )
-                        audit = audit.assign(simulation_id=identity[0], **meta)
-                        audits_out.append(audit)
-                        traces_out.append(
-                            {"simulation_id": identity[0], **meta, **metrics}
-                        )
-                    processed += 1
-                    if condition_index % 100 == 0:
-                        _progress(
-                            "condition trace progress: "
-                            f"ID={condition_id}, traces={condition_index}"
-                        )
-                if profile_traces and processed >= profile_traces:
-                    break
+                        del trace
+                        processed += 1
+                        condition_index += 1
+                        if condition_index % 250 == 0:
+                            _progress(
+                                f"corrupted traces={condition_index}; policy traces={processed}"
+                            )
+                    _progress(
+                        f"end corrupted condition; traces={condition_index}; policy traces={processed}"
+                    )
+                    del condition_groups, observations
+                    if profile_traces and processed >= profile_traces:
+                        break
+            _PROGRESS_CONTEXT = fold_context
+            _progress(
+                f"end evaluation seed; elapsed={time.monotonic() - evaluation_started:.3f}s"
+            )
+            del reference
             if profile_traces and processed >= profile_traces:
-                _progress(
-                    f"end evaluation seed: {evaluation_seed}; "
-                    f"elapsed={time.monotonic() - evaluation_started:.3f}s"
-                )
                 break
-            _progress(
-                f"end evaluation seed: {evaluation_seed}; "
-                f"elapsed={time.monotonic() - evaluation_started:.3f}s"
-            )
-        if profile_traces and processed >= profile_traces:
-            _progress(
-                f"end group: n_barcodes={n_barcodes}, efficiency={efficiency:g}; "
-                f"elapsed={time.monotonic() - group_started:.3f}s"
-            )
-            break
-        _progress(
-            f"end group: n_barcodes={n_barcodes}, efficiency={efficiency:g}; "
-            f"elapsed={time.monotonic() - group_started:.3f}s"
+        # Drop both cache ownership and the input slice at every boundary,
+        # including profiling exits. No per-trace caches exist in this scope.
+        cache_size = len(reference_cache)
+        reference_cache.clear()
+        del baseline
+        _PROGRESS_CONTEXT = f"group B={n_barcodes} p={efficiency:g}"
+        group_rss_end = _rss_mb()
+        runtime_rows.append(
+            {
+                "scope": "group",
+                "n_barcodes": n_barcodes,
+                "detection_efficiency": efficiency,
+                "profile_traces": processed - group_processed_start,
+                "elapsed_seconds": time.monotonic() - group_started,
+                "rss_start_mb": group_rss_start,
+                "rss_end_mb": group_rss_end,
+                "rss_peak_mb": _GROUP_PEAK_MB,
+                "reference_cache_hits": reference_cache_hits - group_hits_start,
+                "reference_cache_misses": reference_cache_misses - group_misses_start,
+                "reference_cache_size_before_clear": cache_size,
+                "reference_cache_size_after_clear": len(reference_cache),
+            }
         )
-    trace_metrics = pd.DataFrame(traces_out)
-    audit = pd.concat(audits_out, ignore_index=True) if audits_out else pd.DataFrame()
-    condition = summarize(
-        trace_metrics,
-        [
-            "dataset_type",
-            "policy",
-            "n_barcodes",
-            "K",
-            "detection_efficiency",
-            "displacement",
-        ],
-    )
+        _progress(
+            f"end group; elapsed={time.monotonic() - group_started:.3f}s; reference cache cleared"
+        )
+        if profile_traces and processed >= profile_traces:
+            break
     output_started = time.monotonic()
-    _write(trace_metrics, output / OUTPUTS[0])
-    _write(condition, output / OUTPUTS[1])
-    _write(audit, output / OUTPUTS[2])
-    _write(pd.DataFrame(threshold_out), output / OUTPUTS[3])
-    plot_results(output)
-    timings["plotting_writing_seconds"] = time.monotonic() - output_started
+    trace_writer.finish()
+    audit_writer.finish()
+    threshold_writer.finish()
+    _write(aggregates.frame(), output / OUTPUTS[1])
+    plot_results(output, trajectories)
+    timings["plotting_writing_seconds"] += time.monotonic() - output_started
     elapsed = time.monotonic() - started
-    _write(
-        pd.DataFrame(
-            [
-                {
-                    "profile_traces": processed,
-                    "profile_calibration_traces": profile_calibration_traces,
-                    "elapsed_seconds": elapsed,
-                    "seconds_per_trace_all_policies": elapsed / max(processed, 1),
-                    "projected_hours_for_100000_traces": elapsed
-                    / max(processed, 1)
-                    * 100000
-                    / 3600,
-                    **timings,
-                    "build_trace_scores_calls": build_trace_scores_calls,
-                    "reference_cache_hits": reference_cache_hits,
-                    "reference_cache_misses": reference_cache_misses,
-                }
-            ]
-        ),
-        output / OUTPUTS[4],
+    runtime_rows.append(
+        {
+            "scope": "total",
+            "profile_traces": processed,
+            "profile_calibration_traces": profile_calibration_traces,
+            "elapsed_seconds": elapsed,
+            "seconds_per_trace_all_policies": elapsed / max(processed, 1),
+            "seconds_per_1000_traces": elapsed / max(processed, 1) * 1000,
+            "projected_hours_for_100000_traces": elapsed
+            / max(processed, 1)
+            * 100000
+            / 3600,
+            **timings,
+            "build_trace_scores_calls": build_trace_scores_calls,
+            "reference_cache_hits": reference_cache_hits,
+            "reference_cache_misses": reference_cache_misses,
+            "rss_start_mb": rss_start,
+            "rss_end_mb": _rss_mb(),
+            "rss_peak_mb": max(
+                [_GROUP_PEAK_MB, *(row["rss_peak_mb"] for row in runtime_rows)]
+            ),
+        }
     )
+    _write(pd.DataFrame(runtime_rows), output / OUTPUTS[4])
+    _PROGRESS_CONTEXT = ""
     _progress(
         "runtime summary: "
         + ", ".join(f"{key}={value:.3f}s" for key, value in timings.items())
         + f", build_trace_scores_calls={build_trace_scores_calls}, "
-        f"reference_cache_hits={reference_cache_hits}, "
-        f"reference_cache_misses={reference_cache_misses}"
+        f"reference_cache_hits={reference_cache_hits}, reference_cache_misses={reference_cache_misses}"
     )
 
 
-def plot_results(output: Path) -> None:
+def plot_results(output: Path, trajectories: CostTrajectories | None = None) -> None:
     condition = Table.read(output / OUTPUTS[1], format="ascii.ecsv").to_pandas()
-    audit = Table.read(output / OUTPUTS[2], format="ascii.ecsv").to_pandas()
+    if trajectories is None:
+        trajectories = CostTrajectories()
+        # ECSV data uses a space delimiter with quoted strings. Replotting must
+        # also remain bounded; never read the completed audit through Astropy.
+        for chunk in pd.read_csv(
+            output / OUTPUTS[2],
+            comment="#",
+            sep=" ",
+            chunksize=4096,
+            keep_default_na=False,
+            na_values=["nan"],
+            usecols=["dataset_type", "policy", "iteration", "C_before"],
+        ):
+            trajectories.add(chunk)
     performance = condition[condition["dataset_type"] == "corrupted_evaluation"]
     specs = [
         ("true_corruption_recall", "recall_vs_displacement.png"),
@@ -844,7 +1137,7 @@ def plot_results(output: Path) -> None:
     fig.savefig(output / "clean_any_removal.png", dpi=160)
     plt.close(fig)
     fig, ax = plt.subplots(figsize=(7, 4.5))
-    corrupted_audit = audit[audit["dataset_type"] == "corrupted_evaluation"]
+    corrupted_audit = trajectories.frame()
     for policy, frame in corrupted_audit.groupby("policy", sort=False):
         line = frame.groupby("iteration")["C_before"].mean().sort_index()
         ax.plot(line.index, line.values, marker="o", label=policy)
