@@ -172,8 +172,11 @@ These collections have been removed:
 - Only the requested reference mode is fitted. Sorted arrays are reused directly
   by empirical scoring. The reference cache belongs to one `(n_barcodes,
   detection_efficiency)` group and is cleared on both normal and profiling exits.
-  Baseline tables are loaded for the current efficiency and released at the group
-  boundary, preserving the existing barcode-count selection semantics.
+  Baseline tables are selected with cycle-3 barcode-count provenance: simulation
+  metadata first, then the condition-derived simulation-size mapping, then the
+  observed maximum barcode when neither source exists. Known nonmatching counts
+  are filtered before ECSV loading; counts never come from the current group.
+  Baseline tables are released at the group boundary.
 - Calibration profiling uses lazy `islice` rather than materializing grouped
   DataFrames before slicing. No `gc.collect()` is needed for the retention fix.
 
@@ -239,9 +242,16 @@ python -m pytest test/test_trace_curator_iterative_stopping.py \
   test/test_trace_curator_attribution_benchmark.py -q
 ```
 
-Final checks: all 31 cycle-4 tests passed. The four-script regression suite
-reported 69 passed and one existing cycle-3 failure,
+Final checks: all 34 cycle-4 tests passed. The four-script regression suite
+reported 72 passed and one existing cycle-3 failure,
 `test_iterative_rescoring_can_find_second_culprit`. That failure reproduces in
 isolation, and its implementation and test are unchanged from the fetched feature
 branch. Black formatting, isort import checks, flake8 on the changed Python files,
 and `git diff --check` passed.
+
+The mixed-population regression uses five- and seven-barcode simulations at the
+same detection efficiency and checks reference-fitting and calibration membership
+against cycle-3's provenance logic. It covers explicit simulation metadata,
+condition-derived counts, and the observed-barcode fallback, and verifies that
+known nonmatching simulations are excluded before ECSV loading. All three cases
+fail against the pre-fix implementation and pass after the correction.

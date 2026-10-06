@@ -704,6 +704,10 @@ def benchmark(
     conditions = manifest.get("conditions", [])
     if manifest.get("dry_run") or not conditions:
         raise ValueError("A completed cycle-3 sweep manifest is required")
+    simulation_sizes = {
+        str(item["simulation_id"]): cycle3._condition_metadata(item)[0]
+        for item in manifest["conditions"]
+    }
     output.mkdir(parents=True, exist_ok=True)
     trace_writer = BufferedEcsvWriter(cycle1._EcsvChunkWriter(output / OUTPUTS[0]))
     audit_writer = BufferedEcsvWriter(cycle1._EcsvChunkWriter(output / OUTPUTS[2]))
@@ -787,18 +791,25 @@ def benchmark(
             reference_cache_misses,
         )
         _progress("start group")
-        # Load only this efficiency's baselines, preserving the existing
-        # n_barcodes-column selection and uniform-coordinate mapping semantics.
+        # Use cycle-3 simulation provenance, never the current group's size.
+        # Known nonmatching populations can be excluded before reading ECSV.
         parts = []
         for item in manifest["simulations"]:
             if not np.isclose(float(item["detection_efficiency"]), efficiency):
                 continue
-            frame = cycle1.load_baseline(root / "simulations" / str(item["id"]), item)
-            if (
-                int(frame.get("n_barcodes", pd.Series([n_barcodes])).iloc[0])
-                != n_barcodes
-            ):
+            simulation_n = item.get("n_barcodes", simulation_sizes.get(str(item["id"])))
+            if simulation_n is not None and int(simulation_n) != n_barcodes:
                 continue
+            frame = cycle1.load_baseline(root / "simulations" / str(item["id"]), item)
+            simulation_n = int(
+                item.get(
+                    "n_barcodes",
+                    simulation_sizes.get(str(item["id"]), frame["Barcode"].max()),
+                )
+            )
+            if simulation_n != n_barcodes:
+                continue
+            frame["n_barcodes"] = simulation_n
             if "Genomic_Position" not in frame and assume_uniform:
                 mapping = {
                     b: i + 1 for i, b in enumerate(sorted(frame["Barcode"].unique()))
