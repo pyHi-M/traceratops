@@ -36,7 +36,9 @@ def trace(n=6, positions=None, trace_id="trace"):
 
 @pytest.fixture
 def model():
-    return fit_curator_model([trace() for _ in range(99)])
+    return fit_curator_model(
+        [trace() for _ in range(99)], calibration_traces=[trace()] * 500
+    )
 
 
 def edges(values):
@@ -154,7 +156,13 @@ def test_fit_sorted_arrays_and_metadata():
     frames = [trace(4, positions=[0, 10, 30, 70]) for _ in range(3)]
     for factor, frame in zip([3.0, 1.0, 2.0], frames):
         frame["x"] *= factor
-    fitted = fit_curator_model(frames, minimum_reference_observations=3)
+    with pytest.warns(UserWarning, match="may be unstable"):
+        fitted = fit_curator_model(
+            frames,
+            minimum_reference_observations=3,
+            calibration_traces=frames,
+            trace_fpr=1 / 3,
+        )
     np.testing.assert_array_equal(
         fitted.reference_distributions[10.0], [10.0, 20.0, 30.0]
     )
@@ -162,7 +170,7 @@ def test_fit_sorted_arrays_and_metadata():
     assert fitted.n_reference_traces == 3
     assert fitted.n_reference_pairs == 18
     assert fitted.n_calibration_traces == 3
-    assert fitted.calibration_source == "reference_traces"
+    assert fitted.calibration_source == "separate_traces"
     for sample in fitted.reference_distributions.values():
         assert np.all(np.diff(sample) >= 0)
         with pytest.raises(ValueError):
@@ -187,7 +195,8 @@ def test_actual_clean_threshold_calibration():
         frame = base.copy()
         frame.loc[0, "y"] = offset
         clean.append(frame)
-    fitted = fit_curator_model([base] * 30, calibration_traces=clean, trace_fpr=0.2)
+    with pytest.warns(UserWarning, match="may be unstable"):
+        fitted = fit_curator_model([base] * 30, calibration_traces=clean, trace_fpr=0.2)
     a = log10((90 + 1) / 2)
     b = log10((60 + 1) / 2)
     c = log10((30 + 1) / 2)
@@ -222,7 +231,11 @@ def test_scoring_never_sorts_reference_arrays(model, monkeypatch):
 
 
 def test_barcode_pair_mode_and_string_barcodes():
-    fitted = fit_curator_model([trace(4)] * 20, reference_mode="barcode_pair")
+    fitted = fit_curator_model(
+        [trace(4)] * 20,
+        reference_mode="barcode_pair",
+        calibration_traces=[trace(4)] * 500,
+    )
     assert frozenset(("locus-0", "locus-1")) in fitted.reference_distributions
     assert curate_trace(trace(4), fitted).terminal_state == "normal"
 
@@ -235,14 +248,18 @@ def test_genomic_mapping_is_reused_and_column_alias(model):
     )
     assert curate_trace(frame, model).terminal_state == "normal"
     fitted = fit_curator_model(
-        [frame] * 20, genomic_positions=dict(model.genomic_positions)
+        [frame] * 20,
+        genomic_positions=dict(model.genomic_positions),
+        calibration_traces=[frame] * 500,
     )
     assert fitted.global_threshold == model.global_threshold
 
 
 def test_table_input_and_combined_reference_table():
     frames = [trace(trace_id=f"trace-{i}") for i in range(20)]
-    fitted = fit_curator_model(Table.from_pandas(pd.concat(frames)))
+    fitted = fit_curator_model(
+        Table.from_pandas(pd.concat(frames)), calibration_traces=[frames[0]] * 500
+    )
     result = curate_trace(Table.from_pandas(frames[0]), fitted)
     pd.testing.assert_frame_equal(result.curated_trace, frames[0])
     assert result.n_removed == 0
@@ -442,7 +459,7 @@ def test_inconsistent_positions_between_reference_traces_rejected():
     changed = trace()
     changed["Genomic_Position"] += 1
     with pytest.raises(ValueError, match="disagrees"):
-        fit_curator_model([trace(), changed])
+        fit_curator_model([trace(), changed], calibration_traces=[trace()] * 500)
 
 
 def test_missing_model_position_for_new_barcode_rejected(model):
@@ -456,6 +473,7 @@ def test_missing_model_position_for_new_barcode_rejected(model):
     "kwargs",
     [
         {"trace_fpr": -1},
+        {"trace_fpr": 0},
         {"trace_fpr": 1},
         {"trace_fpr": np.nan},
         {"minimum_reference_observations": 0},
@@ -475,27 +493,31 @@ def test_invalid_removal_limit(model, maximum):
 
 
 def test_no_scoreable_calibration_fails_clearly():
-    with pytest.raises(ValueError, match="No scoreable clean calibration"):
-        fit_curator_model([trace()], minimum_reference_observations=100)
+    with pytest.raises(ValueError, match=r"Too few scoreable calibration traces \(0\)"):
+        fit_curator_model([trace()] * 100, minimum_reference_observations=1000)
 
 
 def test_calibration_excludes_unscoreable_traces(model):
-    fitted = fit_curator_model([trace()] * 20, calibration_traces=[trace(), trace(2)])
-    assert fitted.n_calibration_traces == 1
+    fitted = fit_curator_model(
+        [trace()] * 20, calibration_traces=[trace()] * 500 + [trace(2)]
+    )
+    assert fitted.n_calibration_traces == 500
     assert fitted.n_calibration_unscoreable == 1
 
 
 def test_streaming_references_require_separate_calibration():
     with pytest.raises(ValueError, match="One-pass"):
         fit_curator_model(iter([trace()] * 20))
-    fitted = fit_curator_model(iter([trace()] * 20), calibration_traces=iter([trace()]))
+    fitted = fit_curator_model(
+        iter([trace()] * 20), calibration_traces=iter([trace()] * 500)
+    )
     assert fitted.n_reference_traces == 20
-    assert fitted.n_calibration_traces == 1
+    assert fitted.n_calibration_traces == 500
 
 
 def test_real_coordinates_allow_multiple_removals():
     base = trace(10)
-    fitted = fit_curator_model([base] * 99)
+    fitted = fit_curator_model([base] * 99, calibration_traces=[base] * 500)
     frame = base.copy()
     frame.loc[0, "y"] = 100.0
     frame.loc[5, "y"] = 600.0
@@ -509,7 +531,7 @@ def test_real_coordinates_allow_multiple_removals():
 
 def test_real_coordinates_top3_tie_resolved_by_top5():
     base = trace(10)
-    fitted = fit_curator_model([base] * 99)
+    fitted = fit_curator_model([base] * 99, calibration_traces=[base] * 500)
     frame = base.copy()
     frame.loc[1, "y"] = 200.0
     frame.loc[5, "y"] = 600.0
@@ -541,8 +563,9 @@ def test_calibration_does_not_calculate_loo(monkeypatch):
     monkeypatch.setattr(
         curator, "_loo_scores", lambda *a, **k: pytest.fail("LOO during fitting")
     )
-    fitted = fit_curator_model([trace()] * 20)
-    assert fitted.n_calibration_traces == 20
+    with pytest.warns(UserWarning, match="may be unstable"):
+        fitted = fit_curator_model([trace()] * 100)
+    assert fitted.n_calibration_traces == 100
 
 
 def test_conflicting_barcode_columns_rejected(model):
@@ -553,11 +576,13 @@ def test_conflicting_barcode_columns_rejected(model):
 
 def test_chromosome_consistency():
     base = trace().assign(Chrom="chr1")
-    fitted = fit_curator_model([base] * 20)
+    fitted = fit_curator_model([base] * 20, calibration_traces=[base] * 500)
     with pytest.raises(ValueError, match="chromosome disagrees"):
         curate_trace(base.assign(Chrom="chr2"), fitted)
     with pytest.raises(ValueError, match="share one chromosome"):
-        fit_curator_model([base, base.assign(Chrom="chr2")])
+        fit_curator_model(
+            [base, base.assign(Chrom="chr2")], calibration_traces=[base] * 500
+        )
 
 
 def test_combined_reference_table_requires_trace_id():
@@ -580,7 +605,7 @@ def test_numeric_spot_identity_is_not_coerced_by_mixed_numeric_row():
     base = trace().drop(columns=["Trace_ID", "extra"])
     base["Barcode #"] = np.arange(len(base))
     base["Spot_ID"] = np.arange(2**53 + 1, 2**53 + 1 + len(base), dtype=np.int64)
-    fitted = fit_curator_model([base] * 20)
+    fitted = fit_curator_model([base] * 20, calibration_traces=[base] * 500)
     frame = base.copy()
     frame.loc[2, "y"] = 100.0
     result = curate_trace(frame, fitted)
@@ -588,3 +613,308 @@ def test_numeric_spot_identity_is_not_coerced_by_mixed_numeric_row():
     assert result.iterations[0].candidate_spot_id == identity
     assert isinstance(result.iterations[0].candidate_spot_id, np.integer)
     assert result.removed_localizations["Spot_ID"].tolist() == [identity]
+
+
+@pytest.mark.parametrize("n_folds", [2, 3, 5, 11])
+def test_crossfit_disjoint_balanced_and_deterministic(monkeypatch, n_folds):
+    frames = tuple(trace(3, trace_id=f"trace-{i}") for i in range(11))
+    original_fit = curator._fit_reference
+    original_costs = curator._calibration_costs
+    fits, held_out = [], []
+    active_training = set()
+
+    def record_fit(traces, *args):
+        nonlocal active_training
+        training = list(traces)
+        active_training = {f["Trace_ID"].iloc[0] for f in training}
+        fits.append(tuple(f["Trace_ID"].iloc[0] for f in training))
+        return original_fit(training, *args)
+
+    def record_costs(traces, *args):
+        fold = list(traces)
+        identities = tuple(f["Trace_ID"].iloc[0] for f in fold)
+        assert set(identities).isdisjoint(active_training)
+        held_out.append(identities)
+        yield from original_costs(fold, *args)
+
+    monkeypatch.setattr(curator, "_fit_reference", record_fit)
+    monkeypatch.setattr(curator, "_calibration_costs", record_costs)
+    first = fit_curator_model(
+        frames,
+        n_crossfit_folds=n_folds,
+        trace_fpr=0.5,
+        minimum_reference_observations=1,
+    )
+    first_fits, first_held = list(fits), list(held_out)
+    fits.clear()
+    held_out.clear()
+    second = fit_curator_model(
+        frames,
+        n_crossfit_folds=n_folds,
+        trace_fpr=0.5,
+        minimum_reference_observations=1,
+    )
+    assert fits == first_fits
+    assert held_out == first_held
+    assert len(fits) == n_folds + 1  # Exactly K fits, then one final fit.
+    assert fits[-1] == tuple(f"trace-{i}" for i in range(11))
+    assert sorted(identity for fold in held_out for identity in fold) == sorted(
+        fits[-1]
+    )
+    assert max(map(len, held_out)) - min(map(len, held_out)) <= 1
+    for fold in range(n_folds):
+        assert held_out[fold] == tuple(f"trace-{i}" for i in range(fold, 11, n_folds))
+    assert first.global_threshold == second.global_threshold == 0.0
+    assert first.n_crossfit_folds == n_folds
+    assert first.calibration_source == "crossfit"
+    assert first.n_calibration_traces == 11
+    assert first.n_calibration_unscoreable == 0
+    assert first.n_reference_traces == 11
+    for key in first.reference_distributions:
+        np.testing.assert_array_equal(
+            first.reference_distributions[key], second.reference_distributions[key]
+        )
+
+
+def test_default_threshold_is_crossfitted_and_differs_from_self_inclusion():
+    frames = []
+    for factor in range(1, 101):
+        frame = trace(3)
+        frame["x"] *= factor
+        frames.append(frame)
+    with pytest.warns(UserWarning, match="100.*1% tail.*may be unstable"):
+        fitted = fit_curator_model(frames, reference_mode="barcode_pair")
+    # Each training fold contains 80 samples per barcode pair. Both extrema
+    # fall outside their held-out references, giving finite-sample p=2/81.
+    expected_crossfit = 3 * log10(81 / 2)
+    expected_in_sample = 3 * log10(101 / 4)
+    assert fitted.global_threshold == pytest.approx(expected_crossfit)
+    values = list(
+        curator._calibration_costs(
+            frames,
+            fitted.reference_distributions,
+            fitted.genomic_positions,
+            None,
+            "barcode_pair",
+            20,
+        )
+    )
+    in_sample = curator._empirical_threshold(values, 0.01)
+    assert in_sample == pytest.approx(expected_in_sample)
+    assert fitted.global_threshold != in_sample
+    assert fitted.n_crossfit_folds == 5
+    assert fitted.n_reference_pairs == 300
+    assert all(len(sample) == 100 for sample in fitted.reference_distributions.values())
+
+
+@pytest.mark.parametrize("folds", [0, 1, -2, 12, 2.5, True])
+def test_invalid_crossfit_fold_count_rejected(folds):
+    with pytest.raises(ValueError, match="n_crossfit_folds"):
+        fit_curator_model([trace(3)] * 11, n_crossfit_folds=folds, trace_fpr=0.5)
+
+
+@pytest.mark.parametrize("n_folds", [2, 5])
+def test_insufficient_crossfitted_sample_rejected(n_folds):
+    with pytest.raises(ValueError, match="Too few scoreable.*99.*at least 100"):
+        fit_curator_model([trace(3)] * 99, n_crossfit_folds=n_folds)
+
+
+def test_calibration_sample_rule_counts_finite_scores_not_input_size():
+    frames = [trace(3)] * 99 + [trace(2)] * 10
+    with pytest.raises(ValueError, match="Too few scoreable.*99.*at least 100"):
+        fit_curator_model(frames)
+
+
+@pytest.mark.parametrize(
+    "fpr,n,minimum", [(0.01, 99, 100), (0.05, 19, 20), (0.3, 3, 4)]
+)
+def test_tail_sample_requirement_generalizes(fpr, n, minimum):
+    with pytest.raises(
+        ValueError, match=f"at least {minimum} finite calibration scores"
+    ):
+        fit_curator_model(
+            [trace(3)] * 20, calibration_traces=[trace(3)] * n, trace_fpr=fpr
+        )
+
+
+@pytest.mark.parametrize("fpr,n", [(0.01, 100), (0.01, 499), (0.05, 20)])
+def test_low_but_valid_sample_warns(fpr, n):
+    with pytest.warns(UserWarning, match=f"Only {n}.*estimable but may be unstable"):
+        fitted = fit_curator_model([trace(3)] * n, trace_fpr=fpr)
+    assert fitted.n_calibration_traces == n
+
+
+@pytest.mark.parametrize("fpr,n", [(0.01, 500), (0.05, 100)])
+def test_five_expected_tail_observations_do_not_warn(fpr, n):
+    import warnings
+
+    with warnings.catch_warnings(record=True) as observed:
+        warnings.simplefilter("always")
+        fitted = fit_curator_model([trace(3)] * n, trace_fpr=fpr)
+    assert not observed
+    assert fitted.n_calibration_traces == n
+
+
+def test_independent_calibration_bypasses_crossfit(monkeypatch):
+    original_fit = curator._fit_reference
+    fit_calls = []
+
+    def record_fit(traces, *args):
+        fit_calls.append(1)
+        return original_fit(traces, *args)
+
+    monkeypatch.setattr(curator, "_fit_reference", record_fit)
+    monkeypatch.setattr(
+        curator,
+        "_fold_traces",
+        lambda *a, **k: pytest.fail("cross-fitting independent controls"),
+    )
+    base = trace(3)
+    controls = base.copy()
+    controls["x"] *= 2
+    fitted = fit_curator_model(
+        [base] * 20, calibration_traces=[controls] * 500, n_crossfit_folds=0
+    )
+    assert fit_calls == [1]
+    assert fitted.calibration_source == "separate_traces"
+    assert fitted.n_crossfit_folds is None
+    assert fitted.global_threshold == pytest.approx(2 * log10(41 / 2) + log10(21 / 2))
+    assert fitted.n_reference_traces == 20
+    assert fitted.n_calibration_traces == 500
+
+
+def test_final_reference_support_diagnostics():
+    fitted = fit_curator_model(
+        [trace(4), trace(3), trace(3)],
+        minimum_reference_observations=5,
+        calibration_traces=[trace(3)] * 500,
+    )
+    assert fitted.n_reference_traces == 3
+    assert fitted.n_reference_pairs == 12
+    assert fitted.n_reference_keys == 3
+    assert fitted.n_supported_reference_keys == 1
+    assert fitted.median_reference_observations == 4.0
+    assert fitted.min_reference_observations_actual == 1
+    assert fitted.fraction_reference_keys_below_minimum == pytest.approx(2 / 3)
+
+
+def test_compact_pair_buffers_match_float_list_reference(monkeypatch):
+    from array import array
+
+    buffers = []
+
+    def record_buffer(typecode):
+        buffer = array(typecode)
+        buffers.append(buffer)
+        return buffer
+
+    monkeypatch.setattr(curator, "array", record_buffer)
+    frames = [trace(4, positions=[0, 10, 30, 70]) for _ in range(3)]
+    expected = {}
+    for factor, frame in zip([3.0, 1.0, 2.0], frames):
+        frame["x"] *= factor
+        xyz = frame[["x", "y", "z"]].to_numpy()
+        for i, j in combinations(range(4), 2):
+            key = float(
+                abs(
+                    frame["Genomic_Position"].iloc[i]
+                    - frame["Genomic_Position"].iloc[j]
+                )
+            )
+            expected.setdefault(key, []).append(float(np.linalg.norm(xyz[i] - xyz[j])))
+    references, _, _, n_traces, n_pairs = curator._fit_reference(
+        frames, {}, "separation"
+    )
+    assert len(buffers) == len(expected)
+    assert all(
+        isinstance(buffer, array) and buffer.typecode == "d" for buffer in buffers
+    )
+    assert sum(map(len, buffers)) == n_pairs == 18
+    assert n_traces == 3
+    for key, values in expected.items():
+        np.testing.assert_array_equal(references[key], np.sort(values))
+
+
+def test_fold_references_are_released_before_next_fit(monkeypatch):
+    import weakref
+
+    original_fit = curator._fit_reference
+    previous_arrays = []
+
+    def record_fit(*args):
+        assert all(reference() is None for reference in previous_arrays)
+        result = original_fit(*args)
+        previous_arrays[:] = [weakref.ref(sample) for sample in result[0].values()]
+        return result
+
+    monkeypatch.setattr(curator, "_fit_reference", record_fit)
+    fitted = fit_curator_model([trace(3)] * 100, trace_fpr=0.05)
+    assert fitted.n_crossfit_folds == 5
+    assert all(reference() is None for reference in previous_arrays)
+    for sample in fitted.reference_distributions.values():
+        with pytest.raises(ValueError):
+            sample.setflags(write=True)
+
+
+@pytest.mark.parametrize("as_table", [False, True])
+def test_combined_crossfit_uses_first_appearance_order(as_table):
+    identifiers = ["z", "a", "m", "b", "c", "x", "d", "w", "e", "v"]
+    frame = pd.concat([trace(3, trace_id=identity) for identity in identifiers])
+    population = Table.from_pandas(frame) if as_table else frame
+    # Main API converts Astropy once; helper receives pandas for combined folds.
+    prepared = population.to_pandas() if as_table else population
+    for fold in range(3):
+        held = list(curator._fold_traces(prepared, fold, 3, held_out=True))
+        assert [trace["Trace_ID"].iloc[0] for trace in held] == identifiers[fold::3]
+    fitted = fit_curator_model(
+        population, n_crossfit_folds=3, trace_fpr=0.5, minimum_reference_observations=1
+    )
+    assert fitted.n_reference_traces == fitted.n_calibration_traces == 10
+
+
+def test_combined_astropy_population_is_converted_once(monkeypatch):
+    population = Table.from_pandas(
+        pd.concat([trace(3, trace_id=f"t-{i}") for i in range(10)])
+    )
+    original = Table.to_pandas
+    calls = []
+
+    def record(table, *args, **kwargs):
+        calls.append(1)
+        return original(table, *args, **kwargs)
+
+    monkeypatch.setattr(Table, "to_pandas", record)
+    fit_curator_model(population, trace_fpr=0.5, minimum_reference_observations=1)
+    assert calls == [1]
+
+
+def test_collection_without_trace_ids_supports_crossfit():
+    frames = tuple(trace(3).drop(columns="Trace_ID") for _ in range(10))
+    fitted = fit_curator_model(frames, trace_fpr=0.5, minimum_reference_observations=1)
+    assert fitted.calibration_source == "crossfit"
+    assert fitted.n_calibration_traces == 10
+
+
+def test_crossfit_unscoreable_count_and_reference_support():
+    frames = [trace(3)] * 100 + [trace(2)] * 3
+    with pytest.warns(UserWarning, match="Only 100"):
+        fitted = fit_curator_model(frames)
+    assert fitted.n_calibration_traces == 100
+    assert fitted.n_calibration_unscoreable == 3
+    assert fitted.n_reference_traces == 103
+    assert fitted.n_reference_pairs == 303
+    assert fitted.n_reference_keys == fitted.n_supported_reference_keys == 2
+    assert fitted.min_reference_observations_actual == 100
+    assert fitted.median_reference_observations == 151.5
+    assert fitted.fraction_reference_keys_below_minimum == 0.0
+
+
+def test_crossfit_support_uses_training_fold_not_final_population():
+    # Final all-data pairs would have 100 observations; fold references have
+    # only 80. No held-out cost may use the final reference to pass this gate.
+    with pytest.raises(ValueError, match=r"Too few scoreable calibration traces \(0\)"):
+        fit_curator_model(
+            [trace(3)] * 100,
+            reference_mode="barcode_pair",
+            minimum_reference_observations=90,
+        )

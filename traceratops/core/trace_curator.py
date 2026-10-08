@@ -4,9 +4,11 @@ No barcode ordering or numeric identity is interpreted as genomic position.
 See ``docs/source/api/trace_curator.md`` for the fitting and input contract.
 """
 
-from dataclasses import dataclass
+import warnings
+from array import array
+from dataclasses import dataclass, field
 from itertools import combinations, islice
-from math import floor, log10, nan
+from math import ceil, floor, log10, nan
 from types import MappingProxyType
 from typing import Any, Mapping, Optional, Tuple
 
@@ -29,7 +31,7 @@ class TraceCuratorModel:
 
     Distributions are sorted, immutable float arrays, keyed by exact separation
     or an unordered frozenset of barcode identities. Positions share one genomic
-    coordinate system. Calibration counts exclude unscoreable clean traces.
+    coordinate system. Calibration counts exclude unscoreable traces.
     """
 
     reference_distributions: Mapping
@@ -44,6 +46,12 @@ class TraceCuratorModel:
     n_calibration_unscoreable: int
     calibration_source: str
     chromosome: Optional[object] = None
+    n_crossfit_folds: Optional[int] = None
+    n_reference_keys: int = field(init=False)
+    n_supported_reference_keys: int = field(init=False)
+    median_reference_observations: float = field(init=False)
+    min_reference_observations_actual: int = field(init=False)
+    fraction_reference_keys_below_minimum: float = field(init=False)
 
     def __post_init__(self):
         # bytes backing prevents callers from re-enabling array writes.
@@ -70,8 +78,23 @@ class TraceCuratorModel:
             raise ValueError("reference_mode must be separation or barcode_pair")
         if not np.isfinite(self.global_threshold) or self.global_threshold < 0:
             raise ValueError("global_threshold must be finite and nonnegative")
-        if not np.isfinite(self.trace_fpr) or not 0 <= self.trace_fpr < 1:
-            raise ValueError("trace_fpr must be in [0, 1)")
+        if not np.isfinite(self.trace_fpr) or not 0 < self.trace_fpr < 1:
+            raise ValueError("trace_fpr must be in (0, 1)")
+
+        sizes = np.asarray([len(sample) for sample in references.values()], dtype=int)
+        supported = int(np.count_nonzero(sizes >= self.minimum_reference_observations))
+        for name, value in {
+            "n_reference_keys": len(sizes),
+            "n_supported_reference_keys": supported,
+            "median_reference_observations": (
+                float(np.median(sizes)) if len(sizes) else nan
+            ),
+            "min_reference_observations_actual": int(sizes.min()) if len(sizes) else 0,
+            "fraction_reference_keys_below_minimum": (
+                (len(sizes) - supported) / len(sizes) if len(sizes) else nan
+            ),
+        }.items():
+            object.__setattr__(self, name, value)
 
 
 @dataclass(frozen=True)
@@ -219,7 +242,9 @@ def _traces(source):
             )
         if frame["Trace_ID"].isna().any():
             raise ValueError("Trace_ID must not be missing")
-        yield from (trace for _, trace in frame.groupby("Trace_ID", sort=False))
+        yield from (
+            trace for _, trace in frame.groupby("Trace_ID", sort=False, observed=True)
+        )
     else:
         yield from source
 
@@ -309,41 +334,14 @@ def _empirical_threshold(values, fpr):
     return float(ordered[max(0, len(ordered) - allowed - 1)])
 
 
-def fit_curator_model(
-    traces,
-    *,
-    genomic_positions=None,
-    trace_fpr=0.01,
-    minimum_reference_observations=20,
-    reference_mode="separation",
-    calibration_traces=None,
-) -> TraceCuratorModel:
-    """Fit references and a strict empirical trace-level abnormality threshold.
-
-    ``traces`` is a combined DataFrame/Table with Trace_ID, or a reiterable
-    collection of single-trace DataFrames/Tables. One-pass iterators require
-    separate ``calibration_traces``. All supplied traces must be clean, resolved
-    single polymers. For independent calibration supply held-out clean traces;
-    otherwise calibration uses the fitting traces (an in-sample cutoff).
-    Only pair distances and one scalar cost per calibration trace are retained.
-    """
-    if not np.isfinite(trace_fpr) or not 0 <= trace_fpr < 1:
-        raise ValueError("trace_fpr must be in [0, 1)")
-    _positive_integer(minimum_reference_observations, "minimum_reference_observations")
-    if reference_mode not in {"separation", "barcode_pair"}:
-        raise ValueError("reference_mode must be separation or barcode_pair")
-    if calibration_traces is None and iter(traces) is traces:
-        raise ValueError(
-            "One-pass reference iterators require separate calibration_traces"
-        )
-    positions_by_barcode = (
-        _validated_positions(genomic_positions) if genomic_positions is not None else {}
-    )
-    observations: dict[object, list[float]] = {}
+def _fit_reference(traces, genomic_positions, reference_mode):
+    """Build one reference using compact double buffers, never float lists."""
+    positions_by_barcode = dict(genomic_positions)
+    observations: dict[object, array] = {}
     n_reference_traces = 0
     n_reference_pairs = 0
     chromosome = None
-    for trace in _traces(traces):
+    for trace in traces:
         frame, barcodes, positions, xyz = _validate_trace(trace, positions_by_barcode)
         if "Chrom" in frame and len(frame):
             chrom = frame["Chrom"].iloc[0]
@@ -361,55 +359,194 @@ def fit_curator_model(
                 distance = float(np.linalg.norm(xyz[right] - xyz[left]))
             if not np.isfinite(distance):
                 raise ValueError("Spatial distance exceeds finite numeric range")
-            observations.setdefault(key, []).append(distance)
+            if key not in observations:
+                observations[key] = array("d")
+            observations[key].append(distance)
             n_reference_pairs += 1
     if len(set(positions_by_barcode.values())) != len(positions_by_barcode):
         raise ValueError(
             "Each barcode must have a unique genomic position in the model"
         )
-    references = {
-        key: np.sort(np.asarray(values, dtype=float))
-        for key, values in observations.items()
-    }
-    del observations
-    costs = []
-    unscoreable = 0
-    calibration_source = (
-        "reference_traces" if calibration_traces is None else "separate_traces"
-    )
-    for trace in _traces(traces if calibration_traces is None else calibration_traces):
-        frame, barcodes, positions, xyz = _validate_trace(
-            trace, positions_by_barcode, chromosome
-        )
-        cost = nan
-        if len(frame) >= 3:
-            edges = _pair_anomalies(
-                barcodes,
-                positions,
-                xyz,
-                references,
-                reference_mode,
-                minimum_reference_observations,
-            )
-            cost = _top_cost(edges, 3)
-        if np.isfinite(cost):
-            costs.append(cost)
-        else:
-            unscoreable += 1
-    threshold = _empirical_threshold(costs, trace_fpr)
-    return TraceCuratorModel(
+    references = {}
+    # Pop converted buffers immediately so compact buffers and NumPy copies do
+    # not coexist for the entire reference population.
+    while observations:
+        key, buffer = observations.popitem()
+        sample = np.frombuffer(buffer, dtype=np.float64).copy()
+        del buffer
+        sample.sort()
+        references[key] = sample
+    return (
         references,
         positions_by_barcode,
-        threshold,
-        reference_mode,
-        minimum_reference_observations,
-        float(trace_fpr),
+        chromosome,
         n_reference_traces,
         n_reference_pairs,
-        len(costs),
-        unscoreable,
-        calibration_source,
-        chromosome,
+    )
+
+
+def _calibration_costs(traces, references, positions, chromosome, mode, minimum):
+    """Yield only scalar costs; each pairwise scoring state dies before yield."""
+    for trace in traces:
+        frame, barcodes, genomic, xyz = _validate_trace(trace, positions, chromosome)
+        cost = nan
+        if len(frame) >= 3:
+            cost = _top_cost(
+                _pair_anomalies(barcodes, genomic, xyz, references, mode, minimum), 3
+            )
+        yield cost
+
+
+def _fold_traces(population, fold, n_folds, *, held_out):
+    """Round-robin by deterministic trace order; no hash or random seed."""
+    for index, trace in enumerate(_traces(population)):
+        if (index % n_folds == fold) == held_out:
+            yield trace
+
+
+def _record_costs(costs, destination):
+    unscoreable = 0
+    for cost in costs:
+        if np.isfinite(cost):
+            destination.append(cost)
+        else:
+            unscoreable += 1
+    return unscoreable
+
+
+def _calibration_threshold(costs, trace_fpr):
+    minimum_tail_sample = ceil(1 / trace_fpr)
+    if len(costs) < minimum_tail_sample:
+        raise ValueError(
+            f"Too few scoreable calibration traces ({len(costs)}) to estimate the "
+            f"requested empirical tail (trace_fpr={trace_fpr:g}); at least "
+            f"{minimum_tail_sample} finite calibration scores are required. "
+            "Supply more traces or check reference support."
+        )
+    if len(costs) * trace_fpr < 5:
+        warnings.warn(
+            f"Only {len(costs)} scoreable calibration traces are available. "
+            f"The requested {100 * trace_fpr:g}% tail is estimable but may be "
+            "unstable (fewer than five expected tail observations).",
+            UserWarning,
+            stacklevel=3,
+        )
+    return _empirical_threshold(costs, trace_fpr)
+
+
+def fit_curator_model(
+    traces,
+    *,
+    genomic_positions=None,
+    trace_fpr=0.01,
+    minimum_reference_observations=20,
+    reference_mode="separation",
+    calibration_traces=None,
+    n_crossfit_folds=5,
+) -> TraceCuratorModel:
+    """Fit references and a cross-fitted empirical trace-abnormality cutoff.
+
+    The fitting population must contain a majority of valid resolved polymers;
+    individual aberrant traces need not be identified. Cross-fitting prevents
+    self-inclusion, but contamination robustness has not been quantified.
+    By default trace i belongs to fold i % n_crossfit_folds in collection order
+    (first-appearance Trace_ID order for combined tables). Each fold is scored
+    against references from the other folds, then the final reference is fitted
+    once on all traces. Combined DataFrames/Tables and reiterable collections
+    work; one-pass iterators require separate calibration_traces.
+
+    Explicit calibration_traces bypass cross-fitting and are intended for an
+    independent high-quality control population. In either mode the requested
+    tail requires ceil(1 / trace_fpr) finite calibration scores; fewer than five
+    expected tail observations emit a statistical warning. Only compact pair
+    buffers, the current reference, and scalar calibration costs are retained.
+    """
+    if not np.isfinite(trace_fpr) or not 0 < trace_fpr < 1:
+        raise ValueError("trace_fpr must be in (0, 1)")
+    _positive_integer(minimum_reference_observations, "minimum_reference_observations")
+    if reference_mode not in {"separation", "barcode_pair"}:
+        raise ValueError("reference_mode must be separation or barcode_pair")
+    genomic_positions = (
+        _validated_positions(genomic_positions) if genomic_positions is not None else {}
+    )
+    costs = array("d")
+    unscoreable = 0
+    if calibration_traces is None:
+        if iter(traces) is traces:
+            raise ValueError(
+                "One-pass reference iterators require separate calibration_traces; default cross-fitting requires reiterable input"
+            )
+        # Convert a combined Astropy table only once, without materializing a
+        # list of copied single traces or any calibration scoring histories.
+        population = traces.to_pandas() if isinstance(traces, Table) else traces
+        n_traces = sum(1 for _ in _traces(population))
+        _positive_integer(n_crossfit_folds, "n_crossfit_folds")
+        if not 2 <= n_crossfit_folds <= n_traces:
+            raise ValueError(
+                f"n_crossfit_folds must be between 2 and the number of available traces ({n_traces})"
+            )
+        for fold in range(n_crossfit_folds):
+            references, positions, chromosome, _, _ = _fit_reference(
+                _fold_traces(population, fold, n_crossfit_folds, held_out=False),
+                genomic_positions,
+                reference_mode,
+            )
+            unscoreable += _record_costs(
+                _calibration_costs(
+                    _fold_traces(population, fold, n_crossfit_folds, held_out=True),
+                    references,
+                    positions,
+                    chromosome,
+                    reference_mode,
+                    minimum_reference_observations,
+                ),
+                costs,
+            )
+            del references
+        threshold = _calibration_threshold(costs, trace_fpr)
+        references, positions, chromosome, n_reference_traces, n_reference_pairs = (
+            _fit_reference(
+                _traces(population),
+                genomic_positions,
+                reference_mode,
+            )
+        )
+        calibration_source = "crossfit"
+    else:
+        references, positions, chromosome, n_reference_traces, n_reference_pairs = (
+            _fit_reference(
+                _traces(traces),
+                genomic_positions,
+                reference_mode,
+            )
+        )
+        unscoreable = _record_costs(
+            _calibration_costs(
+                _traces(calibration_traces),
+                references,
+                positions,
+                chromosome,
+                reference_mode,
+                minimum_reference_observations,
+            ),
+            costs,
+        )
+        threshold = _calibration_threshold(costs, trace_fpr)
+        calibration_source = "separate_traces"
+    return TraceCuratorModel(
+        reference_distributions=references,
+        genomic_positions=positions,
+        global_threshold=threshold,
+        reference_mode=reference_mode,
+        minimum_reference_observations=minimum_reference_observations,
+        trace_fpr=float(trace_fpr),
+        n_reference_traces=n_reference_traces,
+        n_reference_pairs=n_reference_pairs,
+        n_calibration_traces=len(costs),
+        n_calibration_unscoreable=unscoreable,
+        calibration_source=calibration_source,
+        chromosome=chromosome,
+        n_crossfit_folds=int(n_crossfit_folds) if calibration_traces is None else None,
     )
 
 

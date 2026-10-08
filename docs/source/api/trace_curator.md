@@ -8,9 +8,9 @@ resolved before calling this API.
 ```python
 from traceratops.core.trace_curator import fit_curator_model, curate_trace
 
-# A collection of clean, resolved single-trace DataFrames or Astropy Tables.
+# A population of resolved traces, most expected to be valid.
 # Each trace contains explicit Genomic_Position values.
-model = fit_curator_model(reference_traces)
+model = fit_curator_model(traces)
 result = curate_trace(trace, model)
 print(result.terminal_state)
 print(result.removed_localizations)
@@ -38,10 +38,12 @@ one coordinate system. Numeric barcode identities and row order never supply
 positions. BED midpoint conversion is the caller's responsibility.
 
 Fitting accepts a combined DataFrame/Table with `Trace_ID`, or a reiterable
-collection of single traces. A one-pass reference iterator requires separate
-calibration traces. Empty and fewer-than-three-localization curation inputs
-return `unscoreable`, provided their schema is valid. Fit fails clearly if no
-clean calibration trace can be scored.
+collection of single traces with a stable iteration order. Default cross-fitting
+requires reiterable input and rejects one-pass iterators. A one-pass reference
+iterator is supported only with explicit separate calibration traces. Empty and
+fewer-than-three-localization curation inputs return `unscoreable`, provided their
+schema is valid. Fit fails clearly if too few
+calibration traces can be scored to estimate the requested empirical tail.
 
 ## Public functions
 
@@ -49,27 +51,79 @@ clean calibration trace can be scored.
 fit_curator_model(
     traces, *, genomic_positions=None, trace_fpr=0.01,
     minimum_reference_observations=20, reference_mode="separation",
-    calibration_traces=None,
+    calibration_traces=None, n_crossfit_folds=5,
 ) -> TraceCuratorModel
 
 curate_trace(trace, model, *, max_removals=3) -> TraceCurationResult
 ```
 
-All fitting and calibration traces must be clean, resolved single polymers.
+All input traces must be resolved single polymers. The fitting population is
+expected to contain a majority of valid chromatin traces; individual aberrant
+traces do not need to be identified beforehand.
 The default reference mode pools spatial distances by **exact absolute genomic
 separation**. No separation binning, rounding, interpolation, or sparse-bin
 fallback is performed. Optional `barcode_pair` mode uses unordered barcode
 identity pairs. Unsupported pairs are ignored, including references below the
 minimum observation count. Missing relationships are not assigned zero scores.
 
-For independent calibration pass held-out clean `calibration_traces`. Otherwise
-the fitting traces calibrate an **in-sample** cutoff; the nominal FPR describes
-that empirical calibration sample and is not a guarantee on unseen traces.
-Only finite, scoreable clean costs enter the cutoff. Unscoreable calibration
-traces are counted separately. Reference arrays are sorted once during fitting;
-scoring uses binary searches without sorting them again. Fitting retains pair
-observations and scalar calibration costs, without a history of trace-score
-objects or pairwise calibration tables.
+## Two fitting modes
+
+The default call:
+
+```python
+model = fit_curator_model(traces)
+```
+
+performs deterministic K-fold cross-fitting, with `n_crossfit_folds=5` by
+default. Assign trace number `i` to fold `i % n_crossfit_folds`. Combined tables
+use first-appearance `Trace_ID` order; individual-trace collections use collection
+order, even without `Trace_ID`. There is no shuffle, random seed, or hashing.
+Fold sizes differ by at most one. The fold count must be an integer between two
+and the number of available traces; it is not automatically reduced.
+
+For each held-out fold, fit an empirical reference on the other folds and score
+each held-out trace against it. Each trace is held out exactly once, and no
+trace contributes pair distances to the reference used for its own calibration
+score. Pool only finite held-out `C_top3` values to derive the threshold. Discard
+each fold reference before fitting the next. After calibration, fit the final
+production reference once on **all** input traces. No in-sample calibration mode
+is used silently.
+
+Cross-fitting prevents self-inclusion but does not make the reference estimator
+robust to arbitrarily high contamination. The prototype assumes most traces
+are valid. **Contamination robustness has not yet been quantified**, and no
+supported contamination percentage is claimed. The nominal FPR specifies an
+empirical calibration tail, not a guaranteed error rate on unseen traces.
+
+When an independent high-quality reference/control population is available:
+
+```python
+model = fit_curator_model(traces, calibration_traces=clean_control_traces)
+```
+
+fit the production reference from `traces`, score the supplied independent
+controls against it, and derive the threshold from those control scores. This
+bypasses cross-fitting; `n_crossfit_folds` is unused and recorded as `None`.
+Independence of explicitly supplied controls is the caller's responsibility.
+
+In **both modes**, require `0 < trace_fpr < 1` and at least
+`ceil(1 / trace_fpr)` finite calibration scores. At the default `0.01`, fewer
+than **100** scoreable traces raises a clear `ValueError`, even if the total
+input count is large. Sparse reference support or too-small traces can reduce
+the scoreable sample. If `N * trace_fpr < 5`, emit a `UserWarning` via
+`warnings.warn`: the tail is estimable but may be unstable because there are
+fewer than five expected tail observations. At 1%, this warning applies to
+100–499 finite scores. This is a statistical criterion, not a biological
+contamination claim. No warning is emitted at or above five expected tail
+observations.
+
+Only finite costs enter the cutoff; unscoreable calibration traces are counted
+separately. Pair observations use compact `array("d")` double buffers, converted
+once per reference key to sorted NumPy arrays; scoring uses binary searches
+without re-sorting. Buffers are released as keys are converted. No collection of
+fold-specific references, trace-score histories, or pairwise calibration tables
+is retained. Scalar calibration costs also use a compact double buffer. Final
+reference arrays retain their immutable backing.
 
 ## Scientific decision rule
 
@@ -85,8 +139,9 @@ anomaly = -log10(min(1, 2 * min(lower, upper)))
 scores if fewer than three). No finite pair gives an unavailable cost, never
 zero. Traces smaller than three localizations are unscoreable.
 
-The clean cutoff uses `allowed = floor(trace_fpr * n_clean)` and
-`sorted_costs[max(0, n_clean - allowed - 1)]`. Abnormality requires strictly
+The calibration cutoff uses `allowed = floor(trace_fpr * n_calibration)` and
+`sorted_costs[max(0, n_calibration - allowed - 1)]`, with the finite calibration
+sample count. Abnormality requires strictly
 `C_top3 > global_threshold`; equality is normal.
 
 For an abnormal trace, each finite `LOO_top3` is the current cost minus the cost
@@ -110,7 +165,17 @@ There is no additional candidate confidence or actionability threshold.
 - `genomic_positions`: immutable barcode-to-position mapping;
 - `global_threshold`, `reference_mode`, `minimum_reference_observations`, `trace_fpr`;
 - `n_reference_traces`, `n_reference_pairs`, `n_calibration_traces` (scoreable),
-  `n_calibration_unscoreable`, `calibration_source`, and optional `chromosome`.
+  `n_calibration_unscoreable`, `calibration_source` (`"crossfit"` or
+  `"separate_traces"`), `n_crossfit_folds` (or `None`), and optional `chromosome`;
+- `n_reference_keys`, `n_supported_reference_keys`,
+  `median_reference_observations`, `min_reference_observations_actual`, and
+  `fraction_reference_keys_below_minimum`.
+
+Support diagnostics describe the **final full reference**, counting distinct
+keys equally. A supported key has at least `minimum_reference_observations`;
+median and minimum include all keys, including unsupported ones. These compact
+summaries do not retain an additional per-key table. With an empty reference,
+counts and the minimum are zero, and median/fraction are NaN.
 
 `TraceCurationResult` contains independent pandas copies `curated_trace` and
 `removed_localizations`, preserving input columns, original indices, and stable
