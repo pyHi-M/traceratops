@@ -202,5 +202,147 @@ LOO fields record maximal scores even if a tie prevents selection. Unused
 scores are NaN and absent candidate identities are None. Full pairwise tables
 are not included.
 
-This prototype provides the reusable Python API only. CLI loading, batch ECSV
-output, model persistence, and parallel execution are future work.
+## Production ECSV command line
+
+Install traceratops normally (`pip install -e .` for a development checkout).
+The installed entry point is `trace_curator`, with `fit`, `curate`, and `run`
+subcommands. These call the Python API above; the CLI contains no second
+implementation of scoring, calibration, attribution, or curation.
+
+CLI input ECSV files must already contain:
+
+```text
+Trace_ID, Spot_ID, Barcode or Barcode #, Genomic_Position, x, y, z
+```
+
+`Trace_ID` and **`Genomic_Position` are mandatory**, including for independent
+calibration inputs. Spatial coordinates must be finite, barcode and Spot_ID
+identities must be unique within each trace, and a supplied `Chrom` must satisfy
+the core chromosome contract. Both barcode aliases can appear only if they agree.
+Extra scalar user columns and metadata are retained. Numeric identifiers,
+including large integer Spot_ID values, preserve their identity types.
+
+Add genomic annotations upstream using the existing `trace_genomic_coordinates`
+preprocessing utility. It currently supplies `Chrom`, `Chrom_Start`, and
+`Chrom_End`; **it does not create `Genomic_Position`**. Prepare the explicit
+position column upstream using your chosen locus coordinate convention. The
+curator never converts BED intervals, infers a midpoint, or reads an external
+position mapping. There is no `--genomic-positions` option. All genomic and
+spatial coordinates come from the ECSV itself and must use units compatible
+with the fitted reference.
+
+### Fit a saved model
+
+```bash
+trace_curator fit \
+    --input traces.ecsv \
+    --output-model curator_model \
+    --trace-fpr 0.01 \
+    --minimum-reference-observations 20 \
+    --reference-mode separation \
+    --n-crossfit-folds 5
+```
+
+This uses the deterministic cross-fitting described above, then fits the final
+full-population reference. It writes `curator_model.npz` and
+`curator_model.json`, and prints all compact model diagnostics to stdout.
+Warnings from the core remain visible on stderr. To calibrate on independent
+high-quality controls, add `--calibration-input clean_control_traces.ecsv`;
+cross-fitting is then bypassed, exactly as in the API. At the default 1% FPR,
+at least 100 finite calibration scores are required and 100–499 emit the
+statistical instability warning. Most fitting traces must be valid; contamination
+robustness remains unquantified.
+
+### Curate with a saved model
+
+```bash
+trace_curator curate \
+    --input traces.ecsv \
+    --model curator_model \
+    --output curated_traces.ecsv \
+    --removed-output removed_localizations.ecsv \
+    --summary-output trace_curator_summary.ecsv \
+    --diagnostics-output trace_curator_diagnostics.ecsv \
+    --max-removals 3
+```
+
+Each trace is curated independently in first-appearance Trace_ID order. Retained
+rows keep their original within-trace order; interleaved input traces become
+contiguous in that first-appearance order. All original columns are preserved,
+with no added scientific or diagnostic columns in the curated trace table.
+ECSV has no separate pandas index: output selection preserves original rows and
+Spot_ID values without introducing an index column.
+
+The optional removed table keeps original columns and removal order, adding
+`curator_removal_iteration` (zero-based API iteration),
+`curator_candidate_barcode`, `curator_initial_cost`, and
+`curator_global_threshold`. Existing user columns with those names cause an
+error when removal output is requested; they are never overwritten silently.
+The original Trace_ID is retained.
+
+The optional summary has one row per Trace_ID: `terminal_state`, `stop_reason`,
+`initial_cost`, `final_cost`, `global_threshold`, `n_removed`,
+`n_input_localizations`, `n_output_localizations`, and `n_iterations`. The last
+count includes the terminal stopping-state record.
+
+The optional diagnostics table has Trace_ID plus all `TraceCurationIteration`
+fields listed above, including the final stopping state. Candidate identities
+are explicitly masked when absent; unused costs are NaN. Astropy ECSV mask
+metadata distinguishes missing identities from empty strings. These are compact
+decision records, not full pairwise tables.
+
+Terminal states retain their API meanings:
+
+- `normal`: unchanged trace at or below the global cutoff;
+- `curated`: accepted removals and a final globally normal trace;
+- `abnormal_unresolved`: abnormality remains and the API abstained or stopped;
+- `unscoreable`: the initial trace had no usable cost, including very small traces.
+
+### Fit and curate in one command
+
+```bash
+trace_curator run \
+    --input traces.ecsv \
+    --output curated_traces.ecsv \
+    --output-model curator_model \
+    --removed-output removed_localizations.ecsv \
+    --summary-output trace_curator_summary.ecsv \
+    --diagnostics-output trace_curator_diagnostics.ecsv \
+    --trace-fpr 0.01 \
+    --minimum-reference-observations 20 \
+    --reference-mode separation \
+    --n-crossfit-folds 5 \
+    --max-removals 3
+```
+
+`run` fits on the input population, calibrates with cross-fitting unless
+`--calibration-input` is supplied, then curates using the final full-data
+reference. Its outputs are equivalent to explicit `fit` followed by `curate`.
+The three auxiliary ECSV outputs are optional. Defaults in these examples match
+the API exactly; optional reference mode `barcode_pair` is also supported.
+
+### Model files and output policy
+
+Models use versioned JSON metadata plus an NPZ archive of one-dimensional
+float64 arrays. JSON stores model parameters, fitted genomic positions, typed
+barcode identities, unambiguous unordered pair keys, and an NPZ SHA-256 checksum.
+Both files must travel together. `--model` accepts the prefix or either filename.
+The reader disables pickle and reconstructs `TraceCuratorModel`, recalculating
+support diagnostics and restoring immutable reference arrays.
+
+Persistent barcode/chromosome identities support strings, integers, finite
+floats, and booleans, including NumPy scalars. Arbitrary Python tuple/custom
+object identities are unsupported. String and numeric identities are typed
+explicitly in JSON rather than conflated as string dictionary keys.
+For Python use, `save_curator_model(model, prefix)` and
+`load_curator_model(prefix)` are available from
+`traceratops.core.trace_curator_io`.
+
+Outputs replace existing files, matching the repository ECSV writer convention.
+Input/output aliases and duplicate output paths are rejected, and output parent
+directories must already exist. Each file is replaced atomically; writing all
+outputs or both model files is not one filesystem transaction. A mismatched
+model pair is rejected by its checksum. Validation and curation complete before
+`run` writes files. Errors use concise stderr messages with a nonzero exit code.
+
+Parallel processing and plotting are outside this CLI's scope.

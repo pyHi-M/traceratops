@@ -47,6 +47,7 @@ dev = [
 Homepage = "https://github.com/pyHi-M/traceratops"
 
 [project.scripts]
+trace_curator = "traceratops.trace_curator:main"
 trace_filter = "traceratops.trace_filter:main"
 trace_merge = "traceratops.trace_merge:main"
 figure_him_matrix = "traceratops.plot_him_matrix:main" # Deprecated name
