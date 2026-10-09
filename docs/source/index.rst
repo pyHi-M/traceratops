@@ -43,6 +43,12 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 
 .. toctree::
    :maxdepth: 1
+   :caption: Python API
+
+   api/trace_curator
+
+.. toctree::
+   :maxdepth: 1
    :caption: Contribute
 
    contribute/CONTRIBUTING
