@@ -76,6 +76,7 @@ trace_3way_coloc = "traceratops.trace_3way_coloc:main"
 plot_compare2matrices = "traceratops.plot_compare2matrices:main"
 collect_files = "traceratops.collect_files:main"
 trace_split_labels = "traceratops.trace_split_labels:main"
+trace_simulator = "traceratops.trace_simulator:main"
 
 [tool.setuptools.packages.find]
 include = ["traceratops*"]
