@@ -13,6 +13,7 @@ from tqdm import trange
 from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
     shuffle_matrix,
+    plot_single_matrix,
 )
 
 rng = np.random.default_rng()
@@ -169,11 +170,10 @@ def plot_Wilcoxon_matrix(
     fig_title="",
     plottingFileExtension=".png",
     n_cells=0,
-    cmap="RdBu",
+    cmap="Reds_r",
 ):
 
-    cmtitle = "log10(p-value)"
-    fig_title = "Wilcoxon's rank sum test"
+    
     print(f"$ normalization factor: {normalize}")
 
     m2 = m2 / normalize
@@ -186,38 +186,26 @@ def plot_Wilcoxon_matrix(
         uniqueBarcodes,
     )
 
-    fig1 = plt.figure(constrained_layout=True)
-    spec1 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig1)
-    f_1 = fig1.add_subplot(spec1[0, 0])  # 16
+    fig_path = outputFileName + "_Wilcoxon" + plottingFileExtension
+    data_path = outputFileName + "_Wilcoxon.npy"
 
     result = np.log10(result)
 
-    plot_2d_matrix_simple(
-        f_1,
-        result,
-        uniqueBarcodes,
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=cmtitle,
-        fig_title=fig_title,
-        c_min=-3,
-        c_max=0,  # log10(0.05) = -1.3
+    plot_single_matrix(
+        matrix=result,
+        cmap=cmap,
+        matrix_title=f"Wilcoxon's rank sum test | N = {n_cells} | n = 2",
         fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        show_title=True,
-        n_cells=n_cells,
-        n_datasets=2,
+        barcode_names=uniqueBarcodes,
+        cm_title="log10(p-value)",
+        c_min=-3,
+        clim=0,
+        fig_path=fig_path,
     )
-    plt.savefig(outputFileName + "_Wilcoxon" + plottingFileExtension)
-    print(
-        "$ Output figure: {}".format(
-            outputFileName + "_Wilcoxon" + plottingFileExtension
-        )
-    )
-    np.save(outputFileName + "_Wilcoxon" + ".npy", result)
-    print("$ Output data: {}".format(outputFileName + "_Wilcoxon" + ".npy"))
+        
+    np.save(data_path, result)
+    print(f"$ Output figure: {fig_path}")
+    print(f"$ Output data: {data_path}")
 
 
 def normalize_matrix(m1, m2, mode="none"):
@@ -328,10 +316,6 @@ def plot_matrix_difference(
     cmap="RdBu",
 ):
 
-    # plots difference/ratio matrix
-    fig1 = plt.figure(constrained_layout=True)
-    spec1 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig1)
-    f_1 = fig1.add_subplot(spec1[0, 0])  # 16
 
     if "none" in normalize:  # sets default operation
         mode = "maximum"
@@ -345,37 +329,30 @@ def plot_matrix_difference(
     print(f"$ max_m1 = {np.nanmax(_m1)} \t max_m2 = {np.nanmax(_m2)}")
     if ratio:
         matrix = np.log2(_m1 / _m2)
-        cmtitle = "log(ratio)"
-        fig_title = "log2(Dataset1/Dataset2)"
+        cm_title = "log(ratio)"
         print("$ calculating ratio")
     else:
         matrix = _m1 - _m2
-        cmtitle = "difference"
-        fig_title = "Dataset1-Dataset2"
+        cm_title = "difference"
         print("$ calculating difference")
 
     print("$ Clim used: {}\n".format(c_scale))
 
-    plot_2d_matrix_simple(
-        f_1,
-        matrix,
-        uniqueBarcodes,
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=cmtitle,
-        fig_title=fig_title,
-        c_min=-c_scale,
-        c_max=c_scale,
+    fig_path = outputFileName + "_difference" + plottingFileExtension
+    
+    plot_single_matrix(
+        matrix=matrix,
+        cmap=cmap,
+        matrix_title=f"{cm_title} | N = {n_cells} | n = 2",
         fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        show_title=True,
-        n_cells=n_cells,
-        n_datasets=2,
+        barcode_names=uniqueBarcodes,
+        cm_title=cm_title,
+        c_min=-c_scale,
+        clim=c_scale,
+        fig_path=fig_path,
     )
-    plt.savefig(outputFileName + "_difference" + plottingFileExtension)
-    print("Output figure: {}".format(outputFileName))
+
+    print(f"$ Output figure: {fig_path}")
 
 
 def plot_mixed_matrix(
@@ -394,10 +371,7 @@ def plot_mixed_matrix(
     cmap="RdBu",
 ):
 
-    # plots mixed matrix
-    fig2 = plt.figure(constrained_layout=True)
-    spec2 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig2)
-    f2 = fig2.add_subplot(spec2[0, 0])  # 16
+    
 
     _m1, _m2 = m1.copy(), m2.copy()
 
@@ -411,34 +385,25 @@ def plot_mixed_matrix(
 
     matrix2 = _m1
 
-    fig_title = "mixed matrix"
-
     for i in range(matrix2.shape[0]):
         for j in range(0, i):
             matrix2[i, j] = _m2[i, j]
 
-    plot_2d_matrix_simple(
-        f2,
-        matrix2,
-        list(uniqueBarcodes),
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=fig_title,
-        fig_title=fig_title,
-        show_title=True,
-        c_min=0,
-        c_max=cAxis,
+    fig_path = outputFileName + "_mixed_matrix" + plottingFileExtension
+    data_path = outputFileName + "_mixed_matrix.npy"
+
+    plot_single_matrix(
+        matrix=matrix2,
+        cmap=cmap,
+        matrix_title=f"Mixed matrix | N = {n_cells} | n = 2",
         fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        n_cells=n_cells,
-        n_datasets=2,
+        barcode_names=uniqueBarcodes,
+        cm_title="mixed matrix",
+        c_min=0,
+        clim=cAxis,
+        fig_path=fig_path,
     )
-    plt.savefig(outputFileName + "_mixed_matrix" + plottingFileExtension)
-    np.save(outputFileName + "_mixed_matrix.npy", matrix2)
-    print(
-        "Output figure: {}".format(
-            outputFileName + "_mixed_matrix" + plottingFileExtension
-        )
-    )
+
+    np.save(data_path, matrix2)
+    print(f"$ Output figure: {fig_path}")
+    print(f"$ Output data: {data_path}")

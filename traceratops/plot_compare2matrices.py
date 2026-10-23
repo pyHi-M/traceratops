@@ -323,7 +323,7 @@ def main():
                 fig_title=run_parameters["cmtitle"],
                 plottingFileExtension=run_parameters["plottingFileExtension"],
                 n_cells=n_cells1 + n_cells2,
-                cmap=run_parameters["cmap"],
+                cmap="Reds_r",
             )
 
     else:
