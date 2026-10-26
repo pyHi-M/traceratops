@@ -474,7 +474,7 @@ class ChromatinTraceTable:
                     return
 
         print(
-            f"Successfully matched {matched_count}/{total_count} rows ({(matched_count/total_count)*100:.1f}%)"
+            f"Successfully matched {matched_count} / {total_count} rows ({(matched_count / total_count) * 100:.1f}%)"
         )
 
         return matched_count, total_count

@@ -11,8 +11,8 @@ from tqdm import trange
 
 from traceratops.core.him_matrix_operations import (
     calculate_contact_probability_matrix,
-    shuffle_matrix,
     plot_single_matrix,
+    shuffle_matrix,
 )
 
 rng = np.random.default_rng()
@@ -172,7 +172,6 @@ def plot_Wilcoxon_matrix(
     cmap="Reds_r",
 ):
 
-    
     print(f"$ normalization factor: {normalize}")
 
     m2 = m2 / normalize
@@ -201,7 +200,7 @@ def plot_Wilcoxon_matrix(
         clim=0,
         fig_path=fig_path,
     )
-        
+
     np.save(data_path, result)
     print(f"$ Output figure: {fig_path}")
     print(f"$ Output data: {data_path}")
@@ -315,7 +314,6 @@ def plot_matrix_difference(
     cmap="RdBu",
 ):
 
-
     if "none" in normalize:  # sets default operation
         mode = "maximum"
     else:
@@ -338,7 +336,7 @@ def plot_matrix_difference(
     print("$ Clim used: {}\n".format(c_scale))
 
     fig_path = outputFileName + "_difference" + plottingFileExtension
-    
+
     plot_single_matrix(
         matrix=matrix,
         cmap=cmap,
@@ -369,8 +367,6 @@ def plot_mixed_matrix(
     n_cells=0,
     cmap="RdBu",
 ):
-
-    
 
     _m1, _m2 = m1.copy(), m2.copy()
 
