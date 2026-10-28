@@ -472,3 +472,48 @@ def test_matplotlib_v3_5_1_error():
     assert os.path.exists(generated_nan_path)
     check_script_run_normally(result, generated_matrix_path, expected_matrix_path)
     delete_paths([generated_png_path, generated_matrix_path, generated_nan_path])
+
+
+@pytest.mark.parametrize("file_format", ["png", "svg", "pdf"])
+def test_figure_export_formats(tmp_path, file_format):
+    """Exercise the plotting/export backends with the existing small matrix fixture."""
+    import sys
+
+    matrix_path = tmp_path / "matrix.npy"
+    barcode_path = tmp_path / "barcodes.csv"
+    np.save(matrix_path, create_test_matrix())
+    barcode_path.write_text("1\n3\n13\n999\n")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "traceratops.plot_him_matrix",
+            "--input",
+            str(matrix_path),
+            "--barcodes",
+            str(barcode_path),
+            "--output",
+            str(tmp_path),
+            "--output_format",
+            file_format,
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "MPLBACKEND": "Agg"},
+    )
+    assert result.returncode == 0, result.stderr
+    figures = list(tmp_path.glob(f"*.{file_format}"))
+    assert figures, result.stdout
+    for figure in figures:
+        data = figure.read_bytes()
+        if file_format == "png":
+            from PIL import Image
+
+            with Image.open(figure) as image:
+                image.verify()
+        elif file_format == "pdf":
+            assert data.startswith(b"%PDF-") and b"%%EOF" in data
+        else:
+            import xml.etree.ElementTree as ET
+
+            assert ET.fromstring(data).tag == "{http://www.w3.org/2000/svg}svg"
