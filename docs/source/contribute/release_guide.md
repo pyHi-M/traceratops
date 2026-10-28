@@ -1,121 +1,100 @@
 # Release guide
 
-*This guide describes the release process used in this project.*
+The project uses Semantic Versioning and `vMAJOR.MINOR.PATCH` tags. Prepare and
+validate changes on `release/*`, review them into `dev`, then review `dev` into
+`main`. The published tag must identify the approved release commit on `main`.
+Do not merge into `main`, create a tag, or publish a release without explicit
+maintainer approval. Do not publish packages to PyPI as part of this procedure.
 
-| Component   | Purpose                                                      |
-| ----------- | ------------------------------------------------------------ |
-| `dev`       | Clean, linear development history – suitable for debugging.|
-| `release/*` | Temporary branch used to stabilize and validate a release. |
-| `main`      |Each release is merged via a **merge commit** for traceability. |
-| **Tagging** | The tag is placed on the final squash commit in `dev`.|
+## 1. Assess the release baseline
 
-------
+Fetch `main`, `dev` and tags. Inspect the latest **published GitHub release**,
+resolve its tag to a commit, and compare that commit with both branches. Do not
+assume the highest tag, published release and current `main` are identical.
+Review merged history, relevant source diffs, open PRs and CI results.
 
-## 1. Create a release branch from `dev`
+For the proposed 2.0.0 release, see the
+[assessment and validation checklist](release_2_0_0_checklist.md) and
+[prepared release notes](../quickstart/release_2_0_0.md).
 
-```bash
-git checkout dev
-git pull origin dev
-git checkout -b release/1.2.3
-git push -u origin release/1.2.3
-```
+## 2. Prepare a release branch and PR into dev
 
-```{note}
-This branch is used to validate the upcoming release. You can make fixes freely here.
-```
+Create `release/2.0.0` from current `origin/dev`. Update the authoritative version
+in `pyproject.toml`, the root changelog, its documentation copy, and release notes.
+`traceratops._version` and Sphinx obtain the installed package version through
+package metadata; there is no second version constant to edit.
 
-------
+Run the existing scientific suite, the supported OS/Python CI matrix, dependency
+audits, and package build/installation checks. Distinguish numerical regression
+coverage from imports and CLI help checks. Do not change algorithms or defaults
+to make checks pass. Open a release-preparation PR targeting `dev`; do not merge
+it automatically. If further features are merged meanwhile, reassess the release
+notes and rerun affected checks.
 
-## 2. QA & Final fixes on `release/1.2.3`
+## 3. After approval, merge preparation into dev
 
-Process all [checks required to merge into `main`](https://traceratops.readthedocs.io/en/main/contribute/checklist/pr_template_COPY.html#main-checklist).
+After review, a maintainer merges the preparation PR into `dev`. Open the prepared
+`dev` → `main` PR and confirm its actual commit range and release description.
+The preparation PR's checks do not replace checks on this final integration PR.
+There is no need to reset or force-push the temporary branch.
 
-Make any necessary commits (fixes, version bump, etc.) directly on the `release` branch.
+## 4. Verify the dev-to-main PR
 
-```bash
-# example fix
-git add .
-git commit -m "Fix: final QA issue"
-git push
-```
+Require successful test, security and existing hygiene checks. Confirm that the
+version and release notes match the reviewed scope, no unapproved features have
+entered, and the changelog covers all changes since the published release tag.
+Keep the previous tag untouched. Confirm `v2.0.0` and its release do not already
+exist. Resolve any merge conflicts on a reviewed branch, not directly on `main`.
 
-------
+## 5. Approval boundary: merge into main
 
-## 3. Open a Pull Request: `release/1.2.3` → `dev`
+Only after **explicit approval**, merge the reviewed `dev` → `main` PR, preferably
+with the repository's existing merge-commit convention. Fetch `origin/main` and
+verify that the merged commit contains the approved version and all validated
+changes. If main has advanced again, identify the intended release commit
+explicitly rather than tagging an unreviewed tip.
 
-- Use **"Squash and merge"** on GitHub.
-- The result is a **single clean commit** on `dev` representing the release.
-- Use a clear commit message like: `"Release 1.2.3"`
+## 6. Approval boundary: tag the main release commit
 
-This keeps `dev` linear and avoids duplicate commits.
-
-------
-
-## 4. Reset `release/1.2.3` to `dev`
-
-Now that `dev` contains the release, we align `release` with it to avoid SHA divergence:
-
-```bash
-git checkout dev
-git pull origin dev
-
-git checkout release/1.2.3
-git reset --hard dev
-git push --force
-```
-
-This ensures that `release` and `dev` point to the **exact same commit**.
-
-------
-
-## 4.(bis) Revalidate the release branch
-
-```{note}
-After resetting release/* to match dev, it’s important to revalidate the branch before merging into main — even if you already validated it earlier.
-```
-
-### Why is this necessary?
-
-Between the time you:
-1. created release/1.2.3
-2. and squash-merged it into dev
-
-👉 another developer may have merged a PR into dev, adding changes not present in the original release branch.
-
-After the squash merge, when you reset --hard release ← dev, the release now includes those other commits, even though they were never validated in the original release context.
-
-------
-
-## 5. Tag the Final Release Commit (on `dev`)
-
-Before merging into `main`, **tag the last squash commit on `dev`**, which represents the true released code:
+Only after **explicit approval**, use the exact verified main commit SHA:
 
 ```bash
-git tag -a v1.2.3 -m "Release v1.2.3"
-git push origin v1.2.3
+git fetch origin main --tags
+git show <approved-main-sha>:pyproject.toml
+git merge-base --is-ancestor <approved-main-sha> origin/main
+git ls-remote --tags origin refs/tags/v2.0.0
+# Stop if that tag already exists; do not overwrite it.
+git tag -a v2.0.0 <approved-main-sha> -m "Release v2.0.0"
+git push origin refs/tags/v2.0.0
 ```
 
-> ✅ This makes the tag visible in both `dev` and `main` (since `main` merges the same commit from the release branch).
+Check package version 2.0.0 before creating the tag. Do not tag `dev` before the
+main merge: a tag on dev need not identify the final main release commit.
 
-------
+## 7. Approval boundary: publish the GitHub release
 
-## 6. Open a Pull Request: `release/1.2.3` → `main`
+After **explicit approval**, create the GitHub release using the existing
+`v2.0.0` tag and the prepared release notes. Set the actual release date in the
+changelog through the reviewed preparation/integration PR before tagging.
+Do not duplicate or overwrite a tag/release. No automated release or package
+publishing workflow is currently configured.
 
-- On GitHub, use **"Create a merge commit"**
-- This gives a clear entry point in `main` for the release.
-- Merge message:
-   ➤ `"Release 1.2.3 – merged from release/1.2.3"`
+Build from the exact tagged source with `python -m build`, validate the sdist and
+wheel with `twine check`, and install the wheel in a fresh environment. If binary
+artifacts are to be attached, attach these tagged-source builds, not an earlier
+local preparation build. GitHub source archives alone are not wheel artifacts.
+Do not upload anything to a package index.
 
-This keeps `main` non-linear but readable and semantically meaningful.
+## 8. Verify publication and monitoring
 
-
-------
-
-## 7. Cleanup
-
-You may delete the temporary release branch:
-
-```bash
-git branch -d release/1.2.3
-git push origin --delete release/1.2.3
-```
+- Confirm that the release is published (not draft), its tag resolves to the
+  approved main SHA, and the package metadata declares 2.0.0 and Python >=3.11.
+- Confirm the release title, notes, comparison link and any attached artifacts.
+- Check the security audit workflow exists on `main`, the default branch.
+  Weekly schedules run from the default branch; until it contains the workflow,
+  dependency-related PR checks supply audit coverage. Once present, manually
+  dispatch an audit and check the next weekly run.
+- Enable native GitHub Actions failure notifications and Dependabot alerts as
+  described in the [development guide](dev_installation.md#dependency-maintenance-and-security).
+- Keep approval and CI evidence in the release PR. Delete temporary branches only
+  after confirming publication; do not delete `dev` or change existing tags.
