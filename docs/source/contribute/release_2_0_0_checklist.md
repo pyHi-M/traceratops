@@ -16,6 +16,10 @@ counts. The release inventory uses the v1.0.1-to-dev source diff and the 41
 post-tag commits reachable from dev, with their merged PR descriptions.
 The dev-to-main diff was inspected separately. Do not overwrite main or assume
 fast-forward integration; the final integration PR must review the actual merge.
+A non-mutating merge-tree preview found a content conflict only in
+`docs/source/index.rst`. Resolve navigation on the future integration branch,
+retaining the reviewed tutorial, installation, changelog and release links; then
+rebuild docs and run that PR's checks. No main merge was performed.
 
 **Recommend 2.0.0**, with publication tag **v2.0.0**. The root changelog and
 `traceratops/_version.py` explicitly prescribe Semantic Versioning. Dropping
@@ -179,3 +183,25 @@ checklist rather than treating numerical test success as static-analysis success
 No broad typing/spelling cleanup is included. The preparation PR remains draft
 pending readiness review, even if automated scientific/packaging checks pass.
 Manual interactive PyMOL and private acquisition-data QA were not executed.
+
+### Additional installed-wheel and documentation checks
+
+The corrected wheel was installed outside the source checkout. Its version,
+Python requirement, development-extra markers, resolver payload and 29 installed
+console entry points passed inspection/help checks. TIFF and NPY masks loaded
+correctly. Targeted numerical assertions passed for Pearson comparisons and 4M/
+three-way contact frequencies; mask assignment and label splitting passed on a
+small known input. Nine neighbor/4M/three-way PNG/SVG/PDF outputs passed file-format
+checks. These are small synthetic regressions/smokes, not validation on every
+biological acquisition.
+
+Both final distributions pass Twine checks. The full installed-wheel pytest run
+and nine candidate CI jobs are recorded in the PR as they finish. The starting
+dev matrix is distinct from these candidate checks. Sphinx HTML rendering
+succeeds with notebook execution disabled; existing tutorial/cross-reference
+warnings remain. A missing separator in the Getting Started toctree was repaired
+so the installation, changelog and new release page appear in navigation.
+
+The future dev-to-main PR must additionally resolve the documented index conflict
+and triage mypy/codespell findings and manual QA. Preparation is not authorization
+to merge, tag, or publish.
