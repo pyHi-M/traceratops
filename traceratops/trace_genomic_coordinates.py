@@ -174,7 +174,7 @@ def impute_genomic_coordinates(trace_file, bed_dict, output_file, p):
                 return
 
     print(
-        f"Successfully matched {matched_count}/{total_count} rows ({(matched_count/total_count)*100:.1f}%)"
+        f"Successfully matched {matched_count} / {total_count} rows ({(matched_count / total_count) * 100:.1f}%)"
     )
     trace_table.save(
         output_file,

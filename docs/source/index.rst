@@ -8,7 +8,6 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
-
    quickstart/installation
    quickstart/changelog_COPY
 
@@ -19,10 +18,10 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Getting started with notebooks<tutorials/start_with_ipynb>
    Using the --pipe argument<tutorials/using_pipe>
    Merge Multi-ROI<tutorials/tutorial_merge_multi_roi.ipynb>
-   Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
-   Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
-   Quality Control & Filters : Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
-   Filter Duplicates<tutorials/tutorial_filter_duplicate_barcode.ipynb>
+   Quality Control <tutorials/tutorial_quality_control_traces.ipynb>
+   Filter Thresholds <tutorials/tutorial_filter_thresholds_traces.ipynb>
+   Filters based on Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
+   Filter Duplicates<tutorials/tutorial_filter_duplicate_barcodes.ipynb>
    Split Traces<tutorials/tutorial_split_traces.ipynb>
    Classify Traces<tutorials/tutorial_assign_masks_split_labels.ipynb>
    Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
