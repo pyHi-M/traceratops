@@ -8,8 +8,10 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
+
    quickstart/installation
    quickstart/changelog_COPY
+   quickstart/release_2_0_0
 
 .. toctree::
    :maxdepth: 1

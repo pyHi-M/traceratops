@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "traceratops"
-version = "1.0.1"
+version = "2.0.0"
 description = "Toolbox for trace analysis"
 readme = "README.md"
 authors = [
@@ -22,6 +22,7 @@ dependencies = [
     "pandas",
     "astropy",
     "tqdm",
+    "tifffile", # Required by the trace_assign_mask console command.
     "scipy",
     "scikit-learn>=1.3",
     "seaborn>=0.13.2",
