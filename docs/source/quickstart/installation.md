@@ -29,11 +29,6 @@ For Windows Command Prompt, activate with `.venv\Scripts\activate.bat`.
 If PowerShell activation is restricted, use `.\.venv\Scripts\python.exe -m pip
 install traceratops` directly; changing system execution policy is unnecessary.
 
-The first PyPI publication of 2.0.0 is a separate maintainer action. These PyPI
-commands become available once that publication succeeds; a GitHub release alone
-does not make a package available on PyPI. Until then, use the tagged-source
-alternative below.
-
 ## Stable releases with uv
 
 After [installing uv](https://docs.astral.sh/uv/getting-started/installation/):
@@ -63,20 +58,7 @@ To update, run `python -m pip install --upgrade traceratops` (or
 `uv pip install --upgrade traceratops`). To select a particular published release,
 use `traceratops==2.0.0` instead of the unversioned name.
 
-## Advanced: stable tagged source or development checkout
-
-Before the initial PyPI publication, or when source access is required, install
-the existing stable Git tag in a uv environment:
-
-```bash
-uv venv --python 3.11
-uv pip install "traceratops @ git+https://github.com/pyHi-M/traceratops.git@v2.0.0"
-uv run --no-project trace_filter --help
-```
-
-This requires Git. It installs the tagged source, rather than the latest main or
-dev branch. Package versions and Python requirements are recorded in
-`pyproject.toml`.
+## Development version
 
 For the latest development version, editable installation, tests and contribution
 tools, follow the [development installation guide](../contribute/dev_installation.md).

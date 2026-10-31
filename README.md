@@ -32,51 +32,22 @@ The package is intended for users who already have pyHiM-style localization or t
 
 ## Installation
 
-Stable releases are distributed through **PyPI**. Python **3.11 or newer** is
-required; you do not need to clone this repository for a stable installation.
+For stable use, install from **PyPI**, preferably with pip in a virtual environment.
+Python **3.11 or newer** is required; cloning the repository is unnecessary.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install traceratops
-python -c "from importlib.metadata import version; print(version('traceratops'))"
-trace_filter --help
 ```
 
-On Windows PowerShell, create the environment with `py -3.11 -m venv .venv` and
-activate with `.\.venv\Scripts\Activate.ps1`; Command Prompt uses
-`.venv\Scripts\activate.bat`. See the [installation guide](docs/source/quickstart/installation.md)
-for commands that do not require activation.
+uv users can instead run `uv venv --python 3.11` followed by
+`uv pip install traceratops`. See the [complete installation guide](docs/source/quickstart/installation.md)
+for Windows instructions, verification and updates.
 
-Stable users who prefer [uv](https://docs.astral.sh/uv/) can use:
-
-```bash
-uv venv --python 3.11
-uv pip install traceratops
-uv run --no-project trace_filter --help
-```
-
-The initial PyPI publication of 2.0.0 is pending separate maintainer action.
-The [installation guide](docs/source/quickstart/installation.md) includes an
-existing-tag source alternative until PyPI publication succeeds.
-
-### Development version
-
-Use uv with an editable checkout of **dev**:
-
-```bash
-git clone https://github.com/pyHi-M/traceratops.git
-cd traceratops
-git switch dev
-uv venv --python 3.11
-uv pip install -e ".[dev]"
-uv run --no-project pytest -q
-```
-
-See the [development guide](docs/source/contribute/dev_installation.md) for the
-optional Bash installer and updating a checkout. `pyproject.toml` specifies
-library dependencies; no universal `uv.lock` is committed. Runtime/development
-security audits run in GitHub Actions.
+Developers use **uv** with an editable checkout of **dev** and
+`uv pip install -e ".[dev]"`. The [development guide](docs/source/contribute/dev_installation.md)
+covers checkout setup, tests, updates and the optional installer.
 
 ## Quick start
 
