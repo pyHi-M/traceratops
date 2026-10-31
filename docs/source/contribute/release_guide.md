@@ -100,8 +100,11 @@ be on default **main**. In GitHub Actions:
 2. Choose **Run workflow**, select branch **main**, and enter the existing tag,
    for example **v2.0.0**.
 3. Inspect the build logs, resolved commit SHA, version and distribution artifact.
-4. Approve the protected **pypi** environment deployment if configured, after
-   checking the requested tag and artifacts. Inspect the publishing result.
+4. Before approving the protected **pypi** environment, inspect the resolved
+   release tag and commit SHA, package version, and validated wheel/sdist artifacts
+   (including their filenames and hashes). **Environment approval authorizes a
+   real package upload to PyPI**, not another build or a dry run. Approve only
+   when that publication is intended, then inspect the publishing result.
 
 Equivalent CLI invocation, for use only after publication approval:
 

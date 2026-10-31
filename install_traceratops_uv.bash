@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+RESET_VENV=false
+if [ "$#" -gt 1 ]; then
+    echo "Usage: bash install_traceratops_uv.bash [--reset-venv]" >&2
+    exit 2
+fi
+case "${1:-}" in
+    "") ;;
+    --reset-venv) RESET_VENV=true ;;
+    --help)
+        echo "Usage: bash install_traceratops_uv.bash [--reset-venv]"
+        echo "Existing environments are reused; --reset-venv explicitly deletes and recreates .venv."
+        exit 0
+        ;;
+    *)
+        echo "Unknown option: $1" >&2
+        exit 2
+        ;;
+esac
+
 # -----------------------------
 # User settings
 # -----------------------------
@@ -37,7 +56,7 @@ else
 fi
 
 # -----------------------------
-# Create fresh uv environment
+# Create or reuse the uv environment
 # -----------------------------
 
 cd "${REPO_DIR}/traceratops"
@@ -51,12 +70,21 @@ if [ "$(git branch --show-current)" != "${REPO_BRANCH}" ]; then
     git switch -- "${REPO_BRANCH}"
 fi
 
-if [ -d ".venv" ]; then
-    echo "Removing existing .venv..."
-    rm -rf .venv
+if [ "${RESET_VENV}" = true ]; then
+    echo "Explicit --reset-venv requested: removing .venv..."
+    rm -rf -- .venv
 fi
 
-uv venv .venv --python "${PYTHON_VERSION}"
+if [ -e ".venv" ] || [ -L ".venv" ]; then
+    if [ ! -f ".venv/bin/activate" ]; then
+        echo "Existing .venv is not an activatable environment; left untouched." >&2
+        echo "Inspect it before explicitly choosing --reset-venv." >&2
+        exit 1
+    fi
+    echo "Reusing existing .venv."
+else
+    uv venv .venv --python "${PYTHON_VERSION}"
+fi
 source .venv/bin/activate
 
 # -----------------------------

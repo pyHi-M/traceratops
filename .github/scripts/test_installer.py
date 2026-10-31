@@ -38,7 +38,7 @@ if [ "$1" = venv ]; then mkdir -p .venv/bin; touch .venv/bin/activate; fi
             file.write_text("#!/usr/bin/env bash\nset -eu\n" + text)
             file.chmod(0o755)
 
-    def run_installer(self, current="dev", dirty="no", branch=None):
+    def run_installer(self, current="dev", dirty="no", branch=None, args=()):
         env = dict(os.environ)
         env.update(
             PATH=str(self.bin) + os.pathsep + env["PATH"],
@@ -51,7 +51,10 @@ if [ "$1" = venv ]; then mkdir -p .venv/bin; touch .venv/bin/activate; fi
         if branch:
             env["TRACERATOPS_BRANCH"] = branch
         return subprocess.run(
-            ["bash", str(self.installer)], env=env, capture_output=True, text=True
+            ["bash", str(self.installer), *args],
+            env=env,
+            capture_output=True,
+            text=True,
         )
 
     def test_new_clone_selects_dev_and_installs_editable_extra(self):
@@ -79,6 +82,38 @@ if [ "$1" = venv ]; then mkdir -p .venv/bin; touch .venv/bin/activate; fi
         self.assertNotEqual(result.returncode, 0)
         self.assertTrue(marker.exists())
         self.assertNotIn("git switch", self.log.read_text())
+        self.assertNotIn("uv venv", self.log.read_text())
+
+    def make_existing_environment(self, activatable=True):
+        environment = self.parent / "traceratops/.venv"
+        environment.mkdir(parents=True)
+        marker = environment / "keep"
+        marker.write_text("existing environment data")
+        if activatable:
+            (environment / "bin").mkdir()
+            (environment / "bin/activate").touch()
+        return marker
+
+    def test_rerun_reuses_existing_environment_without_recreating_it(self):
+        marker = self.make_existing_environment()
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(marker.read_text(), "existing environment data")
+        self.assertNotIn("uv venv", self.log.read_text())
+        self.assertIn("uv pip install -e .[dev]", self.log.read_text())
+
+    def test_reset_requires_explicit_option(self):
+        marker = self.make_existing_environment()
+        result = self.run_installer(args=("--reset-venv",))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(marker.exists())
+        self.assertIn("uv venv .venv --python 3.11", self.log.read_text())
+
+    def test_invalid_existing_environment_is_preserved_without_reset(self):
+        marker = self.make_existing_environment(activatable=False)
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(marker.exists())
         self.assertNotIn("uv venv", self.log.read_text())
 
     def test_explicit_branch_override(self):

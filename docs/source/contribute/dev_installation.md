@@ -61,8 +61,15 @@ bash install_traceratops_uv.bash
 ```
 
 The installer defaults to branch `dev`, Python 3.11 and
-`$HOME/Repositories/traceratops`. It recreates `.venv`, installs `.[dev]` editable,
-and checks imports and `trace_filter`. It selects the requested branch but does
+`$HOME/Repositories/traceratops`. It reuses an existing valid `.venv`, installs
+`.[dev]` editable, and checks imports and `trace_filter`. New environments use
+Python 3.11; an existing environment must satisfy the Python >=3.11 requirement.
+An invalid existing `.venv` is left untouched and reported as an error.
+
+To intentionally **delete and recreate** the checkout's environment, explicitly
+run `bash install_traceratops_uv.bash --reset-venv`. Inspect the environment first:
+this option removes its installed packages and any files stored inside `.venv`.
+Rerunning without this option never resets it. It selects the requested branch but does
 not pull an existing checkout; update that checkout explicitly as above.
 
 Set `TRACERATOPS_BRANCH` to choose another existing branch, for example

@@ -1,6 +1,8 @@
 # traceratops
 
-Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and
+3.13 on Linux, macOS and Windows. Stable users install from **PyPI**, preferably
+with **pip**; developers use **uv** with an editable **dev** checkout.
 
 *A toolbox for trace analysis, visualization, and quality assessment for chromatin-trace data.*
 
