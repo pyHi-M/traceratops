@@ -1,8 +1,5 @@
 # Traceratops 2.0.0
 
-Proposed GitHub release notes; this release has not been tagged or published.
-The publication tag will be `v2.0.0`, following the existing `v` prefix convention.
-
 Traceratops 2.0.0 extends chromatin-trace quality control, barcode-aware trace
 resolution, and physical-versus-genomic distance analysis. It also updates
 installation and dependency security. Existing scripts should be reviewed for
@@ -81,6 +78,3 @@ curator benchmarks are **not included** in this release.
 
 [Detailed changelog](changelog_COPY.md) ·
 [Full comparison: v1.0.1...v2.0.0](https://github.com/pyHi-M/traceratops/compare/v1.0.1...v2.0.0)
-
-The final comparison uses the verified previous tag and proposed publication tag;
-`v2.0.0` must be created on the approved `main` release commit before publication.

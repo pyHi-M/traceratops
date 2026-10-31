@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # 2.0.0 release assessment and checklist
 
 ## Baseline and version recommendation
@@ -177,11 +181,13 @@ including tifffile 2026.3.3 on Python 3.11.
 `mypy traceratops` reported 90 errors in 19 files before the export repair. These
 are existing scientific-source typing findings; they are not a passing static
 check and have not been silently waived. Codespell also flags existing source
-identifiers (for example Buid and CONECT) and spellings. New release prose passed
-the spelling check. Maintainers must triage these findings against the main-PR
-checklist rather than treating numerical test success as static-analysis success.
-No broad typing/spelling cleanup is included. The preparation PR remains draft
-pending readiness review, even if automated scientific/packaging checks pass.
+identifiers (for example Buid and CONECT) and spellings. The public release notes pass the spelling check; this internal checklist
+quotes two identifiers that codespell also flags. These are not spelling errors
+to change in data schemas or file-format records. Numerical test success is
+distinct from static-analysis success.
+No broad typing/spelling cleanup is included. The preparation PR remains draft until maintainer review is complete.
+Static findings must be classified by impact rather than treated as automatic
+release blockers.
 Manual interactive PyMOL and private acquisition-data QA were not executed.
 
 ### Additional installed-wheel and documentation checks
@@ -205,3 +211,37 @@ so the installation, changelog and new release page appear in navigation.
 The future dev-to-main PR must additionally resolve the documented index conflict
 and triage mypy/codespell findings and manual QA. Preparation is not authorization
 to merge, tag, or publish.
+
+## Public release text and internal publication details
+
+The public release notes contain scientific changes and compatibility warnings
+only. Preparation status and tag instructions belong here and in the release
+guide: v2.0.0 is the intended tag, and tagging/publication require approval on
+the verified main commit. The comparison link becomes live after that tag exists.
+This checklist remains directly linked from the contributor release guide but is
+intentionally absent from the main documentation navigation.
+
+## Review follow-up: warning classification (2026-10-31)
+
+The same Python environment and commands were run on an archived `origin/dev`
+base (`c9cdc058`) and the revised preparation branch. No scientific source was
+changed in this review follow-up.
+
+| Check | Baseline comparison and impact | Release assessment |
+| --- | --- | --- |
+| mypy | Exactly the same 90 error diagnostics in 19 files on base and head. Missing annotations, variable reuse with different inferred types, optional table/object lifecycle checks and library-stub mismatches dominate. The flagged legacy colormap call has an AttributeError fallback; notebook detection catches NameError. | Existing technical debt, not a passing type check. Optional-value findings merit targeted robustness follow-up; no failing supported workflow or new release regression was demonstrated. No confirmed blocker from these diagnostics. |
+| codespell | All 19 source findings match the base. Buid is a schema identifier, CONECT is a PDB record, SEMs is a statistical abbreviation and nd is an identifier. fiters and SUPERSEEDED are pre-existing textual typos. Two identifier examples are also intentionally quoted in this checklist. | Identifier false positives and non-functional text corrections; do not rename scientific/data-format identifiers. No release blocker. Public release notes pass codespell. |
+| Sphinx | Clean HTML builds succeed: base reports eight warnings, revised head five. Remaining warning families are an old PyMOL notebook relative link, three contributor cross-reference targets and notebook syntax-highlighting fallback; inline-emphasis diagnostics also occur on both revisions. | Genuine documentation/link defects to track, not package/scientific execution failures. No new warning, missing release page or build failure. No release blocker under the existing build configuration (warnings are not fatal). Notebook execution was disabled, so this is rendering validation only. |
+
+Warnings are retained and classified, not hidden or claimed fixed. These results
+support approval of PR #206; they do not authorize the separate dev-to-main
+integration, resolve its known index conflict, or replace manual biological-data
+and interactive PyMOL QA. The license-metadata deprecation remains a future
+maintenance item before the documented 2027-02-18 deadline, not a current build
+failure.
+
+Scope was rechecked: the candidate has no trace_curator or trace_simulator module
+or console entry point, nor their exploratory benchmark developments. PR #201
+remains open and unmerged. The associated PRs #185/#192/#194/#195 remain outside
+the 2.0.0 candidate; barcode-aware trace_resolver is a separate, already-merged
+capability and is retained.

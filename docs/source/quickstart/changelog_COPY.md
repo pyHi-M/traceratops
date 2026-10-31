@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - Unreleased
 
-This release is prepared from `dev`; it has not been tagged or published.
 The major version reflects compatibility changes, including Python >=3.11.
 
 ### Added
@@ -52,8 +51,6 @@ The major version reflects compatibility changes, including Python >=3.11.
 
 [Unreleased]: https://github.com/pyHi-M/traceratops/compare/v2.0.0...dev
 [2.0.0]: https://github.com/pyHi-M/traceratops/compare/v1.0.1...v2.0.0
-
-The `v2.0.0` links above are publication targets and become valid after the approved tag is created.
 
 ## [1.0.1]
 

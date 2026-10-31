@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 import sysconfig
+from email.utils import getaddresses
+from importlib.metadata import metadata as package_metadata
 from pathlib import Path
 
 import numpy as np
@@ -66,7 +68,24 @@ def test_installed_fofct_export_import_roundtrip(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert "##XYZ_unit=micron" in exported.read_text()
-    assert "#Software_Authors: Nollmann, M; Devos, X;" in exported.read_text()
+    installed_authors = getaddresses(
+        package_metadata("traceratops").get_all("Author-email", [])
+    )
+    expected_authors = []
+    for name, _ in installed_authors:
+        parts = name.split()
+        if not parts:
+            continue
+        initials = "-".join(part[0] for part in parts[0].split("-"))
+        expected_authors.append(
+            f"{parts[-1]}, {initials};" if len(parts) > 1 else f"{name};"
+        )
+    author_header = next(
+        line
+        for line in exported.read_text().splitlines()
+        if line.startswith("#Software_Authors:")
+    )
+    assert author_header == "#Software_Authors: " + " ".join(expected_authors)
     result = subprocess.run(
         [
             _command("trace_import_from_fofct"),

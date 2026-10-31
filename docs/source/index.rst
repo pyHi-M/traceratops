@@ -51,4 +51,3 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    contribute/how_to_document
    contribute/pr_checklists
    contribute/release_guide
-   contribute/release_2_0_0_checklist
