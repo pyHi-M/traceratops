@@ -71,6 +71,7 @@ autodoc_mock_imports = [
     "pandas",
     "astropy",
     "tqdm",
+    "tifffile",
     "scipy",
     "sklearn",
     "seaborn",

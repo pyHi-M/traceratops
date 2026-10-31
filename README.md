@@ -1,8 +1,12 @@
 # traceratops
 
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+
 *A toolbox for trace analysis, visualization, and quality assessment for chromatin-trace data.*
 
-traceratops provides the post-processing layer for [pyHiM](https://github.com/pyHi-M/pyHiM) multiplexed DNA-FISH workflows. It focuses on the trace and localization tables produced after image processing, and helps users clean, merge, inspect, transform, and visualize those data in formats compatible with the [4DN FISH Omics Format](https://fish-omics-format.readthedocs.io/en/latest/).
+Raw chromatin tracing experiments consist of hundreds to thousands of images that need to be analyzed to extract and decode spot localizations for each genomic loci, for example using [pyHiM](https://github.com/pyHi-M/pyHiM). This analysis produces trace tables containing the genomic identities and 3D localizations of each localized spot for each chromatin trace (trace table).
+
+`traceratops` is a software package providing multiple tools for the post-processing of trace tables. These tools help users clean, merge, inspect, transform, and visualize chromatin tracing data in formats compatible with the [4DN FISH Omics Format](https://fish-omics-format.readthedocs.io/en/latest/).
 
 ## Documentation
 
@@ -43,6 +47,11 @@ uv venv .venv --python 3.11
 source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
+
+`pyproject.toml` specifies dependencies; no `uv.lock` is committed. Weekly dependency
+security audits report vulnerabilities in GitHub Actions. See the
+[development guide](docs/source/contribute/dev_installation.md#dependency-maintenance-and-security)
+for audit reports and notification settings.
 
 After installation, traceratops command-line tools such as `trace_filter`, `trace_merge`, `trace_to_matrix`, `trace_stats`, `plot_him_matrix`, and `localization_analyzer` should be available in the active environment.
 

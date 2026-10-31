@@ -1,4 +1,4 @@
-*traceratops documentation
+traceratops documentation
 =========================
 
 **Date**: |today| **Version**: |release|
@@ -11,6 +11,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
 
    quickstart/installation
    quickstart/changelog_COPY
+   quickstart/release_2_0_0
 
 .. toctree::
    :maxdepth: 1
@@ -22,7 +23,7 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Quality Control Traces<tutorials/tutorial_quality_control_traces.ipynb>
    Filter Thresholds Traces<tutorials/tutorial_filter_thresholds_traces.ipynb>
    Quality Control & Filters : Localizations<tutorials/tutorial_quality_control_filter_localizations.ipynb>
-   Filter Duplicates<tutorials/tutorial_filter_duplicates.ipynb>
+   Filter Duplicates<tutorials/tutorial_filter_duplicate_barcodes.ipynb>
    Split Traces<tutorials/tutorial_split_traces.ipynb>
    Classify Traces<tutorials/tutorial_assign_masks_split_labels.ipynb>
    Matrix Visualization<tutorials/tutorial_matrix_visualization.ipynb>
@@ -38,7 +39,6 @@ traceratops is an open-source Python toolbox for reproducible post-processing, q
    Data formats<scripts/data_formats>
    scripts/localization
    scripts/trace
-   scripts/matrix
    scripts/plot
 
 
