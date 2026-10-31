@@ -1,6 +1,8 @@
 # traceratops
 
-Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and
+3.13 on Linux, macOS and Windows. Stable users install from **PyPI**, preferably
+with **pip**; developers use **uv** with an editable **dev** checkout.
 
 *A toolbox for trace analysis, visualization, and quality assessment for chromatin-trace data.*
 
@@ -30,37 +32,58 @@ The package is intended for users who already have pyHiM-style localization or t
 
 ## Installation
 
-traceratops supports Linux, macOS, and Windows. We recommend installing it in a dedicated `uv` environment. For a development installation, use the bundled installer:
+Stable releases are distributed through **PyPI**. Python **3.11 or newer** is
+required; you do not need to clone this repository for a stable installation.
 
 ```bash
-curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/main/install_traceratops_uv.bash
-bash install_traceratops_uv.bash
-source $HOME/Repositories/traceratops/.venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install traceratops
+python -c "from importlib.metadata import version; print(version('traceratops'))"
+trace_filter --help
 ```
 
-To install manually with `uv`, clone the repository and install the development environment:
+On Windows PowerShell, create the environment with `py -3.11 -m venv .venv` and
+activate with `.\.venv\Scripts\Activate.ps1`; Command Prompt uses
+`.venv\Scripts\activate.bat`. See the [installation guide](docs/source/quickstart/installation.md)
+for commands that do not require activation.
+
+Stable users who prefer [uv](https://docs.astral.sh/uv/) can use:
+
+```bash
+uv venv --python 3.11
+uv pip install traceratops
+uv run --no-project trace_filter --help
+```
+
+The initial PyPI publication of 2.0.0 is pending separate maintainer action.
+The [installation guide](docs/source/quickstart/installation.md) includes an
+existing-tag source alternative until PyPI publication succeeds.
+
+### Development version
+
+Use uv with an editable checkout of **dev**:
 
 ```bash
 git clone https://github.com/pyHi-M/traceratops.git
 cd traceratops
-uv venv .venv --python 3.11
-source .venv/bin/activate
+git switch dev
+uv venv --python 3.11
 uv pip install -e ".[dev]"
+uv run --no-project pytest -q
 ```
 
-`pyproject.toml` specifies dependencies; no `uv.lock` is committed. Weekly dependency
-security audits report vulnerabilities in GitHub Actions. See the
-[development guide](docs/source/contribute/dev_installation.md#dependency-maintenance-and-security)
-for audit reports and notification settings.
-
-After installation, traceratops command-line tools such as `trace_filter`, `trace_merge`, `trace_to_matrix`, `trace_stats`, `plot_him_matrix`, and `localization_analyzer` should be available in the active environment.
+See the [development guide](docs/source/contribute/dev_installation.md) for the
+optional Bash installer and updating a checkout. `pyproject.toml` specifies
+library dependencies; no universal `uv.lock` is committed. Runtime/development
+security audits run in GitHub Actions.
 
 ## Quick start
 
 A practical way to start is to run the first tutorial notebook:
 
 ```bash
-jupyter notebook docs/source/tutorials/tutorial_01_merge_multi_roi.ipynb
+jupyter notebook docs/source/tutorials/tutorial_merge_multi_roi.ipynb
 ```
 
 Additional tutorials cover quality control, threshold filtering, duplicate removal, trace splitting, mask assignment, matrix visualization, multi-way co-localization, dataset comparison, and use of the `--pipe` argument.
