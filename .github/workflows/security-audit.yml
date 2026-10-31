@@ -1,0 +1,60 @@
+name: Dependency security audit
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - pyproject.toml
+      - docs/requirements.txt
+      - install_traceratops_uv.bash
+      - .readthedocs.yaml
+      - .github/workflows/security-audit.yml
+      - .github/workflows/test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [runtime, development]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v7
+      - name: Create fresh environment
+        run: uv venv --python 3.11
+      - name: Install runtime dependencies
+        if: matrix.environment == 'runtime'
+        run: uv pip install -e .
+      - name: Install development dependencies
+        if: matrix.environment == 'development'
+        run: uv pip install -e ".[dev]"
+      - name: Export installed third-party dependencies
+        # Exclude only this local editable project; retain every installed dependency.
+        run: uv pip freeze --exclude-editable > audit-requirements.txt
+      - name: Audit installed dependencies
+        # Run the audit tool in isolation so its dependencies do not pollute the report.
+        # --no-deps audits the complete installed snapshot without resolving it again.
+        run: uvx --python 3.11 pip-audit --no-deps --disable-pip -r audit-requirements.txt --format json --output audit.json
+      - name: Show audit results
+        if: always()
+        run: |
+          if [ -f audit.json ]; then cat audit.json; fi
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-${{ matrix.environment }}
+          path: |
+            audit.json
+            audit-requirements.txt
+          if-no-files-found: warn

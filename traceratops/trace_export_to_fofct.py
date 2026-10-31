@@ -14,11 +14,13 @@ required_keys = ["genome_assembly", "experimenter_name", "experimenter_contact"]
 """
 
 import csv
+import importlib.metadata
 import json
 import os
 import select
 import sys
 from argparse import ArgumentParser
+from email.utils import getaddresses
 
 import pandas as pd
 from astropy.io import ascii
@@ -179,22 +181,19 @@ def get_initials(first_name):
 
 
 def get_authors_from_copyright():
-    copyright_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "..", "..", "COPYRIGHT.txt"
-    )
-    with open(copyright_path, "r") as f:
-        authors = f.read().splitlines()
-        authors_formatting = ""
-        for line in authors:
-            elt = line.split(",")
-            if len(elt) == 2:
-                author = elt[0].split(" ")
-                first_name = author[0]
-                last_name = author[1]
-                initials = get_initials(first_name)
-                authors_formatting = f"{last_name}, {initials};"
-
-    return authors_formatting
+    """Read author names from installed metadata, without checkout-only files."""
+    metadata = importlib.metadata.metadata("traceratops")
+    names = [
+        name for name, _ in getaddresses(metadata.get_all("Author-email", [])) if name
+    ]
+    formatted = []
+    for name in names:
+        parts = name.split()
+        if len(parts) >= 2:
+            formatted.append(f"{parts[-1]}, {get_initials(parts[0])};")
+        else:
+            formatted.append(f"{name};")
+    return " ".join(formatted)
 
 
 def get_header_comments(genome_assembly, experimenter_name, experimenter_contact):
@@ -245,7 +244,7 @@ def convert_ecsv_to_csv(
     write_fof_ct_csv(csv_file, header, ecsv_data)
 
 
-if __name__ == "__main__":
+def main():
     parser = parse_arguments()
     args = parser.parse_args()
 
@@ -276,3 +275,7 @@ if __name__ == "__main__":
             metadata["experimenter_name"],
             metadata["experimenter_contact"],
         )
+
+
+if __name__ == "__main__":
+    main()

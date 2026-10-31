@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "traceratops"
-version = "1.0.1"
+version = "2.0.0"
 description = "Toolbox for trace analysis"
 readme = "README.md"
 authors = [
@@ -18,23 +18,23 @@ keywords = []
 dependencies = [
     "numpy",
     "matplotlib",
+    "pillow>=13.0.0", # Security: fixes reported Pillow decoder and loader vulnerabilities.
     "pandas",
     "astropy",
     "tqdm",
+    "tifffile", # Required by the trace_assign_mask console command.
     "scipy",
-    "scikit-learn",
+    "scikit-learn>=1.3",
     "seaborn>=0.13.2",
-    "pytest>=8.4.2",
-    "pre-commit>=4.3.0",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
 # When there is "for doc" comments
 # --> think to duplicate to 'docs/requirements.txt'
 dev = [
-    "pytest",
-    "pre-commit",
+    "pytest>=8.4.2",
+    "pre-commit>=4.3.0",
     "mypy",
     "sphinx",           # for doc
     "sphinx-rtd-theme", # for doc
@@ -54,6 +54,7 @@ plot_him_matrix = "traceratops.plot_him_matrix:main"
 trace_to_matrix = "traceratops.trace_to_matrix:main"
 trace_stats = "traceratops.trace_stats:main"
 trace_splitter = "traceratops.trace_splitter:main"
+trace_sorter = "traceratops.trace_sorter:main"
 trace_plot = "traceratops.trace_plot:main"
 trace_pearsons = "traceratops.trace_pearsons:main"
 trace_genomic_coordinates = "traceratops.trace_genomic_coordinates:main"

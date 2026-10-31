@@ -12,15 +12,10 @@ import argparse
 import os
 import sys
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 
-from traceratops.core.plotting_functions import (
-    bootstraps_matrix,
-    gets_matrix,
-    plot_2d_matrix_simple,
-)
+from traceratops.core.him_matrix_operations import plot_him_matrix
+from traceratops.core.plotting_functions import bootstraps_matrix, gets_matrix
 from traceratops.script_banner import print_script_banner
 
 
@@ -28,22 +23,52 @@ def parse_arguments():
     # [parsing arguments]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "-T", "--input", help="Filename of single-cell PWD matrices in Numpy"
+        "-T",
+        "--input",
+        dest="input",
+        help="Filename of single-cell PWD matrices in Numpy",
     )
     parser.add_argument(
-        "-U", "--uniqueBarcodes", help="csv file with list of unique barcodes"
+        "-U",
+        "--barcodes",
+        "--uniqueBarcodes",
+        dest="barcodes",
+        help="csv file with list of unique barcodes",
     )
-    parser.add_argument("-O", "--outputFolder", help="Folder for outputs")
+    parser.add_argument(
+        "-O",
+        "--output",
+        "--outputFolder",
+        dest="output",
+        help="Folder for outputs",
+    )
 
-    parser.add_argument("--fontsize", help="Size of fonts to be used in matrix")
+    parser.add_argument(
+        "--fontsize", help="Size of fonts to be used in matrix", default=22
+    )
     parser.add_argument(
         "--axisLabel", help="Use if you want a label in x and y", action="store_true"
     )
-    parser.add_argument("--cMin", help="Colormap min scale. Default: 0")
-    parser.add_argument("--cMax", help="Colormap max scale. Default: automatic")
-    parser.add_argument("--cMin_std", help="Colormap min scale for std map. Default: 0")
     parser.add_argument(
-        "--cMax_std", help="Colormap max scale for std map. Default: automatic"
+        "--c_min", "--cMin", dest="cMin", help="Colormap min scale. Default: 0"
+    )
+    parser.add_argument(
+        "--c_max",
+        "--cMax",
+        dest="cMax",
+        help="Colormap max scale. Default: automatic",
+    )
+    parser.add_argument(
+        "--c_min_std",
+        "--cMin_std",
+        dest="cMin_std",
+        help="Colormap min scale for std map. Default: 0",
+    )
+    parser.add_argument(
+        "--c_max_std",
+        "--cMax_std",
+        dest="cMax_std",
+        help="Colormap max scale for std map. Default: automatic",
     )
     parser.add_argument(
         "--output_format",
@@ -55,7 +80,9 @@ def parse_arguments():
         "--shuffle",
         help="Provide shuffle vector: 0,1,2,3... of the same size or smaller than the original matrix. No spaces! comma-separated!",
     )
-    parser.add_argument("--cmap", help="Colormap. Default: coolwarm")
+    parser.add_argument(
+        "--cmap", "--c_map", dest="cmap", help="Colormap. Default: coolwarm"
+    )
     parser.add_argument("--cmap_std", help="Colormap for std map. Default: coolwarm")
 
     parser.add_argument(
@@ -75,21 +102,18 @@ def create_dict_args(args):
         )
         sys.exit(-1)
 
-    if args.uniqueBarcodes:
-        run_parameters["uniqueBarcodes"] = args.uniqueBarcodes
+    if args.barcodes:
+        run_parameters["uniqueBarcodes"] = args.barcodes
     else:
         print(">> ERROR: you must provide a CSV file with the unique barcodes used")
         sys.exit(-1)
 
-    if args.outputFolder:
-        run_parameters["outputFolder"] = args.outputFolder
+    if args.output:
+        run_parameters["outputFolder"] = args.output
     else:
         run_parameters["outputFolder"] = "plots"
 
-    if args.fontsize:
-        run_parameters["fontsize"] = args.fontsize
-    else:
-        run_parameters["fontsize"] = 9
+    run_parameters["fontsize"] = args.fontsize
 
     if args.axisLabel:
         run_parameters["axisLabel"] = args.axisLabel
@@ -116,7 +140,7 @@ def create_dict_args(args):
     else:
         run_parameters["cMin_std"] = -1
 
-    run_parameters["plottingFileExtension"] = "." + args.output_format
+    run_parameters["plottingFileExtension"] = args.output_format
 
     if args.shuffle:
         run_parameters["shuffle"] = args.shuffle
@@ -152,52 +176,30 @@ def plot_results(
     run_parameters,
     uniqueBarcodes,
     n_cells,
-    outputFileName,
-    fileNameEnding=".png",
+    input_filename,
+    file_format="png",
     c_max=0,
     c_min=-1,
     fig_title="bootstrapping_PWD_median",
     cmap="RdBu",
 ):
-    fig1 = plt.figure(constrained_layout=True, figsize=(6, 6))
-    spec1 = gridspec.GridSpec(ncols=1, nrows=1, figure=fig1)
-    f_1 = fig1.add_subplot(spec1[0, 0])  # 16
-
-    axisLabel = True
-    cmtitle = "distance, um"
-    fontsize = run_parameters["fontsize"]
-    axis_ticks = True
-
-    if c_min == -1:
-        c_min = np.nanmin(matrix)
-    if c_max == 0:
-        c_max = np.nanmax(matrix)
-
-    plot_2d_matrix_simple(
-        f_1,
+    plot_path = plot_him_matrix(
         matrix,
         uniqueBarcodes,
-        yticks=axisLabel,
-        xticks=axisLabel,
-        cmtitle=cmtitle,
-        fig_title=fig_title,
-        c_min=c_min,
-        c_max=c_max,  # log10(0.05) = -1.3
-        fontsize=fontsize,
-        colorbar=True,
-        axis_ticks=axis_ticks,
-        c_m=cmap,
-        show_title=True,
+        input_filename=input_filename,
+        output_folder=run_parameters["outputFolder"],
+        file_format=file_format,
+        mode=fig_title,
         n_cells=n_cells,
-        n_datasets=2,
+        font_size=run_parameters["fontsize"],
+        cmtitle="distance, µm",
+        c_min=c_min,
+        c_max=c_max,
+        c_m=cmap,
     )
-    print("Output data: {}.npy".format(outputFileName + fig_title))
-    np.save(outputFileName + fig_title, matrix)
-
-    # saves output matrix in NPY format
-    outputFileName = outputFileName + fig_title + fileNameEnding
-    plt.savefig(outputFileName + fileNameEnding)
-    print("Output figure: {}".format(outputFileName))
+    np.save(plot_path, matrix)
+    print(f"Output data: {plot_path}.npy")
+    print(f"Output figure: {plot_path}.{file_format}")
 
 
 def main():
@@ -217,7 +219,7 @@ def main():
         uniqueBarcodes,
         _,
         n_cells,
-        outputFileName,
+        _,
         _,
     ) = gets_matrix(
         run_parameters,
@@ -237,10 +239,10 @@ def main():
         run_parameters,
         uniqueBarcodes,
         n_cells,
-        outputFileName,
+        run_parameters["scPWDMatrix_filename"],
         c_max=run_parameters["cMax"],
         c_min=run_parameters["cMin"],
-        fileNameEnding=run_parameters["plottingFileExtension"],
+        file_format=run_parameters["plottingFileExtension"],
         fig_title="bootstrapping_median",
         cmap=run_parameters["cmap"],
     )
@@ -250,10 +252,10 @@ def main():
         run_parameters,
         uniqueBarcodes,
         n_cells,
-        outputFileName,
+        run_parameters["scPWDMatrix_filename"],
         c_max=run_parameters["cMax_std"],
         c_min=run_parameters["cMin_std"],
-        fileNameEnding=run_parameters["plottingFileExtension"],
+        file_format=run_parameters["plottingFileExtension"],
         fig_title="bootstrapping_std_median",
         cmap=run_parameters["cmap_std"],
     )

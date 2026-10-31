@@ -1,13 +1,56 @@
 # Changelog
 
-## Unreleased
-
-- Localization tables now standardize on `.ecsv` outputs while keeping legacy `.dat` input support with a deprecation warning.
-
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [2.0.0] - 2026-10-31
+
+The major version reflects compatibility changes, including Python >=3.11.
+
+### Added
+- `trace_physical_vs_genomic_distance` computes binned physical distances against genomic separation, with per-axis/3D summaries, CSV output, and log-log power-law fits with confidence intervals (#146, #148, #168).
+- `trace_sorter` sorts whole traces by localization count or radius of gyration, preserving within-trace row order (#175). This tool is documented as development status.
+- `trace_splitter` supports HDBSCAN and `--split-all`, in addition to the existing K-means method (#177).
+- Opt-in barcode-aware beam resolution in `trace_splitter` can classify and clean candidate singlets, separate candidate doublets, and leave incompatible detections unassigned. Threshold and likelihood multiplicity classifiers, reliability warnings, and diagnostic ECSV outputs are available (#183).
+- Opt-in candidate-specific duplicate ambiguity scoring records localization scores and decisions, preserving `Spot_ID` (#184). Score-gap confidence is not a calibrated probability.
+- `trace_filter` accepts combined localization-quality thresholds and saves the localizations retained in the final traces (#130–#132).
+- PyMOL helper commands and a tutorial support displaying exported PDB traces in a grid and coloring barcodes (#141). PyMOL is a separate application, not an installed runtime dependency.
+
+### Changed
+- **Python 3.11 or newer is required. Python 3.9 and 3.10 are no longer supported** (#205).
+- **`trace_filter_advanced` is removed**; update workflows to the documented `trace_filter` and `trace_splitter` commands (#156). There is no automatic one-to-one migration for every legacy option.
+- Localization outputs use `.ecsv`; legacy `.dat` inputs remain readable with a deprecation warning and `.dat` output requests are rewritten to `.ecsv` (#144).
+- Neighbor-distance analysis in `trace_analyzer` requires consistent `Chrom`, `Chrom_Start`, and `Chrom_End` annotations and counts neighbors in genomic order. Previous/next neighbor distances are shown as hexbin density maps (#127, #128).
+- `trace_to_matrix --n_jobs` enables per-trace parallel matrix construction; vectorized minimum-distance handling preserves duplicate-barcode semantics (#125). No general speedup factor is claimed.
+- Plotting commands accept consistent input/output, barcode, colormap and color-limit flags, retaining documented legacy aliases (#161). Bootstrap matrices use the shared Hi-M plotting utility (#163).
+- Matrix comparison difference/ratio, mixed-triangle and rank-sum plots use the shared matrix renderer; colors and appearance change, including the rank-sum colormap (#204).
+- `trace_plot` now exports the first ten traces by default; use `--number_traces`, `--selected_trace`, or `--all` explicitly for scripted selection (#142, #175). The former minimum-barcode prefilter is no longer applied in this export path.
+- `trace_physical_vs_genomic_distance` separates `--data_output` CSV naming from `--output`/`-O` figure naming and supports PNG/SVG/PDF export (#168).
+- uv is the recommended installer. Development installation uses `uv pip install -e ".[dev]"`; `pyproject.toml` is authoritative and `uv.lock` is removed and ignored (#137, #205).
+
+### Fixed
+- Restore the installed `trace_export_to_fofct` entry point and obtain author metadata from the installed distribution instead of a missing checkout-only COPYRIGHT.txt file. A console-command round-trip test checks numerical coordinates and identities.
+- FOF-CT import respects declared XYZ units, converting nanometers to micrometers and retaining micron coordinates (#129). Re-importing nanometer data can therefore correct distances compared with earlier results.
+- `trace_plot --number_traces` produces the requested first-N PDB exports instead of no output (#142).
+- Three-way contact plots use the correct partner-barcode labels and anchor guides; contact/bootstrap calculations reuse per-trace presence arrays while retaining the documented denominator (#159).
+- Colormap access in trace plotting is compatible with maintained Matplotlib versions (#173).
+- Roundness and spot-pixel-percentage quality filters use maximum thresholds; other documented quality metrics use minimum thresholds (#131).
+
+### Security and maintenance
+- Declare the existing mask-assignment command's `tifffile` runtime dependency so a clean installation can import and run `trace_assign_mask`.
+- Require Pillow >=13.0.0 for reported loader/decoder, Ghostscript, TIFF, GIF, FITS and PDF security fixes; retain Matplotlib and Pillow (#205).
+- Keep pytest>=8.4.2 and pre-commit>=4.3.0 in development extras only (#205).
+- Test Python 3.11/3.12/3.13 on Linux/macOS/Windows using uv. Add weekly, dependency-related PR, and manual pip-audit workflows with separate runtime/development reports (#205).
+- Expand scientific regression, CLI argument and PNG/SVG/PDF export coverage. Progress bars and quiet controls are available for trace splitting (#189).
+- Reorganize tutorials and document ECSV schemas, quality thresholds, physical/genomic distances, plotting, and installation (#143, #145, #151, #171, #172).
+- Internal import ordering, executable permissions and shared plotting implementation changes are not new scientific tools (#138, #164, #204).
+
+[Unreleased]: https://github.com/pyHi-M/traceratops/compare/v2.0.0...dev
+[2.0.0]: https://github.com/pyHi-M/traceratops/compare/v1.0.1...v2.0.0
 
 ## [1.0.1]
 
