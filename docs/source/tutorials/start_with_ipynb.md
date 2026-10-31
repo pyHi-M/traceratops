@@ -7,12 +7,9 @@
 *Locally, you can manipulate a Jupyter Notebook file in various ways: in your web browser using the basic ‘Jupyter Notebook’ or the modern ‘JupyterLab’, or in an IDE such as Spyder, VSCode or PyCharm. We recommend using JupyterLab to get started.*
 
 
-
-
-
 ## Installation of JupyterLab
 
-1. Activate your [conda environment](../quick_install.md#create-conda-environment) (named by default "my_env"):
+1. Activate your [conda environment]. Hereafter we will assume your environment is called `my_env`. Replace this below if this is not the case.
 
 ```sh
 conda activate my_env
@@ -42,7 +39,7 @@ Replace `my-kernel` by a distinctive name.
 
 1. Find the path to your tutorial file, it's ending with `.ipynb` extension.
 
-2. Open a terminal inside your tutorial folder and activate your [conda environment](../quick_install.md#create-conda-environment):
+2. Open a terminal inside your tutorial folder and activate your [conda environment]):
 ```sh
 conda activate my_env
 ```

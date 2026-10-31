@@ -1,5 +1,7 @@
 # Installation [DEV]
 
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+
 The recommended development setup uses [`uv`](https://docs.astral.sh/uv/) for both the virtual environment and package installation. The repository includes `install_traceratops_uv.bash`, which installs `uv` if needed, clones traceratops, creates a fresh `.venv`, installs traceratops with development dependencies, and runs a small import/CLI check.
 
 ## Automated uv installation
@@ -105,3 +107,37 @@ trace_filter --help
     - Identify exe path : `which pylint` (for example `/home/user/.local/bin/pylint`)
     - Remove it : `rm ~/.local/bin/pylint`
   - Re-install your package to be sure `uv pip install -e ".[dev]"`
+
+## Dependency maintenance and security
+
+`pyproject.toml` is the authoritative dependency specification. As a library,
+traceratops does not commit `uv.lock`; `uv pip install -e ".[dev]"` resolves the
+specified requirements without a lockfile. Use a fresh environment when checking
+compatibility. To run tests without shell-specific activation (including Windows):
+
+```bash
+uv run --no-project pytest -vv -s
+uv run --no-project trace_filter --help
+```
+
+The dependency security audit runs weekly, manually, and on pull requests to
+`dev` or `main` that change dependency or audit configuration. Separate runtime
+and development jobs audit the installed dependency snapshots with `pip-audit`
+using the PyPI vulnerability service. Findings fail the job; logs and JSON
+artifacts contain package versions, vulnerability identifiers and available fixes.
+The audit does not change dependencies or merge fixes. The development report
+includes runtime dependencies as well as development tools.
+
+Maintainers should enable GitHub Actions notifications in their personal
+**Settings → Notifications → System → Actions** (email and/or web, optionally
+failed workflows only), and watch the repository's Actions activity. Enable the
+repository dependency graph and Dependabot alerts under **Settings → Advanced
+Security** (or **Code security**), and enable personal Dependabot alert
+notifications. Alert access depends on repository permissions. No external
+notification service or credentials are needed.
+
+Scheduled workflows run from the default branch: the audit workflow must reach
+the default branch before weekly runs start. Until then, use the pull request
+checks; manual dispatch also requires the workflow on the default branch.
+GitHub may disable scheduled workflows in inactive public repositories after
+60 days; maintainers can re-enable them from the Actions tab.

@@ -1,5 +1,7 @@
 # Installation
 
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+
 |OS|Linux|Windows|Mac|
 |:-:|:-:|:-:|:-:|
 |**compatibility**|Yes|Yes|Yes|
