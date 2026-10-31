@@ -245,3 +245,13 @@ or console entry point, nor their exploratory benchmark developments. PR #201
 remains open and unmerged. The associated PRs #185/#192/#194/#195 remain outside
 the 2.0.0 candidate; barcode-aware trace_resolver is a separate, already-merged
 capability and is retained.
+
+## Subsequent distribution infrastructure
+
+The GitHub release v2.0.0 is published at
+`904b31118d648089afe1d3a4b73b32d60d1f257d`. This historical checklist does not
+instruct recreating or moving that tag. PyPI publication is a separate operation.
+Follow the current [release and publishing guide](release_guide.md) for the manual
+pending Trusted Publisher/environment setup and publication of this existing tag
+using infrastructure subsequently merged into main. No PyPI project, settings or
+package upload is created as part of implementing that infrastructure.

@@ -1,60 +1,75 @@
 # Installation [DEV]
 
-Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+Use **uv** for development on Python **3.11 or newer**. Stable users should follow
+the [PyPI installation guide](../quickstart/installation.md) instead.
 
-The recommended development setup uses [`uv`](https://docs.astral.sh/uv/) for both the virtual environment and package installation. The repository includes `install_traceratops_uv.bash`, which installs `uv` if needed, clones traceratops, creates a fresh `.venv`, installs traceratops with development dependencies, and runs a small import/CLI check.
+## Manual development installation
 
-## Automated uv installation
-
-From any terminal, run:
-
-```bash
-curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/main/install_traceratops_uv.bash
-bash install_traceratops_uv.bash
-```
-
-By default, the script:
-
-- clones traceratops into `$HOME/Repositories/traceratops`;
-- creates a fresh uv environment at `$HOME/Repositories/traceratops/.venv`;
-- uses Python 3.11;
-- installs traceratops in editable mode with the `dev` optional dependencies;
-- checks that core scientific dependencies and the `trace_filter` command are available.
-
-Activate the environment after installation with:
+[Install uv](https://docs.astral.sh/uv/getting-started/installation/), then select
+`dev` explicitly: cloning alone selects the repository's default `main` branch.
 
 ```bash
-source $HOME/Repositories/traceratops/.venv/bin/activate
-```
-
-## Manual uv installation
-
-If you prefer to run the commands yourself, install `uv` first if it is missing:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Then clone and install traceratops:
-
-```bash
-mkdir -p $HOME/Repositories
-cd $HOME/Repositories
 git clone https://github.com/pyHi-M/traceratops.git
 cd traceratops
-uv venv .venv --python 3.11
-source .venv/bin/activate
+git switch dev
+uv venv --python 3.11
 uv pip install -e ".[dev]"
 ```
 
+`-e` installs traceratops in editable mode: Python source edits in this checkout
+are immediately visible in the environment. `[dev]` installs test, pre-commit,
+typing and documentation tools, which stable users do not need.
 
-## Check the installation
+## Verify and run tests
 
 ```bash
-python -c "import traceratops; print('traceratops OK')"
-trace_filter --help
+uv run --no-project python -c "from importlib.metadata import version; print(version('traceratops'))"
+uv run --no-project trace_filter --help
+uv pip check
+uv run --no-project pytest -vv -s
 ```
+
+`uv run --no-project` targets `.venv` without activation and does not create a
+lockfile. It works on Linux, macOS and Windows. To activate manually, use
+`source .venv/bin/activate` in Bash, `.\.venv\Scripts\Activate.ps1` in Windows
+PowerShell, or `.venv\Scripts\activate.bat` in Command Prompt.
+
+## Update an existing checkout
+
+Commit or stash local changes before switching branches or pulling. For a clean
+tracking checkout of `dev`:
+
+```bash
+git fetch origin
+git switch dev
+git pull --ff-only origin dev
+uv pip install -e ".[dev]"
+uv run --no-project pytest -q
+```
+
+Reinstall after dependency, entry-point or version metadata changes. Work on a
+separate feature branch when contributing; do not pull dev over uncommitted work.
+Recreate `.venv` when changing Python versions or checking a fresh resolution.
+
+## Optional Bash development installer
+
+On Linux/macOS (or a suitable Bash environment):
+
+```bash
+curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/dev/install_traceratops_uv.bash
+bash install_traceratops_uv.bash
+```
+
+The installer defaults to branch `dev`, Python 3.11 and
+`$HOME/Repositories/traceratops`. It recreates `.venv`, installs `.[dev]` editable,
+and checks imports and `trace_filter`. It selects the requested branch but does
+not pull an existing checkout; update that checkout explicitly as above.
+
+Set `TRACERATOPS_BRANCH` to choose another existing branch, for example
+`TRACERATOPS_BRANCH=main bash install_traceratops_uv.bash`. Use `TRACERATOPS_REPO_DIR` to override the parent repository directory.
+For an existing checkout, switching requires a clean working tree; local changes are never
+stashed or discarded automatically. The script is for source/development setup,
+not the recommended stable PyPI installation.
 
 ## [Recommended] Setup pre-commit in local
 

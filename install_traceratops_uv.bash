@@ -5,9 +5,11 @@ set -euo pipefail
 # User settings
 # -----------------------------
 
-REPO_DIR="${HOME}/Repositories"
+REPO_DIR="${TRACERATOPS_REPO_DIR:-${HOME}/Repositories}"
 PYTHON_VERSION="3.11"
 REPO_URL="https://github.com/pyHi-M/traceratops.git"
+REPO_BRANCH="${TRACERATOPS_BRANCH:-dev}"
+git check-ref-format --branch "${REPO_BRANCH}" >/dev/null
 
 # -----------------------------
 # Install uv if missing
@@ -29,7 +31,7 @@ mkdir -p "${REPO_DIR}"
 cd "${REPO_DIR}"
 
 if [ ! -d "traceratops" ]; then
-    git clone "${REPO_URL}"
+    git clone --branch "${REPO_BRANCH}" "${REPO_URL}"
 else
     echo "traceratops repository already exists."
 fi
@@ -39,6 +41,15 @@ fi
 # -----------------------------
 
 cd "${REPO_DIR}/traceratops"
+
+# Do not switch a user's dirty checkout or silently update its history.
+if [ "$(git branch --show-current)" != "${REPO_BRANCH}" ]; then
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "Commit or stash local changes before switching to ${REPO_BRANCH}." >&2
+        exit 1
+    fi
+    git switch -- "${REPO_BRANCH}"
+fi
 
 if [ -d ".venv" ]; then
     echo "Removing existing .venv..."
