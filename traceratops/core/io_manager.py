@@ -6,6 +6,8 @@ Input/Output data manager module
 import json
 import os
 
+from astropy.table import Table
+
 
 def create_folder(folder_path: str):
     """Create folder with `makedirs` from os module.
@@ -64,3 +66,23 @@ def save_json(data, file_name):
     """
     with open(file_name, mode="w", encoding="utf-8") as json_f:
         json.dump(data, json_f, ensure_ascii=False, sort_keys=True, indent=4)
+
+
+def read_table_from_ecsv(path):
+    """Read an astropy Table saved as an ``ecsv`` file."""
+    # read ecsv file
+    table = Table.read(path, format="ascii.ecsv")
+
+    return table
+
+
+def save_table_to_ecsv(data, path):
+    """
+    Save an astropy table into an ``ecsv`` file.
+    The input should be an astropy Table object
+    """
+    data.write(
+        path,
+        format="ascii.ecsv",
+        overwrite=True,
+    )

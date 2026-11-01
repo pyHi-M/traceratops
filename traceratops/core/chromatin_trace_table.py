@@ -14,6 +14,7 @@ import pandas as pd
 from astropy.table import Table, vstack
 from matplotlib.colors import ListedColormap
 
+from traceratops.core.io_manager import read_table_from_ecsv, save_table_to_ecsv
 from traceratops.core.localization_table import (
     build_color_dict,
     decode_rois,
@@ -22,26 +23,6 @@ from traceratops.core.localization_table import (
 
 font = {"weight": "normal", "size": 22}
 matplotlib.rc("font", **font)
-
-
-def read_table_from_ecsv(path):
-    """Read an astropy Table saved as an ``ecsv`` file."""
-    # read ecsv file
-    table = Table.read(path, format="ascii.ecsv")
-
-    return table
-
-
-def save_table_to_ecsv(data, path):
-    """
-    Save an astropy table into an ``ecsv`` file.
-    The input should be an astropy Table object
-    """
-    data.write(
-        path,
-        format="ascii.ecsv",
-        overwrite=True,
-    )
 
 
 def generate_pyhim_identifier():
