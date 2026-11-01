@@ -85,8 +85,8 @@ from current main remains available for older tags.
 Never move release tags. A tag moved before validation fails against the release
 event commit. Builds remain pinned to the validated SHA even if a tag changes
 later; reviewers must recheck it before approval. Runs for the same tag are
-serialized without cancellation, but duplicate events or manual retries can
-still attempt a second upload. Existing files fail visibly (`skip-existing:
+serialized without cancelling an active run (GitHub may replace a pending run),
+but duplicate events or manual retries can still attempt a second upload. Existing files fail visibly (`skip-existing:
 false`); there is no automatic upload retry.
 
 ## E. Verify publication
