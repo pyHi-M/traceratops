@@ -1,6 +1,8 @@
 # traceratops
 
-Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. `uv` is the recommended installation tool.
+Requires Python **3.11 or newer**. The test matrix covers Python 3.11, 3.12 and
+3.13 on Linux, macOS and Windows. Stable users install from **PyPI**, preferably
+with **pip**; developers use **uv** with an editable **dev** checkout.
 
 *A toolbox for trace analysis, visualization, and quality assessment for chromatin-trace data.*
 
@@ -30,37 +32,29 @@ The package is intended for users who already have pyHiM-style localization or t
 
 ## Installation
 
-traceratops supports Linux, macOS, and Windows. We recommend installing it in a dedicated `uv` environment. For a development installation, use the bundled installer:
+For stable use, install from **PyPI**, preferably with pip in a virtual environment.
+Python **3.11 or newer** is required; cloning the repository is unnecessary.
 
 ```bash
-curl -O https://raw.githubusercontent.com/pyHi-M/traceratops/main/install_traceratops_uv.bash
-bash install_traceratops_uv.bash
-source $HOME/Repositories/traceratops/.venv/bin/activate
-```
-
-To install manually with `uv`, clone the repository and install the development environment:
-
-```bash
-git clone https://github.com/pyHi-M/traceratops.git
-cd traceratops
-uv venv .venv --python 3.11
+python -m venv .venv
 source .venv/bin/activate
-uv pip install -e ".[dev]"
+python -m pip install traceratops
 ```
 
-`pyproject.toml` specifies dependencies; no `uv.lock` is committed. Weekly dependency
-security audits report vulnerabilities in GitHub Actions. See the
-[development guide](docs/source/contribute/dev_installation.md#dependency-maintenance-and-security)
-for audit reports and notification settings.
+uv users can instead run `uv venv --python 3.11` followed by
+`uv pip install traceratops`. See the [complete installation guide](docs/source/quickstart/installation.md)
+for Windows instructions, verification and updates.
 
-After installation, traceratops command-line tools such as `trace_filter`, `trace_merge`, `trace_to_matrix`, `trace_stats`, `plot_him_matrix`, and `localization_analyzer` should be available in the active environment.
+Developers use **uv** with an editable checkout of **dev** and
+`uv pip install -e ".[dev]"`. The [development guide](docs/source/contribute/dev_installation.md)
+covers checkout setup, tests, updates and the optional installer.
 
 ## Quick start
 
 A practical way to start is to run the first tutorial notebook:
 
 ```bash
-jupyter notebook docs/source/tutorials/tutorial_01_merge_multi_roi.ipynb
+jupyter notebook docs/source/tutorials/tutorial_merge_multi_roi.ipynb
 ```
 
 Additional tutorials cover quality control, threshold filtering, duplicate removal, trace splitting, mask assignment, matrix visualization, multi-way co-localization, dataset comparison, and use of the `--pipe` argument.

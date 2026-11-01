@@ -4,6 +4,11 @@ orphan: true
 
 # 2.0.0 release assessment and checklist
 
+This page is a historical record of the 2.0.0 assessment and validation. Its
+branch states and preparation checklist describe that work, not current release
+status or a procedure to repeat. For future releases, use the
+[release guide](release_guide.md).
+
 ## Baseline and version recommendation
 
 Assessed on 2026-10-28. The latest published GitHub release is
@@ -129,47 +134,6 @@ metadata is deprecated and must be modernized before its 2027-02-18 deadline.
 This warning does not invalidate the build and is not changed as unrelated
 license metadata work.
 
-## Prepared dev-to-main PR
-
-Open this only after the release-preparation PR has been reviewed and merged.
-
-**Title:** Release traceratops 2.0.0
-
-**Description:**
-
-Release 2.0.0 collects the verified changes since v1.0.1: barcode-aware trace
-resolution and multiplicity classification, HDBSCAN splitting, physical/genomic
-distance analysis, whole-trace sorting, localization-quality filtering, matrix
-construction and visualization improvements, FOF-CT unit correction and PDB
-export fixes. The unmerged curator/simulator/benchmark work is excluded.
-
-Breaking changes include Python >=3.11 (dropping 3.9/3.10), removal of
-trace_filter_advanced, enforced localization .ecsv output, genomic-neighbor
-annotation requirements and changed PDB selection. uv installation, Pillow >=13,
-explicit tifffile and scheduled runtime/development security audits accompany
-the release. See the detailed changelog and prepared GitHub release notes.
-
-Attach final release-preparation CI, scientific test, security audit and package
-validation results, then verify this PR's own checks on the actual merge result.
-Call out unresolved static-analysis warnings, manual PyMOL/private-data QA and
-scope decisions. Do not merge automatically. Merge into main, tagging and
-publication require explicit approval. No tags/releases/packages were published
-as part of preparation.
-
-## Approval and publication checklist
-
-- [ ] Confirm 2.0.0 and exclusion of unmerged PR #201 and related work.
-- [ ] Review validation evidence and any remaining readiness limitations.
-- [ ] Approve and merge the preparation PR into dev.
-- [ ] Open/finalize dev → main PR with its own passing CI/audits and actual release date.
-- [ ] Explicitly approve the main merge; verify the resulting main SHA/version.
-- [ ] Explicitly approve creating v2.0.0 on that main SHA; check for duplicates.
-- [ ] Explicitly approve publication with the prepared notes and tagged-source artifacts.
-- [ ] Verify tag, published release, metadata and artifacts; no PyPI upload.
-- [ ] Confirm security-audit.yml is on default main, dispatch an audit and verify scheduling/notifications.
-
-Follow the exact sequence in the [release guide](release_guide.md).
-
 ### Local readiness findings
 
 The full starting-candidate regression suite passed 187 tests with six warnings.
@@ -211,15 +175,6 @@ so the installation, changelog and new release page appear in navigation.
 The future dev-to-main PR must additionally resolve the documented index conflict
 and triage mypy/codespell findings and manual QA. Preparation is not authorization
 to merge, tag, or publish.
-
-## Public release text and internal publication details
-
-The public release notes contain scientific changes and compatibility warnings
-only. Preparation status and tag instructions belong here and in the release
-guide: v2.0.0 is the intended tag, and tagging/publication require approval on
-the verified main commit. The comparison link becomes live after that tag exists.
-This checklist remains directly linked from the contributor release guide but is
-intentionally absent from the main documentation navigation.
 
 ## Review follow-up: warning classification (2026-10-31)
 

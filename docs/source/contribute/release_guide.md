@@ -1,100 +1,76 @@
 # Release guide
 
-The project uses Semantic Versioning and `vMAJOR.MINOR.PATCH` tags. Prepare and
-validate changes on `release/*`, review them into `dev`, then review `dev` into
-`main`. The published tag must identify the approved release commit on `main`.
-Do not merge into `main`, create a tag, or publish a release without explicit
-maintainer approval. Do not publish packages to PyPI as part of this procedure.
+Traceratops uses Semantic Versioning and `vMAJOR.MINOR.PATCH` tags. GitHub releases
+and PyPI publication are separate, maintainer-approved steps. The publishing
+workflow never creates tags or changes branches.
 
-## 1. Assess the release baseline
+## A. Prepare a release
 
-Fetch `main`, `dev` and tags. Inspect the latest **published GitHub release**,
-resolve its tag to a commit, and compare that commit with both branches. Do not
-assume the highest tag, published release and current `main` are identical.
-Review merged history, relevant source diffs, open PRs and CI results.
+1. Integrate approved feature-branch changes into `dev`. Review the actual code
+   changes since the previous release and identify unfinished work to exclude.
+2. Prepare and review the version in `pyproject.toml`, changelog/date and public
+   release notes. Keep `[Unreleased]` for future changes and synchronize the
+   documentation's changelog copy. Runtime and Sphinx read the installed version.
+3. Run relevant scientific tests, the supported OS/Python CI matrix, dependency
+   audits, pre-commit and documentation checks. Build the wheel and sdist, run
+   `twine check`, and verify a clean wheel installation and console commands.
+   Review any remaining warnings and coverage limits before approval.
 
-For the proposed 2.0.0 release, see the
-[assessment and validation checklist](release_2_0_0_checklist.md) and
-[prepared release notes](../quickstart/release_2_0_0.md).
+The [2.0.0 assessment](release_2_0_0_checklist.md) is retained as historical
+validation evidence, not a checklist for future releases.
 
-## 2. Prepare a release branch and PR into dev
+## B. Integrate into main
 
-Create `release/2.0.0` from current `origin/dev`. Update the authoritative version
-in `pyproject.toml`, the root changelog, its documentation copy, and release notes.
-`traceratops._version` and Sphinx obtain the installed package version through
-package metadata; there is no second version constant to edit.
+Open a reviewed PR targeting `main`. If histories diverge, use an integration
+branch from main, merge dev into it and resolve conflicts there. Compare the
+result with both source branches and validate the actual integration result.
 
-Run the existing scientific suite, the supported OS/Python CI matrix, dependency
-audits, and package build/installation checks. Distinguish numerical regression
-coverage from imports and CLI help checks. Do not change algorithms or defaults
-to make checks pass. Open a release-preparation PR targeting `dev`; do not merge
-it automatically. If further features are merged meanwhile, reassess the release
-notes and rerun affected checks.
+After approval, use the repository's normal **merge-commit** strategy to preserve
+history. Verify the resulting version and release contents on main. Synchronize
+main back into dev through a reviewed merge as appropriate; do not reset or
+force-push the long-lived branches.
 
-## 3. After approval, merge preparation into dev
+## C. Create the GitHub release
 
-After review, a maintainer merges the preparation PR into `dev`. Open the prepared
-`dev` → `main` PR and confirm its actual commit range and release description.
-The preparation PR's checks do not replace checks on this final integration PR.
-There is no need to reset or force-push the temporary branch.
+Confirm the exact approved commit on `main` and its package version. Create the
+matching `vMAJOR.MINOR.PATCH` tag on that commit and publish the corresponding
+GitHub release with the public release notes. Check for an existing tag/release
+first: **never overwrite or move an existing release tag**.
 
-## 4. Verify the dev-to-main PR
+A GitHub release does not automatically publish a package to PyPI.
 
-Require successful test, security and existing hygiene checks. Confirm that the
-version and release notes match the reviewed scope, no unapproved features have
-entered, and the changelog covers all changes since the published release tag.
-Keep the previous tag untouched. Confirm `v2.0.0` and its release do not already
-exist. Resolve any merge conflicts on a reviewed branch, not directly on `main`.
+## D. Publish to PyPI
 
-## 5. Approval boundary: merge into main
+Publication currently requires **manual dispatch** of `publish-pypi.yml` from
+**main**, providing the existing release tag. In GitHub Actions:
 
-Only after **explicit approval**, merge the reviewed `dev` → `main` PR, preferably
-with the repository's existing merge-commit convention. Fetch `origin/main` and
-verify that the merged commit contains the approved version and all validated
-changes. If main has advanced again, identify the intended release commit
-explicitly rather than tagging an unreviewed tip.
+1. Select **Build and publish Python distributions** and choose **Run workflow**.
+2. Select branch **main** and enter the approved existing tag in `release_tag`.
+3. Inspect the resolved tag/commit SHA, version and validated wheel/sdist
+   artifacts, including filenames and hashes.
+4. If the **pypi** environment requires approval, approve only when a real upload
+   is intended: **environment approval authorizes publication to PyPI**, not a
+   dry run. Inspect the publishing job's result.
 
-## 6. Approval boundary: tag the main release commit
+The workflow validates the tag's format, main ancestry and package version, then
+builds from that exact tagged source using infrastructure on current main. It
+checks distributions and a clean wheel installation before a separate job
+publishes with **Trusted Publishing**. **No PyPI API token is required.** PR runs
+validate packages but cannot enter the publishing job; publication is not
+triggered automatically by tags or GitHub releases.
 
-Only after **explicit approval**, use the exact verified main commit SHA:
+## E. Verify publication
 
-```bash
-git fetch origin main --tags
-git show <approved-main-sha>:pyproject.toml
-git merge-base --is-ancestor <approved-main-sha> origin/main
-git ls-remote --tags origin refs/tags/v2.0.0
-# Stop if that tag already exists; do not overwrite it.
-git tag -a v2.0.0 <approved-main-sha> -m "Release v2.0.0"
-git push origin refs/tags/v2.0.0
-```
+- Check the published version on PyPI, its Python requirement, package metadata,
+  wheel/sdist files and attestations. Compare file hashes with the validated
+  workflow artifacts and confirm the GitHub release points to the approved tag.
+- In a fresh environment, install the exact published version and check the
+  installed version, `trace_filter --help` and `python -m pip check`. Follow the
+  [stable installation guide](../quickstart/installation.md) for pip, uv and
+  Windows commands. Local wheel tests alone do not verify a PyPI installation.
+- Confirm successful Actions checks and continued dependency security monitoring.
 
-Check package version 2.0.0 before creating the tag. Do not tag `dev` before the
-main merge: a tag on dev need not identify the final main release commit.
-
-## 7. Approval boundary: publish the GitHub release
-
-After **explicit approval**, create the GitHub release using the existing
-`v2.0.0` tag and the prepared release notes. Set the actual release date in the
-changelog through the reviewed preparation/integration PR before tagging.
-Do not duplicate or overwrite a tag/release. No automated release or package
-publishing workflow is currently configured.
-
-Build from the exact tagged source with `python -m build`, validate the sdist and
-wheel with `twine check`, and install the wheel in a fresh environment. If binary
-artifacts are to be attached, attach these tagged-source builds, not an earlier
-local preparation build. GitHub source archives alone are not wheel artifacts.
-Do not upload anything to a package index.
-
-## 8. Verify publication and monitoring
-
-- Confirm that the release is published (not draft), its tag resolves to the
-  approved main SHA, and the package metadata declares 2.0.0 and Python >=3.11.
-- Confirm the release title, notes, comparison link and any attached artifacts.
-- Check the security audit workflow exists on `main`, the default branch.
-  Weekly schedules run from the default branch; until it contains the workflow,
-  dependency-related PR checks supply audit coverage. Once present, manually
-  dispatch an audit and check the next weekly run.
-- Enable native GitHub Actions failure notifications and Dependabot alerts as
-  described in the [development guide](dev_installation.md#dependency-maintenance-and-security).
-- Keep approval and CI evidence in the release PR. Delete temporary branches only
-  after confirming publication; do not delete `dev` or change existing tags.
+Published PyPI files cannot be overwritten. If an upload fails or only some files
+appear, inspect the existing files, hashes and logs before retrying; do not
+blindly rerun or enable `skip-existing`. A source correction generally requires
+a new version and tag through the reviewed release process, never a moved tag.
