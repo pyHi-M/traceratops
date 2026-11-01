@@ -58,6 +58,16 @@ To update, run `python -m pip install --upgrade traceratops` (or
 `uv pip install --upgrade traceratops`). To select a particular published release,
 use `traceratops==2.0.0` instead of the unversioned name.
 
+If `PYTHONPATH` points to a local traceratops checkout, Python may import that
+source instead of the installed package, even inside a virtual environment.
+For clean verification, remove it (`unset PYTHONPATH` on Linux/macOS;
+`Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue` in PowerShell) and run
+outside the checkout. An isolated Python invocation also ignores `PYTHONPATH`:
+
+```bash
+python -I -c "import traceratops; print(traceratops.__file__)"
+```
+
 ## Development version
 
 For the latest development version, editable installation, tests and contribution

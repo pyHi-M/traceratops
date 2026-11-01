@@ -3,6 +3,7 @@
 import argparse
 import importlib.metadata
 import json
+import os
 import re
 import subprocess
 import sys
@@ -20,10 +21,12 @@ def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
 
 
-def validate_tag(tag):
+def validate_tag(tag, expected_sha=None):
     if not re.fullmatch(TAG_PATTERN, tag):
         raise ValueError("Release tag must be vMAJOR.MINOR.PATCH without leading zeros")
     sha = git("rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}")
+    if expected_sha is not None and sha != expected_sha:
+        raise ValueError("Release tag moved or disagrees with the release event commit")
     subprocess.run(
         ["git", "merge-base", "--is-ancestor", sha, "refs/remotes/origin/main"],
         check=True,
@@ -32,6 +35,39 @@ def validate_tag(tag):
     if project["name"] != "traceratops" or project["version"] != tag[1:]:
         raise ValueError("Tag version and tagged traceratops package metadata disagree")
     return {"sha": sha, "version": project["version"]}
+
+
+def select_event(event_name, repository, ref, sha, event):
+    """Authorize trusted Actions context, then validate the actual Git tag."""
+    if event_name == "pull_request":
+        return {"publish": "false", "sha": sha}
+    if repository != "pyHi-M/traceratops":
+        raise ValueError(
+            "Publication requires the canonical pyHi-M/traceratops repository"
+        )
+    if event_name == "workflow_dispatch":
+        if ref != "refs/heads/main":
+            raise ValueError("Manual publication must be dispatched from main")
+        tag = event.get("inputs", {}).get("release_tag", "")
+        expected_sha = None
+    elif event_name == "release":
+        release = event.get("release", {})
+        if (
+            event.get("action") != "published"
+            or release.get("draft") is not False
+            or release.get("prerelease") is not False
+        ):
+            raise ValueError(
+                "Only published, non-draft, non-prerelease releases can publish"
+            )
+        tag = release.get("tag_name", "")
+        if ref != f"refs/tags/{tag}" or not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("Release event must identify its tag ref and commit")
+        expected_sha = sha
+    else:
+        raise ValueError("This event cannot publish")
+    validated = validate_tag(tag, expected_sha=expected_sha)
+    return {"publish": "true", "release_tag": tag, **validated}
 
 
 def validate_distributions(source, dist):
@@ -109,6 +145,8 @@ def validate_installed(version):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    event = commands.add_parser("event")
+    event.add_argument("--github-output", type=Path)
     tag = commands.add_parser("tag")
     tag.add_argument("tag")
     tag.add_argument("--github-output", type=Path)
@@ -119,7 +157,15 @@ def main():
     installed = commands.add_parser("installed")
     installed.add_argument("version")
     args = parser.parse_args()
-    if args.command == "tag":
+    if args.command == "event":
+        outputs = select_event(
+            os.environ["GITHUB_EVENT_NAME"],
+            os.environ["GITHUB_REPOSITORY"],
+            os.environ["GITHUB_REF"],
+            os.environ["GITHUB_SHA"],
+            json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()),
+        )
+    elif args.command == "tag":
         outputs = validate_tag(args.tag)
     elif args.command == "distributions":
         outputs = validate_distributions(args.source, args.dist)

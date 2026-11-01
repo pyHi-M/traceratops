@@ -1,8 +1,9 @@
 # Release guide
 
 Traceratops uses Semantic Versioning and `vMAJOR.MINOR.PATCH` tags. GitHub releases
-and PyPI publication are separate, maintainer-approved steps. The publishing
-workflow never creates tags or changes branches.
+automatically start the PyPI publishing workflow; a protected environment can
+require maintainer approval before upload. The workflow never creates tags or
+changes branches.
 
 ## A. Prepare a release
 
@@ -37,27 +38,56 @@ matching `vMAJOR.MINOR.PATCH` tag on that commit and publish the corresponding
 GitHub release with the public release notes. Check for an existing tag/release
 first: **never overwrite or move an existing release tag**.
 
-A GitHub release does not automatically publish a package to PyPI.
+Only publishing a **stable, non-draft, non-prerelease** GitHub release triggers
+automatic publication. Creating a tag alone, editing a release or merging workflow
+changes does not trigger an upload or republish the existing v2.0.0 package.
 
 ## D. Publish to PyPI
 
-Publication currently requires **manual dispatch** of `publish-pypi.yml` from
-**main**, providing the existing release tag. In GitHub Actions:
+The `release.published` event starts **Build and publish Python distributions**
+(`publish-pypi.yml`). No second manual launch is needed for ordinary releases.
+The workflow resolves the existing stable tag, checks its commit against the
+release event, verifies main ancestry and package version, then builds from that
+exact commit using validation infrastructure from current main. PR runs only
+build and validate; they cannot publish or receive publishing OIDC permissions.
 
-1. Select **Build and publish Python distributions** and choose **Run workflow**.
-2. Select branch **main** and enter the approved existing tag in `release_tag`.
-3. Inspect the resolved tag/commit SHA, version and validated wheel/sdist
-   artifacts, including filenames and hashes.
-4. If the **pypi** environment requires approval, approve only when a real upload
-   is intended: **environment approval authorizes publication to PyPI**, not a
-   dry run. Inspect the publishing job's result.
+Inspect the run summary's tag, commit SHA and version, plus the validated
+wheel/sdist artifacts and hashes. If the **pypi** environment requests approval,
+**approval authorizes a real PyPI upload**, not a dry run. Confirm that the tag
+still identifies the approved commit before approving. A separate job publishes
+only that run's validated artifacts using **Trusted Publishing**; no PyPI API
+token is required. The release is available on PyPI only after that job succeeds.
 
-The workflow validates the tag's format, main ancestry and package version, then
-builds from that exact tagged source using infrastructure on current main. It
-checks distributions and a clean wheel installation before a separate job
-publishes with **Trusted Publishing**. **No PyPI API token is required.** PR runs
-validate packages but cannot enter the publishing job; publication is not
-triggered automatically by tags or GitHub releases.
+### Manual fallback
+
+For an exceptional case, select this workflow in GitHub Actions, choose **Run
+workflow**, select branch **main** and enter the existing stable tag in
+`release_tag`. Review the same validation and approval evidence. Manual and
+automatic runs use the same tag validator and concurrency group. Do not dispatch
+while another attempt is pending or blindly rerun a failed upload.
+
+### Environment deployment policy
+
+Before enabling automatic publication, a repository administrator must open
+**Settings → Environments → pypi → Deployment branches and tags**. With
+**Selected branches and tags**, retain the **Branch** rule `main` for manual runs
+and add a **Tag** rule `v*` for release events. A branch rule alone does not allow
+tag refs. Retain required reviewers and all existing protection rules; this PR
+does not change settings or the existing Trusted Publisher registration.
+
+The `v*` deployment rule is broader than the stable-tag validator: validation
+still rejects prereleases and commits outside main. Keep release-tag creation
+and workflow changes restricted to trusted maintainers and review deployments;
+the environment pattern alone does not prove main ancestry. Future release tags
+must include this workflow version for automatic triggering; manual dispatch
+from current main remains available for older tags.
+
+Never move release tags. A tag moved before validation fails against the release
+event commit. Builds remain pinned to the validated SHA even if a tag changes
+later; reviewers must recheck it before approval. Runs for the same tag are
+serialized without cancelling an active run (GitHub may replace a pending run),
+but duplicate events or manual retries can still attempt a second upload. Existing files fail visibly (`skip-existing:
+false`); there is no automatic upload retry.
 
 ## E. Verify publication
 
