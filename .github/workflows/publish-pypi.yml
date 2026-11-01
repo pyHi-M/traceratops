@@ -3,10 +3,12 @@ name: Build and publish Python distributions
 on:
   pull_request:
     branches: [dev, main]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing stable release tag on main (for example v2.0.0)
+        description: Existing stable release tag on main
         required: true
         type: string
 
@@ -14,16 +16,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: pypi-${{ inputs.release_tag || github.ref }}
+  group: pypi-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.release.outputs.publish }}
     steps:
       - name: Check out workflow infrastructure
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          # Release validation uses current main infrastructure, not tagged scripts.
+          ref: ${{ github.event_name == 'release' && 'main' || github.sha }}
           path: infrastructure
           fetch-depth: 0
           persist-credentials: false
@@ -31,27 +37,25 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
-      - name: Require main and the canonical repository for publication
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          if [[ "$GITHUB_REF" != refs/heads/main || "$GITHUB_REPOSITORY" != pyHi-M/traceratops ]]; then
-            echo "::error::Publication must be dispatched from main in pyHi-M/traceratops"
-            exit 1
-          fi
       - name: Test release validation
         run: python -m unittest discover -s infrastructure/.github/scripts -p 'test_*.py' -v
-      - name: Resolve and validate the existing release tag
-        if: github.event_name == 'workflow_dispatch'
+      - name: Authorize event and resolve the release tag
         id: release
         working-directory: infrastructure
+        run: |
+          python .github/scripts/release.py event --github-output "$GITHUB_OUTPUT"
+      - name: Record validated source for maintainer review
         env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: python .github/scripts/release.py tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT"
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          SOURCE_SHA: ${{ steps.release.outputs.sha }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          printf 'Tag: `%s`\n\nCommit: `%s`\n\nVersion: `%s`\n' "$RELEASE_TAG" "$SOURCE_SHA" "$VERSION" >> "$GITHUB_STEP_SUMMARY"
       - name: Check out package source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          # Manual runs build only the resolved tag SHA; PRs validate their merge SHA.
-          ref: ${{ steps.release.outputs.sha || github.sha }}
+          # Publication builds the validated tag SHA; PRs build their merge SHA.
+          ref: ${{ steps.release.outputs.sha }}
           path: source
           persist-credentials: false
       - name: Build wheel from sdist and validate metadata
@@ -82,9 +86,12 @@ jobs:
   publish:
     needs: build
     if: >-
-      github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' &&
-      github.repository == 'pyHi-M/traceratops'
+      needs.build.outputs.publish == 'true' &&
+      github.repository == 'pyHi-M/traceratops' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'release' && github.event.action == 'published' &&
+        !github.event.release.draft && !github.event.release.prerelease &&
+        startsWith(github.ref, 'refs/tags/v')))
     runs-on: ubuntu-latest
     environment:
       name: pypi
