@@ -1,0 +1,650 @@
+{
+  "python": "3.11.16",
+  "results": [
+    {
+      "id": "example.trace_filter",
+      "command": "trace_filter",
+      "argv": [
+        "trace_filter",
+        "--input",
+        "trace.ecsv",
+        "--n_barcodes",
+        "4"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_filtered.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.74
+    },
+    {
+      "id": "example.trace_merge",
+      "command": "trace_merge",
+      "argv": [
+        "trace_merge",
+        "--name",
+        "merged.ecsv"
+      ],
+      "stdin": "trace.ecsv\ntrace2.ecsv\n",
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "merged.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 6.0
+    },
+    {
+      "id": "example.figure_him_matrix",
+      "command": "figure_him_matrix",
+      "argv": [
+        "figure_him_matrix",
+        "--input",
+        "matrix.npy",
+        "--barcodes",
+        "matrix_barcodes.txt",
+        "--output",
+        "plots"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "plots/Fig_matrix_proximity_norm_0.25-1.00.npy",
+        "plots/Fig_matrix_proximity_norm_0.25-1.00.png",
+        "plots/Fig_matrix_nan_norm_0.25-0.75.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 6.85
+    },
+    {
+      "id": "example.plot_him_matrix",
+      "command": "plot_him_matrix",
+      "argv": [
+        "plot_him_matrix",
+        "--input",
+        "matrix.npy",
+        "--barcodes",
+        "matrix_barcodes.txt",
+        "--output",
+        "plots"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "plots/Fig_matrix_proximity_norm_0.25-1.00.npy",
+        "plots/Fig_matrix_proximity_norm_0.25-1.00.png",
+        "plots/Fig_matrix_nan_norm_0.25-0.75.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.46
+    },
+    {
+      "id": "example.trace_to_matrix",
+      "command": "trace_to_matrix",
+      "argv": [
+        "trace_to_matrix",
+        "--input",
+        "trace.ecsv",
+        "--outputFolder",
+        "matrices"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "matrices/trace_Matrix_PWDscMatrix.npy",
+        "matrices/trace_Matrix_uniqueBarcodes.ecsv",
+        "matrices/trace_Matrix_Nmatrix.npy",
+        "matrices/trace_Matrix_HiMmatrix.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 8.08
+    },
+    {
+      "id": "example.trace_stats",
+      "command": "trace_stats",
+      "argv": [
+        "trace_stats",
+        "--input",
+        "trace.ecsv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 2.96
+    },
+    {
+      "id": "example.trace_splitter",
+      "command": "trace_splitter",
+      "argv": [
+        "trace_splitter",
+        "--input",
+        "trace.ecsv",
+        "--method",
+        "beam",
+        "--quiet"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_split.ecsv",
+        "trace_split_diagnostics.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.2
+    },
+    {
+      "id": "example.trace_sorter",
+      "command": "trace_sorter",
+      "argv": [
+        "trace_sorter",
+        "--input",
+        "trace.ecsv",
+        "--sort_by",
+        "number_of_spots"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_sorted.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.24
+    },
+    {
+      "id": "example.trace_plot",
+      "command": "trace_plot",
+      "argv": [
+        "trace_plot",
+        "--input",
+        "trace.ecsv",
+        "--number_traces",
+        "2"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "PDBs/trace-01.pdb",
+        "PDBs/trace-00.pdb"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 4.23
+    },
+    {
+      "id": "example.trace_pearsons",
+      "command": "trace_pearsons",
+      "argv": [
+        "trace_pearsons",
+        "--input",
+        "trace.ecsv",
+        "trace2.ecsv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_correlation_matrix.npy",
+        "trace_correlation_matrix.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.1
+    },
+    {
+      "id": "example.trace_genomic_coordinates",
+      "command": "trace_genomic_coordinates",
+      "argv": [
+        "trace_genomic_coordinates",
+        "--input",
+        "trace.ecsv",
+        "--bed",
+        "barcodes.bed",
+        "--auto-continue"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_imputed.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 2.37
+    },
+    {
+      "id": "example.trace_physical_vs_genomic_distance",
+      "command": "trace_physical_vs_genomic_distance",
+      "argv": [
+        "trace_physical_vs_genomic_distance",
+        "--input",
+        "trace.ecsv",
+        "--gen_dist_bins",
+        "4",
+        "--quiet"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "binned_physical_vs_genomic_distances.csv",
+        "trace_physical_vs_genomic_plot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.49
+    },
+    {
+      "id": "example.trace_import_from_fofct",
+      "command": "trace_import_from_fofct",
+      "argv": [
+        "trace_import_from_fofct",
+        "--input",
+        "export.csv",
+        "--bed_file",
+        "barcodes.bed",
+        "--output_file",
+        "restored.ecsv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "restored.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 2.15
+    },
+    {
+      "id": "example.trace_export_to_fofct",
+      "command": "trace_export_to_fofct",
+      "argv": [
+        "trace_export_to_fofct",
+        "--input",
+        "trace.ecsv",
+        "--bed_file",
+        "barcodes.bed",
+        "--json_file",
+        "metadata.json",
+        "--output_file",
+        "export.csv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "export.csv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.93
+    },
+    {
+      "id": "example.trace_assign_mask",
+      "command": "trace_assign_mask",
+      "argv": [
+        "trace_assign_mask",
+        "--input",
+        "trace.ecsv",
+        "--mask_file",
+        "mask.npy",
+        "--label",
+        "maskpositive"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_maskpositive.ecsv",
+        "trace_maskpositive_mask_plot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.93
+    },
+    {
+      "id": "example.trace_analyzer",
+      "command": "trace_analyzer",
+      "argv": [
+        "trace_analyzer",
+        "--input",
+        "trace.ecsv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_trace_statistics.png",
+        "trace_barcode_detection.png",
+        "trace_relative_barcode_frequencies.png",
+        "trace_first_neighbor_distances.png",
+        "trace_kde_projections.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.77
+    },
+    {
+      "id": "example.localization_merge",
+      "command": "localization_merge",
+      "argv": [
+        "localization_merge"
+      ],
+      "stdin": "localizations.ecsv\nlocalizations2.ecsv\n",
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "merged_localizations.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 2.56
+    },
+    {
+      "id": "example.localization_analyzer",
+      "command": "localization_analyzer",
+      "argv": [
+        "localization_analyzer",
+        "--localization_file",
+        "localizations.ecsv"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "localization_distribution_fluxes.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.97
+    },
+    {
+      "id": "example.compare_pwd_matrices",
+      "command": "compare_pwd_matrices",
+      "argv": [
+        "compare_pwd_matrices",
+        "--input1",
+        "matrix.npy",
+        "--input2",
+        "matrix2.npy",
+        "--output",
+        "comparison"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "comparison_scatter_plot.png",
+        "comparison_violin_plot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.84
+    },
+    {
+      "id": "example.plot_matrix_comparison",
+      "command": "plot_matrix_comparison",
+      "argv": [
+        "plot_matrix_comparison",
+        "--input1",
+        "matrix.npy",
+        "--input2",
+        "matrix2.npy",
+        "--output",
+        "comparison"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "comparison_scatter_plot.png",
+        "comparison_violin_plot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 4.04
+    },
+    {
+      "id": "example.replot_3way",
+      "command": "replot_3way",
+      "argv": [
+        "replot_3way",
+        "--input",
+        "threeway_anchor_1.npy",
+        "--label_map_file",
+        "barcodes.txt"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "threeway_anchor_1_anchor_1_replot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.39
+    },
+    {
+      "id": "example.plot_3way_coloc",
+      "command": "plot_3way_coloc",
+      "argv": [
+        "plot_3way_coloc",
+        "--input",
+        "threeway_anchor_1.npy",
+        "--label_map_file",
+        "barcodes.txt"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "threeway_anchor_1_anchor_1_replot.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.4
+    },
+    {
+      "id": "example.plot_bootstrapping",
+      "command": "plot_bootstrapping",
+      "argv": [
+        "plot_bootstrapping",
+        "--input",
+        "bootstrap.npy",
+        "--barcodes",
+        "barcodes.txt",
+        "--N_bootstrap",
+        "9",
+        "--output",
+        "plots"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "plots/Fig_bootstrap_bootstrapping_median_0.07-0.17.npy",
+        "plots/Fig_bootstrap_bootstrapping_std_median_0.01-0.02.npy",
+        "plots/Fig_bootstrap_bootstrapping_median_0.07-0.17.png",
+        "plots/Fig_bootstrap_bootstrapping_std_median_0.01-0.02.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 4.57
+    },
+    {
+      "id": "example.plot_4m",
+      "command": "plot_4m",
+      "argv": [
+        "plot_4m",
+        "--input",
+        "trace.ecsv",
+        "--anchors",
+        "1",
+        "--bootstrapping_cycles",
+        "3",
+        "--output",
+        "profile"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "profile_anchor_1.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.58
+    },
+    {
+      "id": "example.plot_3way",
+      "command": "plot_3way",
+      "argv": [
+        "plot_3way",
+        "--input",
+        "trace.ecsv",
+        "--anchors",
+        "1",
+        "--bootstrapping_cycles",
+        "3",
+        "--output",
+        "threeway"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "threeway_trace_anchor_1.npy",
+        "threeway_trace_anchor_1.png",
+        "threeway_trace_anchor_1_sem.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.05
+    },
+    {
+      "id": "example.trace_3way_coloc",
+      "command": "trace_3way_coloc",
+      "argv": [
+        "trace_3way_coloc",
+        "--input",
+        "trace.ecsv",
+        "--anchors",
+        "1",
+        "--bootstrapping_cycles",
+        "3",
+        "--output",
+        "threeway"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "threeway_trace_anchor_1.npy",
+        "threeway_trace_anchor_1.png",
+        "threeway_trace_anchor_1_sem.png"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 4.16
+    },
+    {
+      "id": "example.plot_compare2matrices",
+      "command": "plot_compare2matrices",
+      "argv": [
+        "plot_compare2matrices",
+        "--input1",
+        "matrix.npy",
+        "--input2",
+        "matrix2.npy",
+        "--barcodes",
+        "matrix_barcodes.txt",
+        "--output",
+        "plots"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "plots/Fig_matrix_difference.png",
+        "plots/Fig_matrix_mixed_matrix.npy",
+        "plots/Fig_matrix_Wilcoxon.npy"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 3.79
+    },
+    {
+      "id": "example.collect_files",
+      "command": "collect_files",
+      "argv": [
+        "collect_files",
+        "--root",
+        "collection",
+        "--example-file",
+        "sample.ecsv",
+        "--copy-to",
+        "collected"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "collected/sample_roi1.ecsv",
+        "collected/sample_roi2.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 0.07
+    },
+    {
+      "id": "example.trace_split_labels",
+      "command": "trace_split_labels",
+      "argv": [
+        "trace_split_labels",
+        "--input",
+        "trace.ecsv",
+        "--label",
+        "positive"
+      ],
+      "stdin": null,
+      "status": "passed",
+      "returncode": 0,
+      "outputs": [
+        "trace_positive.ecsv",
+        "trace_not:positive.ecsv"
+      ],
+      "checks": "exit, nonempty expected artifacts, semantic assertions, unchanged input fixtures",
+      "elapsed_seconds": 1.75
+    }
+  ],
+  "repository_commit": "d767666dfff6be0eca410cca1cc6acc79970140e",
+  "verification_date": "2026-11-13",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "versions": {
+    "traceratops": "2.0.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2",
+    "astropy": "8.0.1",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "seaborn": "0.13.2"
+  },
+  "initial_trials": [
+    {
+      "issue": "Small repository matrix has pairs with fewer than two observations; SciPy bootstrap raises ValueError.",
+      "resolution": "Generate a suitable PWD stack from deterministic synthetic traces using BuildMatrix.build_distance_matrix."
+    },
+    {
+      "issue": "Three-way and bootstrap output filename documentation omits components.",
+      "resolution": "Expected artifact patterns corrected to actual implementation; all final invocations passed."
+    }
+  ],
+  "limitations": [
+    "Smoke verification is not estimator validation. Bootstrap cycles deliberately small; random numerical results are not asserted exactly.",
+    "Scientific algorithms and existing CLI behavior were not modified.",
+    "Python APIs are source/signature reviewed, not all separately executed."
+  ],
+  "automated_checks": {
+    "catalog_validator": "passed",
+    "catalog_regression_tests": {
+      "passed": 15
+    },
+    "existing_tests": {
+      "passed": 188,
+      "warnings": 3
+    },
+    "analysis_source_modified": false
+  }
+}
