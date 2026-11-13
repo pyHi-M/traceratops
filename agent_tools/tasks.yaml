@@ -1,0 +1,742 @@
+{
+  "schema_version": "1.0",
+  "tasks": [
+    {
+      "id": "dataset_counts",
+      "request": "Count unique traces, ROIs and barcode identities in a dataset",
+      "preferred_tool": "cli.trace_stats",
+      "synonyms": [
+        "How many chromatin traces?",
+        "Total distinct barcodes in the dataset",
+        "Number of ROIs"
+      ],
+      "distinguish_from": [
+        "Counts distinct Barcode # values globally, not unique counts per trace or localization counts."
+      ],
+      "tools": [
+        "cli.trace_stats"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "unique_barcode_distribution",
+      "request": "Plot distribution of unique barcode counts per chromatin trace",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "Number of unique barcodes per trace",
+        "Distinct barcodes per trace",
+        "Barcode coverage distribution",
+        "Trace completeness"
+      ],
+      "distinguish_from": [
+        "Trace completeness needs an expected barcode universe; observed unique-count distribution alone is not a normalized completeness fraction.",
+        "Do not substitute dataset-wide distinct barcode count, localization counts, duplicate counts, or individual barcode identity frequencies."
+      ],
+      "tools": [
+        "cli.trace_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "localizations_per_trace",
+      "request": "Plot number of spots/localizations in each trace",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "Trace length histogram",
+        "Rows per Trace_ID"
+      ],
+      "distinguish_from": [
+        "Repeated observations of the same barcode increase row counts without increasing unique counts."
+      ],
+      "tools": [
+        "cli.trace_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "barcode_multiplicity",
+      "request": "Inspect repeated barcode identities within traces",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "Duplicate barcode frequency",
+        "Multiplicity distribution per barcode"
+      ],
+      "distinguish_from": [
+        "Inspection does not remove duplicates; choose trace_filter or beam resolution for curation."
+      ],
+      "tools": [
+        "cli.trace_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "barcode_detection",
+      "request": "Assess detection efficiency for individual barcode identities across traces",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "Barcode dropout",
+        "Per-barcode detection rate"
+      ],
+      "distinguish_from": [
+        "Detection of a particular identity differs from the number of identities per trace."
+      ],
+      "tools": [
+        "cli.trace_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "trace_spatial_qc",
+      "request": "Plot neighboring-locus distances and trace-centered spatial projections",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "Previous versus next genomic neighbor",
+        "XY XZ YZ projections",
+        "Trace spatial QC"
+      ],
+      "distinguish_from": [
+        "Genomic adjacency differs from arbitrary spatial nearest neighbor; required genomic columns and consecutive numeric barcode IDs determine neighbor pairs."
+      ],
+      "tools": [
+        "cli.trace_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "localization_qc",
+      "request": "Inspect localization SNR, shape and detections by barcode",
+      "preferred_tool": "cli.localization_analyzer",
+      "synonyms": [
+        "Signal-to-noise distribution",
+        "Roundness versus skew",
+        "SNR versus z",
+        "Counts of detected spots per barcode"
+      ],
+      "distinguish_from": [
+        "Localization detections do not imply reconstructed traces."
+      ],
+      "tools": [
+        "cli.localization_analyzer"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "curate_traces",
+      "request": "Filter traces and localizations by quality or coverage",
+      "preferred_tool": "cli.trace_filter",
+      "synonyms": [
+        "Minimum distinct loci",
+        "Coordinate crop",
+        "Remove barcode",
+        "Keep label",
+        "Remove label",
+        "SNR threshold",
+        "Intensity threshold",
+        "Clean duplicate spots"
+      ],
+      "distinguish_from": [
+        "Filtering can remove detections; it does not split a merged polymer into separate assignments."
+      ],
+      "tools": [
+        "cli.trace_filter"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "merge_traces",
+      "request": "Combine trace tables across ROIs",
+      "preferred_tool": "cli.trace_merge",
+      "synonyms": [
+        "Append trace files",
+        "Pool traces"
+      ],
+      "distinguish_from": [
+        "Merging appends existing assignments; no trace reconstruction."
+      ],
+      "tools": [
+        "cli.trace_merge"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "merge_localizations",
+      "request": "Combine localization tables across ROIs",
+      "preferred_tool": "cli.localization_merge",
+      "synonyms": [
+        "Pool spot tables",
+        "Append localization files"
+      ],
+      "distinguish_from": [
+        "This does not assign spots to traces."
+      ],
+      "tools": [
+        "cli.localization_merge"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "collect_roi_files",
+      "request": "Collect one trace/localization file from each ROI folder",
+      "preferred_tool": "cli.collect_files",
+      "synonyms": [
+        "Gather acquisition outputs",
+        "Copy files with ROI names"
+      ],
+      "distinguish_from": [
+        "Copies files; use the appropriate merge command to combine rows."
+      ],
+      "tools": [
+        "cli.collect_files"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "resolve_polymers",
+      "request": "Split merged traces and resolve barcode duplicates",
+      "preferred_tool": "cli.trace_splitter",
+      "synonyms": [
+        "Singlet doublet inference",
+        "Barcode-aware reconstruction",
+        "Beam polymer resolution",
+        "Spatial splitting",
+        "K-means split",
+        "HDBSCAN split"
+      ],
+      "distinguish_from": [
+        "Spatial methods preserve rows; beam can reject rows and ambiguous traces. Likelihood posterior differs from score-gap confidence."
+      ],
+      "tools": [
+        "cli.trace_splitter"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "sort_traces",
+      "request": "Order traces by number of spots or radius of gyration",
+      "preferred_tool": "cli.trace_sorter",
+      "synonyms": [
+        "Largest traces first",
+        "Sort by compactness",
+        "Rank by Rg"
+      ],
+      "distinguish_from": [
+        "number_of_spots counts rows; it does not sort by unique barcode coverage."
+      ],
+      "tools": [
+        "cli.trace_sorter"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "mask_labels",
+      "request": "Assign labels from a 2D segmentation mask",
+      "preferred_tool": "cli.trace_assign_mask",
+      "synonyms": [
+        "Mask-based annotation",
+        "Mark RNA-positive regions"
+      ],
+      "distinguish_from": [
+        "Assignment is per row using XY pixel lookup; it is not whole-trace membership or a 3D overlap calculation."
+      ],
+      "tools": [
+        "cli.trace_assign_mask"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "partition_labels",
+      "request": "Partition labeled and unlabeled trace rows",
+      "preferred_tool": "cli.trace_split_labels",
+      "synonyms": [
+        "Label positive versus label negative",
+        "Split by mask label"
+      ],
+      "distinguish_from": [
+        "Substring row matching can place a Trace_ID in both outputs; this is not polymer reconstruction."
+      ],
+      "tools": [
+        "cli.trace_split_labels"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "annotate_genome",
+      "request": "Add genomic intervals using a barcode BED mapping",
+      "preferred_tool": "cli.trace_genomic_coordinates",
+      "synonyms": [
+        "Impute genomic coordinates",
+        "Rename barcodes from BED"
+      ],
+      "distinguish_from": [
+        "Annotation does not estimate physical coordinates."
+      ],
+      "tools": [
+        "cli.trace_genomic_coordinates"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "polymer_scaling",
+      "request": "Analyze physical distance as a function of genomic separation",
+      "preferred_tool": "cli.trace_physical_vs_genomic_distance",
+      "synonyms": [
+        "R(s)",
+        "Power-law exponent",
+        "Physical versus genomic distance",
+        "Polymer scaling"
+      ],
+      "distinguish_from": [
+        "Uses binned median distances, not contact probability decay. CSV nm labels do not match actual input units."
+      ],
+      "tools": [
+        "cli.trace_physical_vs_genomic_distance"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "pdb_export",
+      "request": "Export trace structures for PyMOL",
+      "preferred_tool": "cli.trace_plot",
+      "synonyms": [
+        "Visualize 3D traces",
+        "PDB pseudoatoms",
+        "Selected trace structure"
+      ],
+      "distinguish_from": [
+        "CLI exports PDB files; render them using an external viewer."
+      ],
+      "tools": [
+        "cli.trace_plot"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "distance_stack",
+      "request": "Generate per-trace pairwise-distance matrices",
+      "preferred_tool": "cli.trace_to_matrix",
+      "synonyms": [
+        "Single-cell PWD",
+        "Distance tensor",
+        "Barcode distance matrix"
+      ],
+      "distinguish_from": [
+        "Distance values have length units; contact frequencies are dimensionless and threshold-dependent."
+      ],
+      "tools": [
+        "cli.trace_to_matrix"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "contact_map",
+      "request": "Plot proximity frequency/contact probability from distance stacks",
+      "preferred_tool": "cli.plot_him_matrix",
+      "synonyms": [
+        "Hi-M matrix",
+        "Fraction below distance cutoff",
+        "Contact map",
+        "Proximity map"
+      ],
+      "distinguish_from": [
+        "nonNANs denominator includes observed pairs; n_cells includes all traces. A contact threshold is different from an outlier-distance filter."
+      ],
+      "tools": [
+        "cli.plot_him_matrix"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "ensemble_distance",
+      "request": "Plot median or KDE-mode ensemble distances",
+      "preferred_tool": "cli.plot_him_matrix",
+      "synonyms": [
+        "Median PWD heatmap",
+        "KDE distance peak",
+        "Ensemble distance map"
+      ],
+      "distinguish_from": [
+        "KDE mode is not arithmetic mean, median, or contact frequency."
+      ],
+      "tools": [
+        "cli.plot_him_matrix"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "bootstrap_distances",
+      "request": "Bootstrap barcode-pair mean-distance estimates",
+      "preferred_tool": "cli.plot_bootstrapping",
+      "synonyms": [
+        "Distance uncertainty map",
+        "Bootstrapped distance matrix",
+        "Bootstrap median output"
+      ],
+      "distinguish_from": [
+        "Despite median output names, bootstrap resamples np.mean then takes median across estimates; error is bootstrap std."
+      ],
+      "tools": [
+        "cli.plot_bootstrapping"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "dataset_correlations",
+      "request": "Compare median distance maps across multiple trace datasets",
+      "preferred_tool": "cli.trace_pearsons",
+      "synonyms": [
+        "Dataset Pearson heatmap",
+        "Correlate trace experiments"
+      ],
+      "distinguish_from": [
+        "Matches barcode identities; duplicate reduction differs from trace_to_matrix."
+      ],
+      "tools": [
+        "cli.trace_pearsons"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "two_matrix_scatter",
+      "request": "Plot Pearson scatter and distribution comparison for two PWD stacks",
+      "preferred_tool": "cli.plot_matrix_comparison",
+      "synonyms": [
+        "Matrix correlation",
+        "Violin plot of distances",
+        "Compare ensembles"
+      ],
+      "distinguish_from": [
+        "Requires matching barcode order; violin uses log values and ranksums. This differs from multi-dataset trace_pearsons."
+      ],
+      "tools": [
+        "cli.plot_matrix_comparison"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "matrix_difference",
+      "request": "Plot distance/contact matrix differences, ratios and mixed triangles",
+      "preferred_tool": "cli.plot_compare2matrices",
+      "synonyms": [
+        "Differential proximity",
+        "Mixed upper lower triangles",
+        "Per-pair rank sum tests",
+        "Log ratio heatmap"
+      ],
+      "distinguish_from": [
+        "Normalization differs between difference and mixed plots; ratio is log2. No automatic barcode matching or multiple-testing correction."
+      ],
+      "tools": [
+        "cli.plot_compare2matrices"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "anchor_profile",
+      "request": "Plot anchor-to-partner pairwise proximity profiles",
+      "preferred_tool": "cli.plot_4m",
+      "synonyms": [
+        "4M profile",
+        "Anchor-centric contacts",
+        "Viewpoint proximity"
+      ],
+      "distinguish_from": [
+        "4M here is pairwise anchor proximity, not four-way contact. Bootstrap ID subset loses repeated draws."
+      ],
+      "tools": [
+        "cli.plot_4m"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "threeway",
+      "request": "Compute anchor-conditioned three-way co-localization",
+      "preferred_tool": "cli.trace_3way_coloc",
+      "synonyms": [
+        "Anchor plus two partner loci",
+        "Multiway proximity",
+        "Three loci co-localization"
+      ],
+      "distinguish_from": [
+        "Requires each partner close to anchor; not all three pairwise distances below cutoff. Denominator conditions on joint detection."
+      ],
+      "tools": [
+        "cli.trace_3way_coloc"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "replot_threeway",
+      "request": "Restyle previously computed three-way frequency heatmaps",
+      "preferred_tool": "cli.plot_3way_coloc",
+      "synonyms": [
+        "Replot multiway matrix",
+        "Change three-way color scale"
+      ],
+      "distinguish_from": [
+        "Does not recompute contacts. Title cutoff is hardcoded 0.2 µm; supply barcode label map."
+      ],
+      "tools": [
+        "cli.plot_3way_coloc"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "export_fofct",
+      "request": "Convert trace ECSV to FOF-CT CSV",
+      "preferred_tool": "cli.trace_export_to_fofct",
+      "synonyms": [
+        "4DN export",
+        "FISH Omics Format conversion"
+      ],
+      "distinguish_from": [
+        "Mask_id and label are omitted."
+      ],
+      "tools": [
+        "cli.trace_export_to_fofct"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "import_fofct",
+      "request": "Convert FOF-CT CSV into trace ECSV",
+      "preferred_tool": "cli.trace_import_from_fofct",
+      "synonyms": [
+        "4DN import",
+        "Restore pyHiM table"
+      ],
+      "distinguish_from": [
+        "Requires BED interval matching; omitted annotations are not recovered."
+      ],
+      "tools": [
+        "cli.trace_import_from_fofct"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "workflow_qc_matrix",
+      "request": "Inspect, curate and generate proximity map",
+      "preferred_tool": "cli.trace_analyzer",
+      "synonyms": [
+        "QC to contact heatmap"
+      ],
+      "distinguish_from": [
+        "Choose thresholds and duplicate policy scientifically before filtering."
+      ],
+      "tools": [
+        "cli.trace_analyzer",
+        "cli.trace_filter",
+        "cli.trace_to_matrix",
+        "cli.plot_him_matrix"
+      ],
+      "sequence": [
+        "cli.trace_analyzer",
+        "cli.trace_filter",
+        "cli.trace_to_matrix",
+        "cli.plot_him_matrix"
+      ]
+    },
+    {
+      "id": "workflow_mask_split",
+      "request": "Label rows with mask and partition them",
+      "preferred_tool": "cli.trace_assign_mask",
+      "synonyms": [
+        "Mask positive negative datasets"
+      ],
+      "distinguish_from": [
+        "Apply pixel coordinate convention and substring label semantics."
+      ],
+      "tools": [
+        "cli.trace_assign_mask",
+        "cli.trace_split_labels"
+      ],
+      "sequence": [
+        "cli.trace_assign_mask",
+        "cli.trace_split_labels"
+      ]
+    },
+    {
+      "id": "workflow_scaling",
+      "request": "Annotate genome then estimate physical-versus-genomic scaling",
+      "preferred_tool": "cli.trace_genomic_coordinates",
+      "synonyms": [
+        "BED to R(s)"
+      ],
+      "distinguish_from": [
+        "Annotation genome must match experiment. Verify physical units despite nm column names."
+      ],
+      "tools": [
+        "cli.trace_genomic_coordinates",
+        "cli.trace_physical_vs_genomic_distance"
+      ],
+      "sequence": [
+        "cli.trace_genomic_coordinates",
+        "cli.trace_physical_vs_genomic_distance"
+      ]
+    },
+    {
+      "id": "workflow_collect_merge",
+      "request": "Gather ROI files then merge trace tables",
+      "preferred_tool": "cli.collect_files",
+      "synonyms": [
+        "Collect and pool ROIs"
+      ],
+      "distinguish_from": [
+        "Use localization_merge instead for unassigned localization tables."
+      ],
+      "tools": [
+        "cli.collect_files",
+        "cli.trace_merge",
+        "cli.localization_merge"
+      ],
+      "sequence": [
+        "cli.collect_files",
+        "cli.trace_merge"
+      ]
+    },
+    {
+      "id": "api_distances_2_coordinates",
+      "request": "Infer coordinates from distances",
+      "preferred_tool": "python.core.him_matrix_operations.distances_2_coordinates",
+      "synonyms": [
+        "distances_2_coordinates"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Not execution-verified here; negative eigenvalues can produce NaNs. Do not assume exact embedding or validated geometry from the short docstring."
+      ],
+      "tools": [
+        "python.core.him_matrix_operations.distances_2_coordinates"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_get_rg_from_pwd",
+      "request": "Calculates the Rg from a 2D pairwise distance matrix while taking into account that some of the PWD might be NaN",
+      "preferred_tool": "python.core.him_matrix_operations.get_rg_from_pwd",
+      "synonyms": [
+        "get_rg_from_pwd"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Uses finite pair count after masking diagonal and distances > threshold; requires min_number_pwd=4 by default. Do not assume conventional complete-matrix normalization when pairs are missing."
+      ],
+      "tools": [
+        "python.core.him_matrix_operations.get_rg_from_pwd"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_get_detection_eff_barcodes",
+      "request": "Return the detection efficiency of all barcodes. Assumes a barcode is detected as soon as one PWD with this barcode is detected.",
+      "preferred_tool": "python.core.him_matrix_operations.get_detection_eff_barcodes",
+      "synonyms": [
+        "get_detection_eff_barcodes"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Detects a barcode only if it participates in at least one finite PWD; isolated singleton detections are invisible. This can differ from table-based detection efficiency."
+      ],
+      "tools": [
+        "python.core.him_matrix_operations.get_detection_eff_barcodes"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_get_barcodes_per_cell",
+      "request": "Returns the number of barcodes that were detected in each cell of sc_matrix_collated.",
+      "preferred_tool": "python.core.him_matrix_operations.get_barcodes_per_cell",
+      "synonyms": [
+        "get_barcodes_per_cell"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Detects a barcode only if it participates in at least one finite PWD; isolated singleton detections are invisible. This can differ from table-based detection efficiency."
+      ],
+      "tools": [
+        "python.core.him_matrix_operations.get_barcodes_per_cell"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_LocalizationTable_compares_localizations",
+      "request": "Compares the localizations of two barcode tables",
+      "preferred_tool": "python.core.localization_table.LocalizationTable.compares_localizations",
+      "synonyms": [
+        "LocalizationTable.compares_localizations"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there."
+      ],
+      "tools": [
+        "python.core.localization_table.LocalizationTable.compares_localizations"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_color_all_barcodes",
+      "request": "Documented in the PyMOL tutorial.",
+      "preferred_tool": "python.pymol_script.color_all_barcodes",
+      "synonyms": [
+        "color_all_barcodes"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Requires a PyMOL Python runtime; not installed as a traceratops runtime dependency. load_pdb_grid deletes existing PyMOL objects; spin_grid changes animation state."
+      ],
+      "tools": [
+        "python.pymol_script.color_all_barcodes"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_load_pdb_grid",
+      "request": "Load the first PDB files in a folder and display them in a PyMOL grid using a ball-and-stick representation.",
+      "preferred_tool": "python.pymol_script.load_pdb_grid",
+      "synonyms": [
+        "load_pdb_grid"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Requires a PyMOL Python runtime; not installed as a traceratops runtime dependency. load_pdb_grid deletes existing PyMOL objects; spin_grid changes animation state."
+      ],
+      "tools": [
+        "python.pymol_script.load_pdb_grid"
+      ],
+      "sequence": []
+    },
+    {
+      "id": "api_spin_grid",
+      "request": "Create and play a continuously looping rotation movie.",
+      "preferred_tool": "python.pymol_script.spin_grid",
+      "synonyms": [
+        "spin_grid"
+      ],
+      "distinguish_from": [
+        "Source-documented public name; no package-wide API stability guarantee. Prefer the CLI for operations already exposed there.",
+        "Requires a PyMOL Python runtime; not installed as a traceratops runtime dependency. load_pdb_grid deletes existing PyMOL objects; spin_grid changes animation state."
+      ],
+      "tools": [
+        "python.pymol_script.spin_grid"
+      ],
+      "sequence": []
+    }
+  ],
+  "unavailable_or_not_exposed": [
+    {
+      "request": "Reconstruct traces from raw microscope images",
+      "status": "outside package post-processing scope",
+      "guidance": "Use upstream localization/trace pipeline; do not invent a traceratops command."
+    },
+    {
+      "request": "Four-way co-localization",
+      "status": "no verified public CLI for this operation",
+      "guidance": "plot_4m implements pairwise anchor profiles; inspect Python catalog before custom code."
+    },
+    {
+      "request": "Statistical comparisons with automatic barcode identity remapping or multiple-testing correction",
+      "status": "not implemented by matrix comparison CLIs",
+      "guidance": "Match barcodes explicitly and report custom preprocessing/correction."
+    }
+  ],
+  "absence_rule": "An unmatched synonym is not proof of absence. Inspect operations, Python APIs and source references; if unavailable, report the missing capability explicitly before implementing custom analysis."
+}

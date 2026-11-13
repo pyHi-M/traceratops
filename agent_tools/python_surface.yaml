@@ -1,0 +1,2796 @@
+{
+  "schema_version": "1.0",
+  "policy": "Source-documented public analytical functions/methods; public methods of exported analysis classes; documented PyMOL commands. Exclude private names, internal unexported resolver helpers and parser/I/O/reporting infrastructure.",
+  "callables": [
+    {
+      "module": "traceratops.collect_files",
+      "callable": "FilePattern.total_length",
+      "source": "traceratops/collect_files.py",
+      "line": 60,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "FilePattern.matches",
+      "source": "traceratops/collect_files.py",
+      "line": 63,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "build_pattern",
+      "source": "traceratops/collect_files.py",
+      "line": 81,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "scan_subdirectories",
+      "source": "traceratops/collect_files.py",
+      "line": 121,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "dest_name",
+      "source": "traceratops/collect_files.py",
+      "line": 144,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "check_collisions",
+      "source": "traceratops/collect_files.py",
+      "line": 155,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "format_report",
+      "source": "traceratops/collect_files.py",
+      "line": 185,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "collect_files",
+      "source": "traceratops/collect_files.py",
+      "line": 210,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "parse_arguments",
+      "source": "traceratops/collect_files.py",
+      "line": 308,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.collect_files",
+      "callable": "main",
+      "source": "traceratops/collect_files.py",
+      "line": 362,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.initialize_parameters",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 64,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.calculate_pwd_single_mask",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 81,
+      "has_docstring": true,
+      "catalog_id": "python.core.build_matrix.BuildMatrix.calculate_pwd_single_mask",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.build_distance_matrix",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 178,
+      "has_docstring": true,
+      "catalog_id": "python.core.build_matrix.BuildMatrix.build_distance_matrix",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.calculate_n_matrix",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 255,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.get_output_prefix",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 266,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.plots_all_matrices",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 289,
+      "has_docstring": true,
+      "catalog_id": "python.core.build_matrix.BuildMatrix.plots_all_matrices",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.save_matrices",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 418,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.launch_analysis",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 435,
+      "has_docstring": true,
+      "catalog_id": "python.core.build_matrix.BuildMatrix.launch_analysis",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.build_matrix",
+      "callable": "BuildMatrix.run",
+      "source": "traceratops/core/build_matrix.py",
+      "line": 486,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "read_table_from_ecsv",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 27,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "save_table_to_ecsv",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 35,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "generate_pyhim_identifier",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 47,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "relabel_pyhim_identifiers",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 52,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "micrometer_scale_from_xyz_unit",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 69,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "random_label_cmap",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 86,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.initialize",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 119,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.load",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 156,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.remove_empty_comments",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 182,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.remove_duplicate_comments",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 191,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.save",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 200,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.prevent_roi_conflict",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 373,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.load_bed_file",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 387,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.impute_genomic_coordinates",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 431,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.impute_genomic_coordinates",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.append",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 482,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.filter_traces_by_coordinate",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 499,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.filter_traces_by_coordinate",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.filter_by_intensity",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 554,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.filter_by_intensity",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.filter_by_localization_metrics",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 562,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.filter_by_localization_metrics",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.barcode_statistics",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 687,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.barcode_statistics",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.plots_barcode_statistics",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 726,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.plots_barcode_statistics",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.trace_remove_label",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 826,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.trace_remove_label",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.trace_keep_label",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 857,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.trace_keep_label",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.filter_repeated_barcodes",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 888,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.filter_repeated_barcodes",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.remove_duplicates_loc",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 983,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.remove_duplicates_loc",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.remove_duplicates",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 1068,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.remove_duplicates",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.remove_barcode",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 1122,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.remove_barcode",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.filter_traces_by_n",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 1171,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.filter_traces_by_n",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.chromatin_trace_table",
+      "callable": "ChromatinTraceTable.plots_traces",
+      "source": "traceratops/core/chromatin_trace_table.py",
+      "line": 1239,
+      "has_docstring": true,
+      "catalog_id": "python.core.chromatin_trace_table.ChromatinTraceTable.plots_traces",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "AnalysisHiMMatrix.load_data",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 35,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "AnalysisHiMMatrix.plot_2d_matrix_simple",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 117,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "AnalysisHiMMatrix.n_cells_loaded",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 180,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "AnalysisHiMMatrix.retrieve_sc_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 196,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "load_list",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 232,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "list_sc_to_keep",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 244,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "plot_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 266,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "shuffle_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 376,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "decodes_trace",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 394,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.decodes_trace",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "write_xyz_2_pdb",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 421,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.write_xyz_2_pdb",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "write_xyz_2_pdb_legacy",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 567,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "distances_2_coordinates",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 703,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.distances_2_coordinates",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "is_notebook",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 749,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "is_nan_symmetric_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 774,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "plot_distance_histograms",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 779,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "adjust_colorbar",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 869,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "plot_single_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 922,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_matrix_title",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 956,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "adjust_cmin_cmax",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 975,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_plot_path",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 985,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "plot_nan_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1004,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "plot_him_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1040,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "calculate_nan_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1090,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "calculate_contact_probability_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1104,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "find_optimal_kernel_width",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1145,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "retrieve_kernel_density_estimator",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1155,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.retrieve_kernel_density_estimator",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "distribution_maximum_kernel_density_estimation",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1206,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.distribution_maximum_kernel_density_estimation",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_rg_from_pwd",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1280,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.get_rg_from_pwd",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_detection_eff_barcodes",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1324,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.get_detection_eff_barcodes",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_barcodes_per_cell",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1361,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.get_barcodes_per_cell",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "get_coordinates_from_pwd_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1377,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "sort_cells_by_number_pwd",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1398,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "kde_fit",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1421,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.him_matrix_operations",
+      "callable": "calculate_ensemble_pwd_matrix",
+      "source": "traceratops/core/him_matrix_operations.py",
+      "line": 1430,
+      "has_docstring": true,
+      "catalog_id": "python.core.him_matrix_operations.calculate_ensemble_pwd_matrix",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.io_manager",
+      "callable": "create_folder",
+      "source": "traceratops/core/io_manager.py",
+      "line": 10,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.io_manager",
+      "callable": "load_barcode_dict",
+      "source": "traceratops/core/io_manager.py",
+      "line": 27,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.io_manager",
+      "callable": "save_json",
+      "source": "traceratops/core/io_manager.py",
+      "line": 55,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "warn_legacy_dat_extension",
+      "source": "traceratops/core/localization_table.py",
+      "line": 24,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "normalize_localization_output_path",
+      "source": "traceratops/core/localization_table.py",
+      "line": 30,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.load",
+      "source": "traceratops/core/localization_table.py",
+      "line": 192,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.remove_empty_comments",
+      "source": "traceratops/core/localization_table.py",
+      "line": 240,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.remove_duplicate_comments",
+      "source": "traceratops/core/localization_table.py",
+      "line": 249,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.save",
+      "source": "traceratops/core/localization_table.py",
+      "line": 253,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.append",
+      "source": "traceratops/core/localization_table.py",
+      "line": 294,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.plot_distribution_fluxes",
+      "source": "traceratops/core/localization_table.py",
+      "line": 311,
+      "has_docstring": true,
+      "catalog_id": "python.core.localization_table.LocalizationTable.plot_distribution_fluxes",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.plot_intensity_distribution",
+      "source": "traceratops/core/localization_table.py",
+      "line": 493,
+      "has_docstring": true,
+      "catalog_id": "python.core.localization_table.LocalizationTable.plot_intensity_distribution",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.plots_localizations",
+      "source": "traceratops/core/localization_table.py",
+      "line": 512,
+      "has_docstring": true,
+      "catalog_id": "python.core.localization_table.LocalizationTable.plots_localizations",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "LocalizationTable.compares_localizations",
+      "source": "traceratops/core/localization_table.py",
+      "line": 573,
+      "has_docstring": true,
+      "catalog_id": "python.core.localization_table.LocalizationTable.compares_localizations",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "decode_rois",
+      "source": "traceratops/core/localization_table.py",
+      "line": 638,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "build_color_dict",
+      "source": "traceratops/core/localization_table.py",
+      "line": 648,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "plots_localization_projection",
+      "source": "traceratops/core/localization_table.py",
+      "line": 657,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "read_table_from_ecsv",
+      "source": "traceratops/core/localization_table.py",
+      "line": 683,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.core.localization_table",
+      "callable": "create_output_table",
+      "source": "traceratops/core/localization_table.py",
+      "line": 691,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "bootstrapping",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 21,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "bootstraps_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 36,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "get_position_from_unique_barcode_list",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 66,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "gets_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 70,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "Wilcoxon_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 138,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "plot_Wilcoxon_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 158,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "normalize_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 209,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "plot_2d_matrix_simple",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 235,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "plot_matrix_difference",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 300,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.plotting_functions",
+      "callable": "plot_mixed_matrix",
+      "source": "traceratops/core/plotting_functions.py",
+      "line": 355,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.core.trace_resolver.beam",
+      "callable": "beam_search",
+      "source": "traceratops/core/trace_resolver/beam.py",
+      "line": 25,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "Internal resolver implementation submodule, not exported public API."
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "classify_trace",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 43,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.classify_trace",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "build_multiplicity_matrix",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 58,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.build_multiplicity_matrix",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "barcode_heterogeneity_pvalue",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 77,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.barcode_heterogeneity_pvalue",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "assess_auto_nuisance_reliability",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 166,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.assess_auto_nuisance_reliability",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "assess_likelihood_classifier_reliability",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 195,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.assess_likelihood_classifier_reliability",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "LikelihoodMultiplicityClassifier.fit",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 324,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.LikelihoodMultiplicityClassifier.fit",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.classifier",
+      "callable": "LikelihoodMultiplicityClassifier.score",
+      "source": "traceratops/core/trace_resolver/classifier.py",
+      "line": 363,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.classifier.LikelihoodMultiplicityClassifier.score",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.model",
+      "callable": "EmpiricalDistanceModel.positions",
+      "source": "traceratops/core/trace_resolver/model.py",
+      "line": 53,
+      "has_docstring": false,
+      "catalog_id": "python.core.trace_resolver.model.EmpiricalDistanceModel.positions",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.model",
+      "callable": "EmpiricalDistanceModel.fit",
+      "source": "traceratops/core/trace_resolver/model.py",
+      "line": 68,
+      "has_docstring": false,
+      "catalog_id": "python.core.trace_resolver.model.EmpiricalDistanceModel.fit",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.model",
+      "callable": "EmpiricalDistanceModel.for_separation",
+      "source": "traceratops/core/trace_resolver/model.py",
+      "line": 138,
+      "has_docstring": false,
+      "catalog_id": "python.core.trace_resolver.model.EmpiricalDistanceModel.for_separation",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.resolver",
+      "callable": "TraceResolver.resolve",
+      "source": "traceratops/core/trace_resolver/resolver.py",
+      "line": 34,
+      "has_docstring": false,
+      "catalog_id": "python.core.trace_resolver.resolver.TraceResolver.resolve",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.resolver",
+      "callable": "TraceResolver.resolve_one_polymer_candidates",
+      "source": "traceratops/core/trace_resolver/resolver.py",
+      "line": 100,
+      "has_docstring": true,
+      "catalog_id": "python.core.trace_resolver.resolver.TraceResolver.resolve_one_polymer_candidates",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.core.trace_resolver.results",
+      "callable": "TraceMultiplicity.from_barcodes",
+      "source": "traceratops/core/trace_resolver/results.py",
+      "line": 20,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "Internal resolver implementation submodule, not exported public API."
+    },
+    {
+      "module": "traceratops.core.trace_resolver.results",
+      "callable": "ResolutionResult.n_unassigned",
+      "source": "traceratops/core/trace_resolver/results.py",
+      "line": 48,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "Internal resolver implementation submodule, not exported public API."
+    },
+    {
+      "module": "traceratops.core.trace_resolver.results",
+      "callable": "ResolutionResult.fraction_unassigned",
+      "source": "traceratops/core/trace_resolver/results.py",
+      "line": 52,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "Internal resolver implementation submodule, not exported public API."
+    },
+    {
+      "module": "traceratops.core.trace_resolver.scoring",
+      "callable": "PolymerScorer.transition_cost",
+      "source": "traceratops/core/trace_resolver/scoring.py",
+      "line": 27,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "Internal resolver implementation submodule, not exported public API."
+    },
+    {
+      "module": "traceratops.localization_analyzer",
+      "callable": "parse_arguments",
+      "source": "traceratops/localization_analyzer.py",
+      "line": 20,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.localization_analyzer",
+      "callable": "create_dict_args",
+      "source": "traceratops/localization_analyzer.py",
+      "line": 48,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.localization_analyzer",
+      "callable": "get_output_file",
+      "source": "traceratops/localization_analyzer.py",
+      "line": 61,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.localization_analyzer",
+      "callable": "run",
+      "source": "traceratops/localization_analyzer.py",
+      "line": 69,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.localization_analyzer",
+      "callable": "main",
+      "source": "traceratops/localization_analyzer.py",
+      "line": 79,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "parse_arguments",
+      "source": "traceratops/localization_merge.py",
+      "line": 22,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "create_dict_args",
+      "source": "traceratops/localization_merge.py",
+      "line": 35,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "appends_traces",
+      "source": "traceratops/localization_merge.py",
+      "line": 63,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "load_localizations",
+      "source": "traceratops/localization_merge.py",
+      "line": 82,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "run",
+      "source": "traceratops/localization_merge.py",
+      "line": 90,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.localization_merge",
+      "callable": "main",
+      "source": "traceratops/localization_merge.py",
+      "line": 110,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 23,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "plot_threeway_matrix",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 50,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "extract_anchor",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 137,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "load_list",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 142,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "load_label_map",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 154,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_3way_coloc",
+      "callable": "main",
+      "source": "traceratops/plot_3way_coloc.py",
+      "line": 163,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_4m",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_4m.py",
+      "line": 30,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_4m",
+      "callable": "compute_colocalization",
+      "source": "traceratops/plot_4m.py",
+      "line": 72,
+      "has_docstring": true,
+      "catalog_id": "python.plot_4m.compute_colocalization",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.plot_4m",
+      "callable": "bootstrap_colocalization",
+      "source": "traceratops/plot_4m.py",
+      "line": 121,
+      "has_docstring": true,
+      "catalog_id": "python.plot_4m.bootstrap_colocalization",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.plot_4m",
+      "callable": "plot_frequencies",
+      "source": "traceratops/plot_4m.py",
+      "line": 175,
+      "has_docstring": true,
+      "catalog_id": "python.plot_4m.plot_frequencies",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.plot_4m",
+      "callable": "main",
+      "source": "traceratops/plot_4m.py",
+      "line": 224,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_bootstrapping",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_bootstrapping.py",
+      "line": 22,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_bootstrapping",
+      "callable": "create_dict_args",
+      "source": "traceratops/plot_bootstrapping.py",
+      "line": 94,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_bootstrapping",
+      "callable": "plot_results",
+      "source": "traceratops/plot_bootstrapping.py",
+      "line": 174,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_bootstrapping",
+      "callable": "main",
+      "source": "traceratops/plot_bootstrapping.py",
+      "line": 205,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_compare2matrices",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_compare2matrices.py",
+      "line": 24,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_compare2matrices",
+      "callable": "create_dict_args",
+      "source": "traceratops/plot_compare2matrices.py",
+      "line": 101,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_compare2matrices",
+      "callable": "gets_ensemble_matrix",
+      "source": "traceratops/plot_compare2matrices.py",
+      "line": 191,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_compare2matrices",
+      "callable": "main",
+      "source": "traceratops/plot_compare2matrices.py",
+      "line": 234,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 26,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "check_required_arg",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 141,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "create_output_folder",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 155,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "load_matrix",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 161,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "load_barcodes",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 168,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "shuffle_matrix",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 175,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "new_shuffle_matrix",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 193,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "merge_matrices",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 200,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "apply_nan_threshold",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 215,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "apply_triangular_mask",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 224,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.plot_him_matrix",
+      "callable": "main",
+      "source": "traceratops/plot_him_matrix.py",
+      "line": 258,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "parse_arguments",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 28,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "create_dict_args",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 57,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "plot_result",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 101,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "calculates_pearson_correlation",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 139,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "remove_zeros",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 144,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "plots_distributions",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 149,
+      "has_docstring": true,
+      "catalog_id": "python.plot_matrix_comparison.plots_distributions",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "parses_matrix_to_vector",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 181,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "load_matrix",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 197,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "calculates_ensemble_matrices",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 201,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "common_member",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 224,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "filters_zero_values",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 229,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "main_script",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 243,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.plot_matrix_comparison",
+      "callable": "main",
+      "source": "traceratops/plot_matrix_comparison.py",
+      "line": 260,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.pymol_script",
+      "callable": "color_all_barcodes",
+      "source": "traceratops/pymol_script.py",
+      "line": 37,
+      "has_docstring": false,
+      "catalog_id": "python.pymol_script.color_all_barcodes",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.pymol_script",
+      "callable": "load_pdb_grid",
+      "source": "traceratops/pymol_script.py",
+      "line": 56,
+      "has_docstring": true,
+      "catalog_id": "python.pymol_script.load_pdb_grid",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.pymol_script",
+      "callable": "spin_grid",
+      "source": "traceratops/pymol_script.py",
+      "line": 125,
+      "has_docstring": true,
+      "catalog_id": "python.pymol_script.spin_grid",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.script_banner",
+      "callable": "print_script_banner",
+      "source": "traceratops/script_banner.py",
+      "line": 33,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "compute_threeway_colocalization",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 138,
+      "has_docstring": true,
+      "catalog_id": "python.trace_3way_coloc.compute_threeway_colocalization",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "bootstrap_threeway_colocalization",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 164,
+      "has_docstring": true,
+      "catalog_id": "python.trace_3way_coloc.bootstrap_threeway_colocalization",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "plot_threeway_matrix",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 225,
+      "has_docstring": true,
+      "catalog_id": "python.trace_3way_coloc.plot_threeway_matrix",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 399,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 449,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_3way_coloc",
+      "callable": "main",
+      "source": "traceratops/trace_3way_coloc.py",
+      "line": 461,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 30,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 61,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "get_barcode_statistics",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 90,
+      "has_docstring": true,
+      "catalog_id": "python.trace_analyzer.get_barcode_statistics",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "plot_neighbor_distances",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 235,
+      "has_docstring": true,
+      "catalog_id": "python.trace_analyzer.plot_neighbor_distances",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "barcode_detection_efficiency",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 438,
+      "has_docstring": true,
+      "catalog_id": "python.trace_analyzer.barcode_detection_efficiency",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "plot_kde_projections",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 520,
+      "has_docstring": true,
+      "catalog_id": "python.trace_analyzer.plot_kde_projections",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "analyze_trace",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 625,
+      "has_docstring": true,
+      "catalog_id": "python.trace_analyzer.analyze_trace",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "process_traces",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 696,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_analyzer",
+      "callable": "main",
+      "source": "traceratops/trace_analyzer.py",
+      "line": 754,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 20,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 44,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "load_mask",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 84,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "assign_masks",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 105,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "plot_mask_assignment",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 147,
+      "has_docstring": true,
+      "catalog_id": "python.trace_assign_mask.plot_mask_assignment",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "process_traces",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 199,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_assign_mask",
+      "callable": "main",
+      "source": "traceratops/trace_assign_mask.py",
+      "line": 231,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 29,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 49,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "load_trace_ecsv_file",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 64,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "load_barcode_bed_file",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 71,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "load_json_file",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 85,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "check_metadata",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 92,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "get_output_file",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 100,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "find_chrom_info",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 113,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "assign_chrom_info",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 129,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "remove_unused_columns",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 146,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "rename_pyhim_columns",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 152,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "write_fof_ct_csv",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 161,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "get_initials",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 173,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "get_authors_from_copyright",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 183,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "get_header_comments",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 199,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "convert_ecsv_to_csv",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 222,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_export_to_fofct",
+      "callable": "main",
+      "source": "traceratops/trace_export_to_fofct.py",
+      "line": 247,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "check_required_arg",
+      "source": "traceratops/trace_filter.py",
+      "line": 62,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_filter.py",
+      "line": 74,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "args_coord_to_dict",
+      "source": "traceratops/trace_filter.py",
+      "line": 175,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "args_quality_filters_to_dict",
+      "source": "traceratops/trace_filter.py",
+      "line": 186,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "get_files_from_args",
+      "source": "traceratops/trace_filter.py",
+      "line": 207,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "check_file_number",
+      "source": "traceratops/trace_filter.py",
+      "line": 216,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "filter_duplicate",
+      "source": "traceratops/trace_filter.py",
+      "line": 230,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "filter_barcode_number",
+      "source": "traceratops/trace_filter.py",
+      "line": 244,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "filter_label",
+      "source": "traceratops/trace_filter.py",
+      "line": 252,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "get_filtered_localizations",
+      "source": "traceratops/trace_filter.py",
+      "line": 264,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "get_file_root",
+      "source": "traceratops/trace_filter.py",
+      "line": 277,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "runtime",
+      "source": "traceratops/trace_filter.py",
+      "line": 282,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_filter",
+      "callable": "main",
+      "source": "traceratops/trace_filter.py",
+      "line": 420,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_genomic_coordinates",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_genomic_coordinates.py",
+      "line": 18,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_genomic_coordinates",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_genomic_coordinates.py",
+      "line": 39,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_genomic_coordinates",
+      "callable": "load_bed_file",
+      "source": "traceratops/trace_genomic_coordinates.py",
+      "line": 61,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "I/O or table lifecycle infrastructure, outside analytical function scope."
+    },
+    {
+      "module": "traceratops.trace_genomic_coordinates",
+      "callable": "impute_genomic_coordinates",
+      "source": "traceratops/trace_genomic_coordinates.py",
+      "line": 123,
+      "has_docstring": true,
+      "catalog_id": "python.trace_genomic_coordinates.impute_genomic_coordinates",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_genomic_coordinates",
+      "callable": "main",
+      "source": "traceratops/trace_genomic_coordinates.py",
+      "line": 186,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 26,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 40,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "read_column_names_from_csv",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 55,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "load_csv_file",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 66,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "load_barcode_bed_file",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 76,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "validate_columns",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 84,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "find_barcode_id",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 94,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "add_missing_columns",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 108,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "rename_columns_for_ecsv",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 131,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "convert_csv_to_ecsv",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 140,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_import_from_fofct",
+      "callable": "main",
+      "source": "traceratops/trace_import_from_fofct.py",
+      "line": 148,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "silent_load",
+      "source": "traceratops/trace_merge.py",
+      "line": 29,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_merge.py",
+      "line": 37,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "check_required_arg",
+      "source": "traceratops/trace_merge.py",
+      "line": 61,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "get_files_from_args",
+      "source": "traceratops/trace_merge.py",
+      "line": 73,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "appends_traces",
+      "source": "traceratops/trace_merge.py",
+      "line": 82,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "load_traces",
+      "source": "traceratops/trace_merge.py",
+      "line": 98,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "create_out_folder",
+      "source": "traceratops/trace_merge.py",
+      "line": 109,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_merge",
+      "callable": "main",
+      "source": "traceratops/trace_merge.py",
+      "line": 115,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "silent_load_trace",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 35,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 43,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 76,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "find_unique_substrings",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 91,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "accumulate_distances",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 202,
+      "has_docstring": true,
+      "catalog_id": "python.trace_pearsons.accumulate_distances",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "compare_distance_maps",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 235,
+      "has_docstring": true,
+      "catalog_id": "python.trace_pearsons.compare_distance_maps",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "plot_correlation_matrix",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 280,
+      "has_docstring": true,
+      "catalog_id": "python.trace_pearsons.plot_correlation_matrix",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_pearsons",
+      "callable": "main",
+      "source": "traceratops/trace_pearsons.py",
+      "line": 351,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "extract_traces_numpy",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 38,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.extract_traces_numpy",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "compute_genomic_dist_map",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 64,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.compute_genomic_dist_map",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "compute_inter_loci_genomic_dist",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 71,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.compute_inter_loci_genomic_dist",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "compute_all_pwd",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 84,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.compute_all_pwd",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "compute_physical_vs_genomic_distance",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 109,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.compute_physical_vs_genomic_distance",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "fit_power_law",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 164,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.fit_power_law",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "plot_log_distance_graph",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 217,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.plot_log_distance_graph",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "get_plot_output_file",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 290,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "calculate_physical_vs_genomic_distance",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 311,
+      "has_docstring": true,
+      "catalog_id": "python.trace_physical_vs_genomic_distance.calculate_physical_vs_genomic_distance",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 366,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_physical_vs_genomic_distance",
+      "callable": "main",
+      "source": "traceratops/trace_physical_vs_genomic_distance.py",
+      "line": 424,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_plot",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_plot.py",
+      "line": 24,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_plot",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_plot.py",
+      "line": 54,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_plot",
+      "callable": "runtime",
+      "source": "traceratops/trace_plot.py",
+      "line": 116,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_plot",
+      "callable": "main",
+      "source": "traceratops/trace_plot.py",
+      "line": 195,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_sorter",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_sorter.py",
+      "line": 19,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_sorter",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_sorter.py",
+      "line": 42,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_sorter",
+      "callable": "sorted_output_filename",
+      "source": "traceratops/trace_sorter.py",
+      "line": 51,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_sorter",
+      "callable": "sort_trace_table",
+      "source": "traceratops/trace_sorter.py",
+      "line": 57,
+      "has_docstring": true,
+      "catalog_id": "python.trace_sorter.sort_trace_table",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_sorter",
+      "callable": "main",
+      "source": "traceratops/trace_sorter.py",
+      "line": 87,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_split_labels",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_split_labels.py",
+      "line": 24,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_split_labels",
+      "callable": "get_files",
+      "source": "traceratops/trace_split_labels.py",
+      "line": 49,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_split_labels",
+      "callable": "split_trace_by_label",
+      "source": "traceratops/trace_split_labels.py",
+      "line": 57,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_split_labels",
+      "callable": "process",
+      "source": "traceratops/trace_split_labels.py",
+      "line": 80,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_split_labels",
+      "callable": "main",
+      "source": "traceratops/trace_split_labels.py",
+      "line": 111,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_splitter.py",
+      "line": 56,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_splitter.py",
+      "line": 201,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "generate_unique_id",
+      "source": "traceratops/trace_splitter.py",
+      "line": 213,
+      "has_docstring": true,
+      "catalog_id": null,
+      "exclusion_reason": "Implementation utility, reporting, I/O, formatting or intermediate launcher; not recommended as independent scientific analysis."
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "compute_radius_of_gyration",
+      "source": "traceratops/trace_splitter.py",
+      "line": 218,
+      "has_docstring": true,
+      "catalog_id": "python.trace_splitter.compute_radius_of_gyration",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "estimate_hdbscan_epsilon",
+      "source": "traceratops/trace_splitter.py",
+      "line": 257,
+      "has_docstring": true,
+      "catalog_id": "python.trace_splitter.estimate_hdbscan_epsilon",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "split_large_traces",
+      "source": "traceratops/trace_splitter.py",
+      "line": 310,
+      "has_docstring": true,
+      "catalog_id": "python.trace_splitter.split_large_traces",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "resolve_traces",
+      "source": "traceratops/trace_splitter.py",
+      "line": 524,
+      "has_docstring": true,
+      "catalog_id": "python.trace_splitter.resolve_traces",
+      "exclusion_reason": null
+    },
+    {
+      "module": "traceratops.trace_splitter",
+      "callable": "main",
+      "source": "traceratops/trace_splitter.py",
+      "line": 759,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_stats",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_stats.py",
+      "line": 18,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_stats",
+      "callable": "get_trace_files",
+      "source": "traceratops/trace_stats.py",
+      "line": 28,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_stats",
+      "callable": "compute_trace_statistics",
+      "source": "traceratops/trace_stats.py",
+      "line": 43,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_stats",
+      "callable": "main",
+      "source": "traceratops/trace_stats.py",
+      "line": 62,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_to_matrix",
+      "callable": "parse_arguments",
+      "source": "traceratops/trace_to_matrix.py",
+      "line": 18,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_to_matrix",
+      "callable": "create_dict_args",
+      "source": "traceratops/trace_to_matrix.py",
+      "line": 45,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    },
+    {
+      "module": "traceratops.trace_to_matrix",
+      "callable": "runtime",
+      "source": "traceratops/trace_to_matrix.py",
+      "line": 93,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "No public callable documentation found in source or tutorials; not recommended as documented API."
+    },
+    {
+      "module": "traceratops.trace_to_matrix",
+      "callable": "main",
+      "source": "traceratops/trace_to_matrix.py",
+      "line": 137,
+      "has_docstring": false,
+      "catalog_id": null,
+      "exclusion_reason": "CLI parsing or orchestration: use registered CLI entry, not a Python recommendation."
+    }
+  ]
+}
